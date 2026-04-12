@@ -27,3 +27,18 @@ export type Task = {
   assigned_user?: User
   creator?: User
 }
+
+export type Project = {
+  id: string
+  name: string
+  category: string
+  created_at: string
+}
+
+export type ProjectLink = {
+  id: string
+  project_id: string
+  title: string
+  url: string
+  created_at: string
+}
