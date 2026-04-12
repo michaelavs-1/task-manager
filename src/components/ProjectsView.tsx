@@ -1,5 +1,6 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+
+import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Project, ProjectLink } from "@/lib/supabase"
 
@@ -11,250 +12,140 @@ export default function ProjectsView({ isManager }: Props) {
   const [projects, setProjects] = useState<Project[]>([])
   const [links, setLinks] = useState<Record<string, ProjectLink[]>>({})
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
+  const [showAddLink, setShowAddLink] = useState(false)
   const [newLinkTitle, setNewLinkTitle] = useState("")
   const [newLinkUrl, setNewLinkUrl] = useState("")
-  const [addingLink, setAddingLink] = useState(false)
-  const [newProjectName, setNewProjectName] = useState("")
-  const [showNewProject, setShowNewProject] = useState(false)
-
-  const loadProjects = useCallback(async () => {
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("category", "artists")
-      .order("name")
-    if (data) setProjects(data as Project[])
-  }, [])
-
-  const loadLinks = useCallback(async (projectId: string) => {
-    const { data } = await supabase
-      .from("project_links")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-    if (data) {
-      setLinks((prev) => ({ ...prev, [projectId]: data as ProjectLink[] }))
-    }
-  }, [])
+  const [activeTab, setActiveTab] = useState<"links">("links")
 
   useEffect(() => {
     loadProjects()
-  }, [loadProjects])
+  }, [])
+
+  async function loadProjects() {
+    const { data } = await supabase.from("projects").select("*").order("name")
+    if (data) {
+      setProjects(data as Project[])
+      if (data.length > 0) setSelectedProject(data[0].id)
+    }
+  }
 
   useEffect(() => {
     if (selectedProject) loadLinks(selectedProject)
-  }, [selectedProject, loadLinks])
+  }, [selectedProject])
+
+  async function loadLinks(projectId: string) {
+    const { data } = await supabase.from("project_links").select("*").eq("project_id", projectId).order("created_at")
+    if (data) setLinks(prev => ({ ...prev, [projectId]: data as ProjectLink[] }))
+  }
 
   async function addLink() {
     if (!selectedProject || !newLinkTitle || !newLinkUrl) return
-    setAddingLink(true)
-    const { error } = await supabase.from("project_links").insert({
-      project_id: selectedProject,
-      title: newLinkTitle,
-      url: newLinkUrl,
-    })
-    if (!error) {
-      setNewLinkTitle("")
-      setNewLinkUrl("")
-      loadLinks(selectedProject)
-    }
-    setAddingLink(false)
+    await supabase.from("project_links").insert({ project_id: selectedProject, title: newLinkTitle, url: newLinkUrl })
+    setNewLinkTitle("")
+    setNewLinkUrl("")
+    setShowAddLink(false)
+    loadLinks(selectedProject)
   }
 
   async function deleteLink(linkId: string) {
-    if (!confirm("×××××§ ××ª ×××× ×§?")) return
+    if (!selectedProject) return
     await supabase.from("project_links").delete().eq("id", linkId)
-    if (selectedProject) loadLinks(selectedProject)
+    loadLinks(selectedProject)
   }
 
-  async function addProject() {
-    if (!newProjectName) return
-    const { error } = await supabase.from("projects").insert({
-      name: newProjectName,
-      category: "artists",
-    })
-    if (!error) {
-      setNewProjectName("")
-      setShowNewProject(false)
-      loadProjects()
-    }
-  }
-
-  async function deleteProject(id: string) {
-    if (!confirm("×××××§ ××ª ××¤×¨×××§× ××× ×××× ×§×× ×©××?")) return
-    await supabase.from("projects").delete().eq("id", id)
-    if (selectedProject === id) setSelectedProject(null)
-    loadProjects()
-  }
-
-  const selectedProjectData = projects.find((p) => p.id === selectedProject)
-  const projectLinks = selectedProject ? links[selectedProject] || [] : []
-
+  const currentProject = projects.find(p => p.id === selectedProject)
+  const currentLinks = selectedProject ? (links[selectedProject] || []) : []
   return (
-    <div className="flex gap-6 min-h-[400px]">
-      {/* Sidebar - Artist List */}
+    <div className="flex gap-6 h-full">
+      {/* Sidebar - Artists list */}
       <div className="w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
-          <div className="p-4 bg-purple-50 border-b border-purple-100">
-            <h3 className="font-bold text-purple-800 flex items-center gap-2">
-              ðµ ×××× ××
-            </h3>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-purple-600 text-white px-4 py-3 font-semibold text-sm">
+            🎵 אומנים
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100">
             {projects.map((project) => (
               <button
                 key={project.id}
-                onClick={() => setSelectedProject(project.id)}
-                className={`w-full text-right px-4 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                onClick={() => { setSelectedProject(project.id); setShowAddLink(false) }}
+                className={`w-full text-right px-4 py-3 text-sm font-medium transition-colors ${
                   selectedProject === project.id
-                    ? "bg-purple-50 text-purple-700 font-medium"
-                    : "text-gray-700"
+                    ? "bg-purple-50 text-purple-700 border-r-2 border-purple-600"
+                    : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                <span>{project.name}</span>
-                {isManager && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteProject(project.id)
-                    }}
-                    className="text-red-300 hover:text-red-500 text-sm cursor-pointer"
-                  >
-                    â
-                  </span>
-                )}
+                {project.name}
               </button>
             ))}
           </div>
-          {isManager && (
-            <div className="p-3 border-t">
-              {showNewProject ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    placeholder="×©× ××××..."
-                    className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                    onKeyDown={(e) => e.key === "Enter" && addProject()}
-                  />
-                  <button
-                    onClick={addProject}
-                    className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-700"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => setShowNewProject(false)}
-                    className="text-gray-400 px-2"
-                  >
-                    â
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowNewProject(true)}
-                  className="w-full text-sm text-purple-600 hover:text-purple-800 py-1"
-                >
-                  + ×××¡×£ ××××
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Main Content - Links */}
+      {/* Main content */}
       <div className="flex-1">
-        {selectedProject && selectedProjectData ? (
-          <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
-            <div className="p-5 border-b bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-800">
-                {selectedProjectData.name}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">××× ×§×× ×¨×××× ××××</p>
+        {currentProject && (
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">{currentProject.name}</h2>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab("links")}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === "links" ? "bg-purple-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  🔗 קישורים רלוונטיים
+                </button>
+              </div>
             </div>
 
-            {/* Add Link Form */}
-            {isManager && (
-              <div className="p-4 border-b bg-blue-50/50">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={newLinkTitle}
-                    onChange={(e) => setNewLinkTitle(e.target.value)}
-                    placeholder="×©× ×××× ×§"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-                  />
-                  <input
-                    type="url"
-                    value={newLinkUrl}
-                    onChange={(e) => setNewLinkUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-                    dir="ltr"
-                  />
-                  <button
-                    onClick={addLink}
-                    disabled={addingLink || !newLinkTitle || !newLinkUrl}
-                    className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    {addingLink ? "..." : "×××¡×£"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Links List */}
-            <div className="divide-y">
-              {projectLinks.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                  <div className="text-3xl mb-2">ð</div>
-                  <p>××× ××× ×§×× ×¢××××</p>
-                  {isManager && (
-                    <p className="text-sm mt-1">×××¡×£ ××× ×§ ×××¢××</p>
-                  )}
-                </div>
-              ) : (
-                projectLinks.map((link) => (
-                  <div
-                    key={link.id}
-                    className="px-5 py-4 flex items-center justify-between hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-blue-500">ð</span>
-                      <div>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
-                        >
-                          {link.title}
-                        </a>
-                        <p className="text-xs text-gray-400 mt-0.5" dir="ltr">
-                          {link.url}
-                        </p>
-                      </div>
-                    </div>
-                    {isManager && (
-                      <button
-                        onClick={() => deleteLink(link.id)}
-                        className="text-red-400 hover:text-red-600 text-sm"
-                      >
-                        ð
+            <div className="p-6">
+              {/* Links Tab */}
+              <div>
+                {isManager && (
+                  <div className="mb-4">
+                    {!showAddLink ? (
+                      <button onClick={() => setShowAddLink(true)} className="flex items-center gap-2 text-purple-600 hover:text-purple-800 font-medium text-sm">
+                        <span className="text-lg">+</span> הוסף קישור
                       </button>
+                    ) : (
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                        <input type="text" value={newLinkTitle} onChange={(e) => setNewLinkTitle(e.target.value)} placeholder="שם הקישור" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                        <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} placeholder="https://..." className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                        <div className="flex gap-2">
+                          <button onClick={addLink} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700">שמור</button>
+                          <button onClick={() => { setShowAddLink(false); setNewLinkTitle(""); setNewLinkUrl("") }} className="border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-100">ביטול</button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <div className="text-5xl mb-3">ðµ</div>
-              <p className="text-lg">×××¨ ×××× ×××¨×©×××</p>
+                )}
+                {currentLinks.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <div className="text-3xl mb-2">🔗</div>
+                    <p>אין קישורים עדיין</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {currentLinks.map((link) => (
+                      <div key={link.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-purple-50 transition-colors group">
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 flex-1 min-w-0">
+                          <span className="text-purple-600">🔗</span>
+                          <span className="font-medium text-gray-700 truncate">{link.title}</span>
+                          <span className="text-xs text-gray-400 truncate hidden group-hover:block">{link.url}</span>
+                        </a>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-600 hover:text-purple-800 font-medium">פתח ↗</a>
+                          {isManager && (
+                            <button onClick={() => deleteLink(link.id)} className="text-gray-300 hover:text-red-500 transition-colors text-sm">×</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
