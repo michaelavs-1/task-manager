@@ -16,7 +16,7 @@ export type Task = {
   id: string
   title: string
   description: string
-  status: "pending" | "in_progress" | "completed"
+  status: "pending" | "in_progress" | "completed" | "archived"
   priority: "low" | "medium" | "high" | "urgent"
   assigned_to: string
   created_by: string
@@ -24,6 +24,7 @@ export type Task = {
   updated_at: string
   completed_at: string | null
   due_date: string | null
+  project?: string
   assigned_user?: User
   creator?: User
 }
@@ -31,7 +32,7 @@ export type Task = {
 export type Project = {
   id: string
   name: string
-  category: string
+  category: "artist" | "production"
   created_at: string
 }
 
