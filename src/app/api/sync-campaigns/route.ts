@@ -32,7 +32,7 @@ interface MondayBoardResponse {
 interface CampaignRecord {
   monday_item_id: string
   board: string
-  campaign_name: string
+  name: string
   group_title?: string | null
   status?: string | null
   platforms?: string | null
@@ -59,7 +59,7 @@ interface CampaignRecord {
 }
 
 // Column title mappings (Hebrew and English)
-const COLUMN_MAP: { [key: string]: keyof Omit<CampaignRecord, 'monday_item_id' | 'board' | 'campaign_name' | 'group_title'> } = {
+const COLUMN_MAP: { [key: string]: keyof Omit<CampaignRecord, 'monday_item_id' | 'board' | 'name' | 'group_title'> } = {
   'סטטוס': 'status',
   'status': 'status',
   'פלטפורמות': 'platforms',
@@ -132,7 +132,7 @@ function parseCampaignRecord(item: MondayItem): CampaignRecord {
   const record: CampaignRecord = {
     monday_item_id: item.id,
     board: 'universal',
-    campaign_name: item.name,
+    name: item.name,
     group_title: item.group?.title || null,
   }
 
