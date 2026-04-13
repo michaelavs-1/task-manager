@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
   `
 
   try {
-    const resp = await fetch('https://api.monday.com/graphql', {
+    const resp = await fetch('https://api.eu.monday.com/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: mondayToken },
       body: JSON.stringify({ query }),

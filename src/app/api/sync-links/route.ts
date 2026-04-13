@@ -44,7 +44,7 @@ async function syncLinks() {
     }
   `
 
-  const response = await fetch('https://api.monday.com/graphql', {
+  const response = await fetch('https://api.eu.monday.com/v2', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

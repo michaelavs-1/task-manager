@@ -213,7 +213,7 @@ async function syncCampaigns(): Promise<{ success: boolean; synced?: number; err
         cursor: cursor || null,
       }
 
-      const response = await fetch('https://api.monday.com/graphql', {
+      const response = await fetch('https://api.eu.monday.com/v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
