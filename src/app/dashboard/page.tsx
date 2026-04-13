@@ -6,8 +6,9 @@ import TaskCard from "@/components/TaskCard"
 import NewTaskModal from "@/components/NewTaskModal"
 import ProjectsView from "@/components/ProjectsView"
 import { CampaignsView } from "@/components/CampaignsView"
+import { LinksView } from "@/components/LinksView"
 
-type Tab = "tasks" | "projects" | "campaigns"
+type Tab = "tasks" | "projects" | "campaigns" | "links"
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -135,6 +136,15 @@ export default function Dashboard() {
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+        </svg>
+      ),
+    },
+    {
+      tab: "links",
+      label: "קישורים",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
       ),
     },
@@ -286,6 +296,13 @@ export default function Dashboard() {
         {activeTab === "campaigns" && (
           <div className="h-full">
             <CampaignsView />
+          </div>
+        )}
+
+        {/* Links Tab */}
+        {activeTab === "links" && (
+          <div className="h-full">
+            <LinksView />
           </div>
         )}
       </main>
