@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 
 type Theme = 'light' | 'dark' | 'middle'
 
@@ -13,7 +13,6 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light')
-  const [isMounted, setIsMounted] = useState(false)
 
   // Load theme from localStorage on mount
   useEffect(() => {
@@ -21,7 +20,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initialTheme = saved || 'light'
     setThemeState(initialTheme)
     applyTheme(initialTheme)
-    setIsMounted(true)
   }, [])
 
   const setTheme = (newTheme: Theme) => {
@@ -39,21 +37,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Apply CSS variables
     if (t === 'light') {
       root.style.setProperty('--bg-primary', '#ffffff')
-      root.style.setProperty('--bg-secondary', '#f3f4f6')
-      root.style.setProperty('--text-primary', '#000000')
-      root.style.setProperty('--text-secondary', '#6b7280')
+      root.style.setProperty('--bg-secondary', '#f0f4f8')
+      root.style.setProperty('--bg-card', '#ffffff')
+      root.style.setProperty('--text-primary', '#1a202c')
+      root.style.setProperty('--text-secondary', '#64748b')
+      root.style.setProperty('--border-color', '#e2e8f0')
       root.classList.add('theme-light')
     } else if (t === 'dark') {
-      root.style.setProperty('--bg-primary', '#030712')
-      root.style.setProperty('--bg-secondary', '#111827')
-      root.style.setProperty('--text-primary', '#f3f4f6')
-      root.style.setProperty('--text-secondary', '#d1d5db')
+      root.style.setProperty('--bg-primary', '#111827')
+      root.style.setProperty('--bg-secondary', '#0a0e1a')
+      root.style.setProperty('--bg-card', '#1a2030')
+      root.style.setProperty('--text-primary', '#f1f5f9')
+      root.style.setProperty('--text-secondary', '#6b7280')
+      root.style.setProperty('--border-color', '#1e293b')
       root.classList.add('theme-dark')
     } else if (t === 'middle') {
       root.style.setProperty('--bg-primary', '#1e293b')
       root.style.setProperty('--bg-secondary', '#0f172a')
-      root.style.setProperty('--text-primary', '#f1f5f9')
-      root.style.setProperty('--text-secondary', '#cbd5e1')
+      root.style.setProperty('--bg-card', '#243349')
+      root.style.setProperty('--text-primary', '#e2e8f0')
+      root.style.setProperty('--text-secondary', '#94a3b8')
+      root.style.setProperty('--border-color', '#334155')
       root.classList.add('theme-middle')
     }
   }

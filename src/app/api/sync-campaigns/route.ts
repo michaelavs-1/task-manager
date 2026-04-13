@@ -213,11 +213,12 @@ async function syncCampaigns(): Promise<{ success: boolean; synced?: number; err
         cursor: cursor || null,
       }
 
-      const response = await fetch('https://api.eu.monday.com/v2', {
+      const response = await fetch('https://api.monday.com/v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: mondayToken,
+          'Authorization': mondayToken,
+          'API-Version': '2023-10',
         },
         body: JSON.stringify({ query, variables }),
       })
@@ -270,7 +271,7 @@ async function syncCampaigns(): Promise<{ success: boolean; synced?: number; err
       synced: campaigns.length,
     }
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
+    const errorMessage = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
     return {
       success: false,
       error: `Sync failed: ${errorMessage}`,

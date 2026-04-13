@@ -72,13 +72,13 @@ export async function GET(request: NextRequest) {
   `
 
   try {
-    const resp = await fetch('https://api.eu.monday.com/v2', {
+    const resp = await fetch('https://api.monday.com/v2', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: mondayToken },
+      headers: { 'Content-Type': 'application/json', 'Authorization': mondayToken, 'API-Version': '2023-10' },
       body: JSON.stringify({ query }),
     })
 
-    if (!resp.ok) return NextResponse.json({ error: `Monday API: ${resp.status}` }, { status: 502 })
+    if (!resp.ok) return NextResponse.json({ error: `Monday API: ${resp.status} ${resp.statusText}` }, { status: 502 })
 
     const data = await resp.json()
     const items: MondayItem[] = data?.data?.boards?.[0]?.items_page?.items || []
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events, total: events.length })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const errMsg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    return NextResponse.json({ error: errMsg }, { status: 500 })
   }
 }

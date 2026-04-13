@@ -109,8 +109,8 @@ export default function Dashboard() {
   const sortedEmployees = Object.keys(groupedByEmployee).sort()
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-xl text-gray-500">טוען...</div>
+    <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="text-xl" style={{ color: 'var(--text-secondary)' }}>טוען...</div>
     </div>
   )
 
@@ -163,138 +163,178 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="flex h-screen bg-gray-50" dir="rtl">
+    <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }} dir="rtl">
       {/* Sidebar */}
-      <aside className="w-56 bg-indigo-900 text-white flex flex-col flex-shrink-0">
-        <div className="px-5 py-6 border-b border-indigo-800">
-          <h1 className="text-base font-bold text-white">מערכת משימות</h1>
-          <p className="text-xs text-indigo-300 mt-1">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
+      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-indigo-700 text-white flex flex-col flex-shrink-0">
+        {/* Header */}
+        <div className="px-6 py-6 border-b border-indigo-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <h1 className="text-lg font-bold text-white">מערכת משימות</h1>
+          </div>
+          <p className="text-xs text-indigo-200">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ tab, label, icon }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-right ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                 activeTab === tab
-                  ? "bg-indigo-700 text-white"
-                  : "text-indigo-200 hover:bg-indigo-800 hover:text-white"
+                  ? "bg-white bg-opacity-20 text-white"
+                  : "text-indigo-100 hover:bg-white hover:bg-opacity-10"
               }`}
             >
+              <span>{label}</span>
               {icon}
-              {label}
             </button>
           ))}
         </nav>
 
-        <div className="px-3 py-4 border-t border-indigo-800">
+        {/* Bottom Actions */}
+        <div className="px-3 py-4 border-t border-indigo-500/30 space-y-3">
           {userRole === "manager" && activeTab === "tasks" && (
             <button
               onClick={() => setShowNewTask(true)}
-              className="w-full bg-white text-indigo-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors mb-2"
+              className="w-full bg-white text-indigo-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors"
             >
               + משימה חדשה
             </button>
           )}
 
           {/* Theme Toggle */}
-          <div className="mb-4 p-2 bg-indigo-800 rounded-lg">
-            <p className="text-xs text-indigo-300 mb-2 text-right">עיצוב</p>
-            <div className="flex gap-1 justify-between">
+          <div className="bg-white bg-opacity-10 rounded-xl p-3">
+            <p className="text-xs text-indigo-200 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
+            <div className="flex gap-2">
               <button
                 onClick={() => setTheme('light')}
                 title="בהיר"
-                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'light'
-                    ? 'bg-white text-indigo-900'
-                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                    ? 'bg-white text-indigo-700'
+                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                בהיר
+                ☀️
               </button>
               <button
                 onClick={() => setTheme('middle')}
                 title="בינוני"
-                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'middle'
-                    ? 'bg-white text-indigo-900'
-                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                    ? 'bg-white text-indigo-700'
+                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                בינוני
+                ◑
               </button>
               <button
                 onClick={() => setTheme('dark')}
                 title="כהה"
-                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'dark'
-                    ? 'bg-white text-indigo-900'
-                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                    ? 'bg-white text-indigo-700'
+                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                כהה
+                🌙
               </button>
             </div>
           </div>
 
+          {/* Logout */}
           <button
             onClick={logout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-indigo-300 hover:text-white hover:bg-indigo-800 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-indigo-100 hover:bg-white hover:bg-opacity-10 transition-colors"
           >
+            <span>יציאה</span>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            יציאה
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         {/* Tasks Tab */}
         {activeTab === "tasks" && (
-          <div className="max-w-5xl mx-auto px-6 py-8">
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="max-w-6xl mx-auto px-8 py-8">
+            {/* Page Title */}
+            <h2 className="text-2xl font-bold tracking-tight mb-8" style={{ color: 'var(--text-primary)' }}>
+              משימות שלי
+            </h2>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <button
                 onClick={() => setFilter("all")}
-                className={`p-4 rounded-xl border-2 transition-all text-right ${filter === "all" ? "border-indigo-500 bg-indigo-50" : "border-gray-200 bg-white"}`}
+                className="rounded-2xl border shadow-sm p-5 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: filter === "all" ? 'var(--bg-card)' : 'var(--bg-card)',
+                  borderColor: filter === "all" ? '#4F46E5' : 'var(--border-color)',
+                  borderWidth: filter === "all" ? '2px' : '1px',
+                }}
               >
-                <div className="text-2xl font-bold text-gray-800">{tasks.length}</div>
-                <div className="text-sm text-gray-500">סה״כ</div>
+                <div className="text-2xl font-bold" style={{ color: '#4F46E5' }}>{tasks.length}</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>סה״כ</div>
               </button>
+
               <button
                 onClick={() => setFilter("pending")}
-                className={`p-4 rounded-xl border-2 transition-all text-right ${filter === "pending" ? "border-yellow-500 bg-yellow-50" : "border-gray-200 bg-white"}`}
+                className="rounded-2xl border shadow-sm p-5 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: filter === "pending" ? 'var(--bg-card)' : 'var(--bg-card)',
+                  borderColor: filter === "pending" ? '#F59E0B' : 'var(--border-color)',
+                  borderWidth: filter === "pending" ? '2px' : '1px',
+                }}
               >
-                <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
-                <div className="text-sm text-gray-500">ממתינות</div>
+                <div className="text-2xl font-bold" style={{ color: '#F59E0B' }}>{pendingCount}</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>ממתינות</div>
               </button>
+
               <button
                 onClick={() => setFilter("in_progress")}
-                className={`p-4 rounded-xl border-2 transition-all text-right ${filter === "in_progress" ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"}`}
+                className="rounded-2xl border shadow-sm p-5 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: filter === "in_progress" ? 'var(--bg-card)' : 'var(--bg-card)',
+                  borderColor: filter === "in_progress" ? '#3B82F6' : 'var(--border-color)',
+                  borderWidth: filter === "in_progress" ? '2px' : '1px',
+                }}
               >
-                <div className="text-2xl font-bold text-blue-600">{inProgressCount}</div>
-                <div className="text-sm text-gray-500">בביצוע</div>
+                <div className="text-2xl font-bold" style={{ color: '#3B82F6' }}>{inProgressCount}</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>בביצוע</div>
               </button>
+
               <button
                 onClick={() => setFilter("completed")}
-                className={`p-4 rounded-xl border-2 transition-all text-right ${filter === "completed" ? "border-green-500 bg-green-50" : "border-gray-200 bg-white"}`}
+                className="rounded-2xl border shadow-sm p-5 transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: filter === "completed" ? 'var(--bg-card)' : 'var(--bg-card)',
+                  borderColor: filter === "completed" ? '#10B981' : 'var(--border-color)',
+                  borderWidth: filter === "completed" ? '2px' : '1px',
+                }}
               >
-                <div className="text-2xl font-bold text-green-600">{completedCount}</div>
-                <div className="text-sm text-gray-500">הושלמו</div>
+                <div className="text-2xl font-bold" style={{ color: '#10B981' }}>{completedCount}</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>הושלמו</div>
               </button>
             </div>
 
             {/* View Toggle - Manager Only */}
             {userRole === "manager" && (
-              <div className="mb-5">
+              <div className="mb-6 flex gap-3">
                 <button
                   onClick={() => setViewByEmployee(!viewByEmployee)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    viewByEmployee ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                  style={{
+                    backgroundColor: viewByEmployee ? '#4F46E5' : 'transparent',
+                    color: viewByEmployee ? 'white' : 'var(--text-primary)',
+                    border: viewByEmployee ? 'none' : `1px solid var(--border-color)`,
+                  }}
                 >
                   לפי עובד
                 </button>
@@ -304,11 +344,11 @@ export default function Dashboard() {
             {/* Task List */}
             <div className="space-y-3">
               {filteredTasks.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="text-center py-16">
+                  <svg className="w-12 h-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--text-secondary)' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <p>אין משימות {filter !== "all" ? "בקטגוריה זו" : ""}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>אין משימות {filter !== "all" ? "בקטגוריה זו" : ""}</p>
                 </div>
               ) : viewByEmployee ? (
                 sortedEmployees.map((employeeName) => (
@@ -340,7 +380,7 @@ export default function Dashboard() {
 
         {/* Projects Tab */}
         {activeTab === "projects" && (
-          <div className="h-full p-6">
+          <div className="h-full p-8">
             <ProjectsView isManager={userRole === "manager"} tasks={tasks} />
           </div>
         )}
@@ -398,22 +438,23 @@ function EmployeeSection({
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+    <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-5 py-4 text-right flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition"
+        className="w-full px-6 py-4 flex items-center justify-between transition-colors"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        <span className="flex items-center gap-3">
-          <span className="font-semibold text-lg text-gray-800">{employeeName}</span>
-          <span className="text-sm text-gray-500">({tasks.length})</span>
-        </span>
-        <span className="text-gray-600 text-xs">{expanded ? "▼" : "▶"}</span>
+        <div className="flex items-center gap-3">
+          <span className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>{employeeName}</span>
+          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>({tasks.length})</span>
+        </div>
+        <span style={{ color: 'var(--text-secondary)' }} className="text-xs">{expanded ? "▼" : "▶"}</span>
       </button>
 
       {expanded && (
-        <div className="divide-y">
+        <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
           {tasks.map((task) => (
-            <div key={task.id} className="px-5 py-4 bg-white">
+            <div key={task.id} className="px-6 py-4" style={{ backgroundColor: 'var(--bg-card)' }}>
               <TaskCard
                 task={task}
                 isManager={isManager}

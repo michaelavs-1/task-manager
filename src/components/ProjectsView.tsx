@@ -70,68 +70,40 @@ export default function ProjectsView({ isManager, tasks }: Props) {
   const currentLinks = sel ? links[sel] || [] : []
   const projectTasks = sel ? tasks.filter((t) => t.project === current?.name) : []
 
-  const inputCls =
-    "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-slate-50 focus:bg-white"
-
   const ProjectButton = ({ project }: { project: Project }) => (
     <button
-      key={project.id}
       onClick={() => {
         setSel(project.id)
         setShowAdd(false)
         setShowTasks(false)
       }}
-      className={
-        "w-full text-right px-3 py-2.5 rounded-lg text-sm font-medium transition-all " +
-        (sel === project.id
+      className={`w-full text-right px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+        sel === project.id
           ? "bg-indigo-600 text-white"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")
-      }
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
     >
       {project.name}
     </button>
   )
 
   return (
-    <div className="flex gap-6 h-full">
-      <div className="w-56 flex-shrink-0">
-        {/* Artists Section */}
-        <div className="mb-6">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
-            אומנים
-          </p>
-          <div className="space-y-0.5">{artists.map((p) => <ProjectButton key={p.id} project={p} />)}</div>
-        </div>
-
-        {/* Productions Section */}
-        <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 px-1">
-            הפקות
-          </p>
-          <div className="space-y-0.5">
-            {productions.map((p) => (
-              <ProjectButton key={p.id} project={p} />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 min-w-0">
-        {current && (
+    <div className="flex gap-0 h-full bg-gray-50">
+      {/* Content Panel - FIRST in flex = appears on RIGHT in RTL */}
+      <div className="flex-1 min-w-0 px-8 py-8 overflow-y-auto">
+        {current ? (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">{current.name}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{currentLinks.length} קישורים</p>
-              </div>
+            {/* Header with project info and action buttons */}
+            <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
+                {/* LEFT side - action buttons */}
                 {projectTasks.length > 0 && (
                   <button
                     onClick={() => setShowTasks(!showTasks)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
                   >
                     <svg
-                      className="w-3.5 h-3.5"
+                      className="w-4 h-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -149,9 +121,14 @@ export default function ProjectsView({ isManager, tasks }: Props) {
                 {isManager && !showAdd && (
                   <button
                     onClick={() => setShowAdd(true)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -163,58 +140,71 @@ export default function ProjectsView({ isManager, tasks }: Props) {
                   </button>
                 )}
               </div>
+              {/* RIGHT side - project title and stats */}
+              <div className="text-right">
+                <h2 className="text-2xl font-bold text-gray-900">{current.name}</h2>
+                <p className="text-sm text-gray-500 mt-1">{currentLinks.length} קישורים</p>
+              </div>
             </div>
 
             {/* Tasks Section */}
             {showTasks && projectTasks.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-3">משימות של {current.name}</h3>
-                <div className="space-y-2">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  משימות של {current.name}
+                </h3>
+                <div className="space-y-3">
                   {projectTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="bg-white p-3 rounded-lg border border-blue-100 flex items-start justify-between"
+                      className="bg-gray-50 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors"
                     >
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span
-                            className={
-                              "text-xs px-2 py-0.5 rounded " +
-                              (task.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : task.status === "in_progress"
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 text-right">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-xs text-gray-600 mt-1.5">
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-3 justify-end">
+                            <span
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium ${
+                                task.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : task.status === "in_progress"
                                   ? "bg-blue-100 text-blue-700"
-                                  : "bg-green-100 text-green-700")
-                            }
-                          >
-                            {task.status === "pending"
-                              ? "ממתינה"
-                              : task.status === "in_progress"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {task.status === "pending"
+                                ? "ממתינה"
+                                : task.status === "in_progress"
                                 ? "בביצוע"
                                 : "הושלמה"}
-                          </span>
-                          <span
-                            className={
-                              "text-xs px-2 py-0.5 rounded " +
-                              (task.priority === "low"
-                                ? "bg-gray-100 text-gray-700"
-                                : task.priority === "medium"
+                            </span>
+                            <span
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium ${
+                                task.priority === "low"
+                                  ? "bg-gray-100 text-gray-700"
+                                  : task.priority === "medium"
                                   ? "bg-blue-100 text-blue-700"
                                   : task.priority === "high"
-                                    ? "bg-orange-100 text-orange-700"
-                                    : "bg-red-100 text-red-700")
-                            }
-                          >
-                            {task.priority === "low"
-                              ? "נמוכה"
-                              : task.priority === "medium"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {task.priority === "low"
+                                ? "נמוכה"
+                                : task.priority === "medium"
                                 ? "בינונית"
                                 : task.priority === "high"
-                                  ? "גבוהה"
-                                  : "דחוף"}
-                          </span>
+                                ? "גבוהה"
+                                : "דחוף"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -225,63 +215,77 @@ export default function ProjectsView({ isManager, tasks }: Props) {
 
             {/* Add Link Form */}
             {showAdd && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 space-y-3">
-                <input
-                  type="text"
-                  value={linkTitle}
-                  onChange={(e) => setLinkTitle(e.target.value)}
-                  placeholder="שם הקישור"
-                  className={inputCls}
-                />
-                <input
-                  type="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://..."
-                  className={inputCls}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={addLink}
-                    className="bg-indigo-600 text-white text-xs px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-                  >
-                    שמור
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAdd(false)
-                      setLinkTitle("")
-                      setLinkUrl("")
-                    }}
-                    className="border border-slate-200 text-slate-500 text-xs px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    ביטול
-                  </button>
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">קישור חדש</h3>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={linkTitle}
+                    onChange={(e) => setLinkTitle(e.target.value)}
+                    placeholder="שם הקישור"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-right placeholder:text-gray-400"
+                  />
+                  <input
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white placeholder:text-gray-400"
+                    dir="ltr"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowAdd(false)
+                        setLinkTitle("")
+                        setLinkUrl("")
+                      }}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                    >
+                      ביטול
+                    </button>
+                    <button
+                      onClick={addLink}
+                      className="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+                    >
+                      שמור
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Links List */}
             {currentLinks.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-slate-400 text-sm">אין קישורים עדיין</p>
+              <div className="flex items-center justify-center py-24 text-center">
+                <div>
+                  <svg
+                    className="w-12 h-12 text-gray-300 mx-auto mb-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.658 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  <p className="text-gray-500 text-sm">אין קישורים עדיין</p>
+                </div>
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 {currentLinks.map((link) => (
                   <div
                     key={link.id}
-                    className="flex items-center justify-between px-4 py-3 bg-white border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all group"
+                    className="flex items-center gap-4 px-5 py-4 bg-white rounded-2xl border border-gray-100 hover:bg-gray-50 hover:shadow-sm transition-all group"
                   >
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="w-7 h-7 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                         <svg
-                          className="w-3.5 h-3.5 text-indigo-500"
+                          className="w-4 h-4 text-indigo-600"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -294,37 +298,84 @@ export default function ProjectsView({ isManager, tasks }: Props) {
                           />
                         </svg>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">{link.title}</p>
-                        <p className="text-xs text-slate-400 truncate">{link.url}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {link.title}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {link.url}
+                        </p>
                       </div>
-                    </a>
-                    {isManager && (
-                      <button
-                        onClick={() => deleteLink(link.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors"
                       >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                        פתח ↗
+                      </a>
+                      {isManager && (
+                        <button
+                          onClick={() => deleteLink(link.id)}
+                          className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    )}
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-400 text-sm">בחר פרויקט מהרשימה</p>
+          </div>
         )}
+      </div>
+
+      {/* Sidebar - LAST in flex = appears on LEFT in RTL */}
+      <div className="w-60 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-8">
+          {/* Artists Section */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 px-2">
+              אומנים
+            </p>
+            <div className="space-y-0.5">
+              {artists.map((p) => (
+                <ProjectButton key={p.id} project={p} />
+              ))}
+            </div>
+          </div>
+
+          {/* Productions Section */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3 px-2">
+              הפקות
+            </p>
+            <div className="space-y-0.5">
+              {productions.map((p) => (
+                <ProjectButton key={p.id} project={p} />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
