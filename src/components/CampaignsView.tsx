@@ -172,6 +172,7 @@ export function CampaignsView() {
     <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">קמפיינים</h1>
         <div className="flex items-center gap-3">
           {syncError && (
             <span className="text-sm text-red-500 font-medium">{syncError}</span>
@@ -193,7 +194,6 @@ export function CampaignsView() {
             </button>
           )}
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">קמפיינים</h1>
       </div>
 
       {/* Board Selector Tabs */}
