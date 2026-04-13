@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Task } from '@/lib/supabase'
-import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/app/api/artist-events/route'
+import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 
 type ArtistTab = 'events' | 'campaigns' | 'tasks'
 

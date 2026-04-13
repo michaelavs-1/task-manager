@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Map artist names to their Monday.com event board IDs
-export const ARTIST_BOARD_MAP: Record<string, string> = {
-  "ג'ימבו ג'יי": '2043602683',
-  'אקו': '5092930238',
-  'אקו / Mitzi': '5092930238',
-  'מאור אשכנזי': '5093817565',
-  'YUZ': '5093818247',
-  'אלי לוזון': '5094110017',
-}
+import type { ArtistEvent } from '@/lib/artist-config'
 
 interface ColumnValue {
   id: string
@@ -20,29 +11,6 @@ interface MondayItem {
   id: string
   name: string
   column_values: ColumnValue[]
-}
-
-export type ArtistEvent = {
-  id: string
-  name: string
-  date: string | null
-  status: string | null
-  contract_status: string | null
-  event_type: string | null
-  location: string | null
-  start_time: string | null
-  end_time: string | null
-  soundcheck_time: string | null
-  audience_count: string | null
-  audience_type: string | null
-  ticket_price: string | null
-  ticket_count: string | null
-  total_revenue: string | null
-  total_expenses: string | null
-  net_profit: string | null
-  artist_share: string | null
-  office_share: string | null
-  details: string | null
 }
 
 function parseEvent(item: MondayItem): ArtistEvent {
