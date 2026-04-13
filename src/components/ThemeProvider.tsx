@@ -58,11 +58,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Don't render until mounted to avoid hydration mismatch
-  if (!isMounted) {
-    return <>{children}</>
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
