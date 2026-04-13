@@ -2,7 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+}
+
 body {
   direction: rtl;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Dark theme */
+.theme-dark body,
+.theme-dark .bg-white { background-color: var(--bg-primary) !important; }
+.theme-dark .bg-gray-50 { background-color: var(--bg-secondary) !important; }
+.theme-dark .text-gray-900, .theme-dark .text-slate-900 { color: var(--text-primary) !important; }
+.theme-dark .text-gray-500, .theme-dark .text-slate-500 { color: var(--text-secondary) !important; }
+.theme-dark .border-gray-200, .theme-dark .border-slate-200 { border-color: #374151 !important; }
+
+/* Middle theme */
+.theme-middle body,
+.theme-middle .bg-white { background-color: var(--bg-primary) !important; }
+.theme-middle .bg-gray-50 { background-color: var(--bg-secondary) !important; }
+.theme-middle .text-gray-900, .theme-middle .text-slate-900 { color: var(--text-primary) !important; }
+.theme-middle .text-gray-500, .theme-middle .text-slate-500 { color: var(--text-secondary) !important; }
+.theme-middle .border-gray-200, .theme-middle .border-slate-200 { border-color: #334155 !important; }
+
+.priority-urgent { @apply bg-red-100 text-red-800 border-red-300; }
+.priority-high { @apply bg-orange-100 text-orange-800 border-orange-300; }
+.priority-medium { @apply bg-yellow-100 text-yellow-800 border-yellow-300; }
+.priority-low { @apply bg-green-100 text-green-800 border-green-300; }

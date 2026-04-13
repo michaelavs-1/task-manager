@@ -8,10 +8,12 @@ import ProjectsView from "@/components/ProjectsView"
 import { CampaignsView } from "@/components/CampaignsView"
 import { LinksView } from "@/components/LinksView"
 import { ArtistDashboardView } from "@/components/ArtistDashboardView"
+import { useTheme } from "@/components/ThemeProvider"
 
 type Tab = "tasks" | "projects" | "campaigns" | "links" | "artists"
 
 export default function Dashboard() {
+  const { theme, setTheme } = useTheme()
   const [tasks, setTasks] = useState<Task[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [activeTab, setActiveTab] = useState<Tab>("tasks")
@@ -195,6 +197,47 @@ export default function Dashboard() {
               + משימה חדשה
             </button>
           )}
+
+          {/* Theme Toggle */}
+          <div className="mb-4 p-2 bg-indigo-800 rounded-lg">
+            <p className="text-xs text-indigo-300 mb-2 text-right">עיצוב</p>
+            <div className="flex gap-1 justify-between">
+              <button
+                onClick={() => setTheme('light')}
+                title="בהיר"
+                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                  theme === 'light'
+                    ? 'bg-white text-indigo-900'
+                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                }`}
+              >
+                בהיר
+              </button>
+              <button
+                onClick={() => setTheme('middle')}
+                title="בינוני"
+                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                  theme === 'middle'
+                    ? 'bg-white text-indigo-900'
+                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                }`}
+              >
+                בינוני
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                title="כהה"
+                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+                  theme === 'dark'
+                    ? 'bg-white text-indigo-900'
+                    : 'bg-indigo-700 text-indigo-200 hover:bg-indigo-600'
+                }`}
+              >
+                כהה
+              </button>
+            </div>
+          </div>
+
           <button
             onClick={logout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-indigo-300 hover:text-white hover:bg-indigo-800 transition-colors"
