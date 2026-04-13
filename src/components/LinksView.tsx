@@ -17,6 +17,7 @@ export function LinksView() {
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncError, setSyncError] = useState('')
+  const [embedLink, setEmbedLink] = useState<Link | null>(null)
 
   async function loadLinks() {
     const { data, error } = await supabase.from('links').select('*').order('name')
@@ -111,12 +112,17 @@ export function LinksView() {
               </h2>
               <div className="space-y-2">
                 {groupedLinks[artist].map((link) => (
-                  <LinkCard key={link.id} link={link} />
+                  <LinkCard key={link.id} link={link} onEmbed={() => setEmbedLink(link)} />
                 ))}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Embed Modal */}
+      {embedLink && (
+        <EmbedModal link={embedLink} onClose={() => setEmbedLink(null)} />
       )}
     </div>
   )
@@ -153,10 +159,13 @@ function getLinkType(url: string | null): { label: string; color: string } {
   }
 }
 
-function LinkCard({ link }: { link: Link }) {
+function LinkCard({ link, onEmbed }: { link: Link; onEmbed: () => void }) {
   const linkType = getLinkType(link.url)
   return (
-    <div className="flex items-center gap-4 px-5 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
+    <div
+      className="flex items-center gap-4 px-5 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-gray-200 transition-all cursor-pointer"
+      onClick={onEmbed}
+    >
       {/* Link Icon */}
       <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
         <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -174,7 +183,7 @@ function LinkCard({ link }: { link: Link }) {
 
       {/* Link type badge + Open Button */}
       {link.url && (
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
           <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${linkType.color}`}>
             {linkType.label}
           </span>
@@ -228,5 +237,133 @@ function CopyButton({ url }: { url: string }) {
         </>
       )}
     </button>
+  )
+}
+
+// Convert URL to embeddable version
+function getEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace('www.', '')
+
+    // Google Docs/Sheets/Slides → /preview
+    if (host === 'docs.google.com') {
+      return url.replace(/\/(edit|view|pub)(\?.*)?$/, '/preview')
+    }
+
+    // Google Drive file → /preview
+    if (host === 'drive.google.com' && url.includes('/file/d/')) {
+      return url.replace(/\/(view|edit)(\?.*)?$/, '/preview')
+    }
+
+    // YouTube → embed URL
+    if (host === 'youtube.com' || host === 'youtu.be') {
+      let videoId = ''
+      if (host === 'youtu.be') {
+        videoId = u.pathname.slice(1)
+      } else {
+        videoId = u.searchParams.get('v') || ''
+      }
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=0`
+    }
+
+    // Spotify → embed URL
+    if (host === 'spotify.com' || host === 'open.spotify.com') {
+      return url.replace('open.spotify.com/', 'open.spotify.com/embed/')
+    }
+
+    // Everything else — try direct (may be blocked by X-Frame-Options)
+    return url
+  } catch {
+    return url
+  }
+}
+
+function EmbedModal({ link, onClose }: { link: Link; onClose: () => void }) {
+  const [embedError, setEmbedError] = useState(false)
+  const linkType = getLinkType(link.url)
+  const embedUrl = link.url ? getEmbedUrl(link.url) : null
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-900" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700 flex-shrink-0">
+        {/* RIGHT: title + type */}
+        <div className="flex items-center gap-3">
+          <span className="text-white font-semibold text-sm">{link.name}</span>
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${linkType.color}`}>
+            {linkType.label}
+          </span>
+        </div>
+        {/* LEFT: actions */}
+        <div className="flex items-center gap-2">
+          {link.url && (
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-300 bg-indigo-900 rounded-lg hover:bg-indigo-800 transition-colors"
+            >
+              פתח בחלון חדש
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            סגור
+          </button>
+        </div>
+      </div>
+
+      {/* Embed area */}
+      <div className="flex-1 relative">
+        {embedUrl && !embedError ? (
+          <iframe
+            src={embedUrl}
+            className="w-full h-full border-0"
+            title={link.name}
+            allow="autoplay; fullscreen"
+            onError={() => setEmbedError(true)}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+            <svg className="w-16 h-16 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <div>
+              <p className="text-gray-300 font-semibold mb-1">האתר לא מאפשר הטמעה</p>
+              <p className="text-gray-500 text-sm">חלק מהאתרים חוסמים תצוגה מוטמעת מסיבות אבטחה</p>
+            </div>
+            {link.url && (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors"
+              >
+                פתח בחלון חדש
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
