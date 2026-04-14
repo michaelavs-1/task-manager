@@ -13,7 +13,7 @@ type Campaign = {
   budget_type: string | null; budget_intensity: string | null
   needs_michael_call: string | null; territory: string | null; ad_number: string | null
   board: string; relevant_link: string | null; facebook_link: string | null
-  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null
+  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null
 }
 type BoardKey = 'universal' | 'barbie' | 'general'
 
@@ -130,6 +130,12 @@ export function CampaignsView() {
     const id = campaign.id; setUpdatingId(id)
     const prevStatus = campaign.status; const prevGroupTitle = campaign.group_title
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: statusLabel, group_title: newGroupTitle } : c))
+    if (campaign.board === 'barbie') {
+      const { error } = await supabase.from('campaigns').update({ status: statusLabel, group_title: newGroupTitle }).eq('id', id)
+      if (error) setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: prevStatus, group_title: prevGroupTitle } : c))
+      setUpdatingId(null)
+      return
+    }
     try {
       const res = await fetch('/api/update-campaign-status', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -399,7 +405,12 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
               <div key={key}>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
                 {isLink ? (
-                  <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline mt-0.5 block truncate font-medium">{String(value)}</a>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate font-medium flex-1">{String(value)}</a>
+                    <button onClick={() => navigator.clipboard.writeText(String(value))} title="העתק קישור" className="flex-shrink-0 p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                  </div>
                 ) : (
                   <dd className="text-sm text-gray-700 mt-0.5 font-medium">{String(value)}</dd>
                 )}
