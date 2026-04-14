@@ -5,9 +5,8 @@ import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 
 type ArtistTab = 'events' | 'campaigns' | 'tasks'
-
 type Campaign = {
-  id: string
+  id: strin
   campaign_name: string
   status: string | null
   platforms: string | null
@@ -120,7 +119,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const productions = projects.filter(p => p.category === 'production')
 
   const artistTasks = selectedArtist
-    ? tasks.filter(t => (t.project_name === selectedArtist.name || (t as any).project === selectedArtist.name))
+    ? tasks.filter(t => ((t as any).project_name === selectedArtist.name || (t as any).project === selectedArtist.name))
     : []
 
   const hasBoardData = selectedArtist ? !!ARTIST_BOARD_MAP[selectedArtist.name] : false
