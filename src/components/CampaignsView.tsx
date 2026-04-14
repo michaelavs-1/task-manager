@@ -360,6 +360,25 @@ function ItemAccordion({
                 <dd className="text-sm text-gray-700 mt-1 font-medium">
                   {String(value)}
                 </dd>
+                {key === 'status' && (
+                  <select
+                    value={campaign.status || ''}
+                    onChange={(e) => {
+                      const s = e.target.value
+                      const gMap: Record<string, string> = (campaign.board === 'michael')
+                        ? { 'חדש': 'חדשים', 'באוויר': 'בטיפול', 'נגמר': 'הסתיימו' }
+                        : { 'חדש': 'לא טופל', 'עלה לאוויר': 'עלה לאוויר', 'נגמר-ארכיון': 'נגמר-ארכיון' }
+                      onStatusChange(campaign, s, gMap[s] || s)
+                    }}
+                    disabled={isUpdating}
+                    className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {(campaign.board === 'michael'
+                      ? ['חדש', 'באוויר', 'נגמר']
+                      : ['חדש', 'עלה לאוויר', 'נגמר-ארכיון']
+                    ).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                )}
               </div>
             )
           })}
@@ -372,26 +391,6 @@ function ItemAccordion({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
               >
-                              {campaign.status === 'חדש' && (
-                <button
-                  onClick={() => onStatusChange(campaign, 'עלה לאוויר', 'עלה לאוויר')}
-                  disabled={isUpdating}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? (<svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>) : (<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>)}
-                  עלה לאוויר
-                </button>
-              )}
-              {campaign.status === 'עלה לאוויר' && (
-                <button
-                  onClick={() => onStatusChange(campaign, 'נגמר-ארכיון', 'נגמר-ארכיון')}
-                  disabled={isUpdating}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? (<svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>) : null}
-                  נגמר
-                </button>
-              )}
               פתח ב-Monday.com
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
