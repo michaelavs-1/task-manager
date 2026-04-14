@@ -6,20 +6,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const MONDAY_API_KEY = process.env.MONDAY_API_KEY!
 const MONDAY_API_URL = 'https://api.monday.com/v2'
 
-// Board IDs
 const UNIVERSAL_BOARD_ID = '5087485301'
 const MICHAEL_BOARD_ID = '5089500208'
 
-// Status label → index mapping
 const STATUS_INDEX: Record<string, Record<string, number>> = {
   [UNIVERSAL_BOARD_ID]: {
     'חדש': 0,
     'עלה לאוויר': 1,
     'נגמר-ארכיון': 2,
-    'נגמר- ארכיון': 2,
   },
   [MICHAEL_BOARD_ID]: {
     'חדש': 0,
@@ -28,13 +24,11 @@ const STATUS_INDEX: Record<string, Record<string, number>> = {
   },
 }
 
-// Group title → group ID mapping
 const GROUP_ID: Record<string, Record<string, string>> = {
   [UNIVERSAL_BOARD_ID]: {
     'לא טופל': 'topics',
     'עלה לאוויר': 'group_title',
     'נגמר-ארכיון': 'group_mkxwd2xm',
-    'נגמר- ארכיון': 'group_mkxwd2xm',
   },
   [MICHAEL_BOARD_ID]: {
     'חדשים': 'topics',
@@ -43,12 +37,14 @@ const GROUP_ID: Record<string, Record<string, string>> = {
   },
 }
 
-async function callMondayApi(query: string) {
+async function callMonday(query: string) {
+  const mondayToken = process.env.MONDAY_API_TOKEN
   const res = await fetch(MONDAY_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: MONDAY_API_KEY,
+      'Authorization': mondayToken!,
+      'API-Version': '2023-10',
     },
     body: JSON.stringify({ query }),
   })
@@ -69,14 +65,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Fetch campaign to determine board
     const { data: campaign, error: fetchError } = await supabase
       .from('campaigns')
       .select('project_name')
       .eq('id', campaignId)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
@@ -85,13 +80,13 @@ export async function POST(req: NextRequest) {
     const groupId = GROUP_ID[boardId]?.[newGroupTitle]
 
     if (statusIndex === undefined) {
-      return NextResponse.json({ error: 'Unknown status label: ' + statusLabel }, { status: 400 })
+      return NextResponse.json({ error: 'Unknown status: ' + statusLabel }, { status: 400 })
     }
     if (!groupId) {
-      return NextResponse.json({ error: 'Unknown group title: ' + newGroupTitle }, { status: 400 })
+      return NextResponse.json({ error: 'Unknown group: ' + newGroupTitle }, { status: 400 })
     }
 
-    // 1. Update Monday status
+    // 1. Update Monday status column
     const statusMutation = `mutation {
       change_column_value(
         board_id: ${boardId},
@@ -101,12 +96,12 @@ export async function POST(req: NextRequest) {
       ) { id }
     }`
 
-    const statusResult = await callMondayApi(statusMutation)
+    const statusResult = await callMonday(statusMutation)
     if (statusResult.errors) {
-      return NextResponse.json({ error: 'Monday status update failed', details: statusResult.errors }, { status: 500 })
+      return NextResponse.json({ error: 'Status update failed', details: statusResult.errors }, { status: 500 })
     }
 
-    // 2. Move item to correct group
+    // 2. Move item to the new group
     const moveMutation = `mutation {
       move_item_to_group(
         item_id: ${mondayItemId},
@@ -114,12 +109,12 @@ export async function POST(req: NextRequest) {
       ) { id }
     }`
 
-    const moveResult = await callMondayApi(moveMutation)
+    const moveResult = await callMonday(moveMutation)
     if (moveResult.errors) {
-      return NextResponse.json({ error: 'Monday group move failed', details: moveResult.errors }, { status: 500 })
+      return NextResponse.json({ error: 'Group move failed', details: moveResult.errors }, { status: 500 })
     }
 
-    // 3. Update Supabase
+    // 3. Persist to Supabase
     const { error: updateError } = await supabase
       .from('campaigns')
       .update({ status: statusLabel, group_title: newGroupTitle })
