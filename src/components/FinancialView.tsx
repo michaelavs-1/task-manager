@@ -7,7 +7,6 @@ const TABS: { key: FinTab; label: string }[] = [
   { key: 'dashboard', label: 'דשבורד' },
   { key: 'old_table', label: 'טבלה ישנה' },
 ]
-
 export function FinancialView() {
   const [activeTab, setActiveTab] = useState<FinTab>('dashboard')
 
@@ -68,7 +67,7 @@ export function FinancialView() {
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">
           <iframe
-            src="https://docs.google.com/spreadsheets/d/1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo/pubhtml?gid=584902190&widget=true&headers=false"
+            src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTbSGGOVXESrSzFqHyFXdGNbpW_s7O6AVR8JF8MLzSXsLpJ5XCv3syW038Vp0pIapEWfYJ35hDXH_GJ/pubhtml?gid=584902190&widget=true&headers=false"
             className="flex-1 w-full border-0"
             title="טבלה ישנה"
             loading="lazy"
