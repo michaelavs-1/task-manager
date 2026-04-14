@@ -289,6 +289,10 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        {activeSection === "financial" ? (
+          <FinancialView />
+        ) : (
+        <>
         {/* Tasks Tab */}
         {activeTab === "tasks" && (
           <div className="max-w-6xl mx-auto px-8 py-8">
@@ -432,6 +436,8 @@ export default function Dashboard() {
           <div className="h-full">
             <ArtistDashboardView tasks={tasks} />
           </div>
+        )}
+        </>
         )}
       </main>
 
