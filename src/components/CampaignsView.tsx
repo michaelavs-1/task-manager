@@ -105,6 +105,14 @@ function filterCampaigns(campaigns: Campaign[], board: BoardKey): Campaign[] {
   return campaigns.filter((c) => (c.board || 'universal') === board)
 }
 
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  } catch { return dateStr }
+}
+
 export function CampaignsView() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [selectedBoard, setSelectedBoard] = useState<BoardKey>('universal')
@@ -152,16 +160,12 @@ export function CampaignsView() {
     const artistName = newArtistMode === 'create' ? newArtistName.trim() : selectedArtist
     if (!artistName) { setCreateError('יש לבחור או להזין שם אומן'); return }
     if (!showDate) { setCreateError('יש לבחור תאריך מופע'); return }
-    setIsCreating(true)
-    setCreateError('')
+    setIsCreating(true); setCreateError('')
     try {
       const { error } = await supabase.from('campaigns').insert({
         name: artistName + ' - ' + showDate,
-        board: 'barbie',
-        status: 'חדש',
-        group_title: 'לא טופל',
-        launch_date: showDate,
-        requester: artistName,
+        board: 'barbie', status: 'חדש', group_title: 'לא טופל',
+        launch_date: showDate, requester: artistName,
         updated_at: new Date().toISOString(),
       })
       if (error) throw error
@@ -183,8 +187,7 @@ export function CampaignsView() {
     setCampaigns((prev) => prev.map((c) => c.id === id ? { ...c, status: statusLabel, group_title: newGroupTitle } : c))
     try {
       const res = await fetch('/api/update-campaign-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId: id, mondayItemId: campaign.monday_item_id, statusLabel, newGroupTitle }),
       })
       if (!res.ok) throw new Error('Failed')
@@ -221,18 +224,12 @@ export function CampaignsView() {
   const filteredCampaigns = filterCampaigns(campaigns, selectedBoard)
 
   const barbyArchiveGroups = ['נגמר - בארבי', 'נגמר - ארכיון כל הקמפיינים']
-  const barbyActiveCampaigns = filteredCampaigns.filter((c) => !barbyArchiveGroups.includes(c.group_title || ''))
-  const barbyArchiveCampaigns = filteredCampaigns.filter((c) => barbyArchiveGroups.includes(c.group_title || ''))
-  const barbyDisplayed = barbySubTab === 'active' ? barbyActiveCampaigns : barbyArchiveCampaigns
-
-  const barbyGrouped = barbyDisplayed.reduce((acc, c) => {
-    const group = c.group_title || 'לא טופל'
-    if (!acc[group]) acc[group] = []
-    acc[group].push(c)
-    return acc
-  }, {} as Record<string, Campaign[]>)
-
-  const barbySortedGroups = Object.entries(barbyGrouped).sort(([a], [b]) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b))
+  const barbyActiveCampaigns = filteredCampaigns
+    .filter((c) => !barbyArchiveGroups.includes(c.group_title || ''))
+    .sort((a, b) => (a.launch_date || '').localeCompare(b.launch_date || ''))
+  const barbyArchiveCampaigns = filteredCampaigns
+    .filter((c) => barbyArchiveGroups.includes(c.group_title || ''))
+    .sort((a, b) => (b.launch_date || '').localeCompare(a.launch_date || ''))
 
   const grouped = filteredCampaigns.reduce((acc, c) => {
     const group = c.group_title || 'לא טופל'
@@ -301,25 +298,36 @@ export function CampaignsView() {
       )}
 
       {selectedBoard === 'barbie' ? (
-        barbySortedGroups.length === 0 ? (
-          <div className="text-center py-16">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-gray-500 font-medium">אין קמפיינים בקטגוריה זו</p>
-            {barbySubTab === 'active' && (
-              <button onClick={() => setShowNewModal(true)} className="mt-4 px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">
+        barbySubTab === 'active' ? (
+          barbyActiveCampaigns.length === 0 ? (
+            <div className="text-center py-16">
+              <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-gray-500 font-medium mb-4">אין קמפיינים פעילים</p>
+              <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">
                 + קמפיין חדש
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {barbyActiveCampaigns.map((campaign) => (
+                <BarbyCard key={campaign.id} campaign={campaign} onStatusChange={handleStatusChange} updatingId={updatingId} />
+              ))}
+            </div>
+          )
         ) : (
-          <div className="space-y-4">
-            {barbySortedGroups.map(([groupTitle, items]) => (
-              <GroupAccordion key={groupTitle} title={groupTitle} items={items}
-                borderClass={GROUP_BORDER[groupTitle]} onStatusChange={handleStatusChange} updatingId={updatingId} />
-            ))}
-          </div>
+          barbyArchiveCampaigns.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-gray-400 font-medium">אין קמפיינים בארכיון</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {barbyArchiveCampaigns.map((campaign) => (
+                <BarbyCard key={campaign.id} campaign={campaign} onStatusChange={handleStatusChange} updatingId={updatingId} muted />
+              ))}
+            </div>
+          )
         )
       ) : sortedGroups.length === 0 ? (
         <div className="text-center py-16">
@@ -421,6 +429,88 @@ export function CampaignsView() {
   )
 }
 
+function BarbyCard({ campaign, onStatusChange, updatingId, muted = false }: {
+  campaign: Campaign
+  onStatusChange: (campaign: Campaign, statusLabel: string, newGroupTitle: string) => void
+  updatingId: string | null
+  muted?: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const isUpdating = updatingId === campaign.id
+  const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
+
+  const artistName = campaign.requester || campaign.name
+  const dateStr = campaign.launch_date
+    ? (() => {
+        try { return new Date(campaign.launch_date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+        catch { return campaign.launch_date }
+      })()
+    : null
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 bg-white opacity-75' : 'border-pink-100 bg-white'}`}>
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-right p-4 focus:outline-none">
+        <div className={`h-1 rounded-full mb-4 ${muted ? 'bg-gray-200' : 'bg-gradient-to-l from-pink-400 to-pink-600'}`} />
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-gray-900 text-base leading-snug truncate">{artistName}</p>
+            {dateStr && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-xs text-gray-500 font-medium">{dateStr}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>
+              {campaign.status || 'ללא סטטוס'}
+            </span>
+            <span className={`text-gray-300 transition-transform text-xs ${expanded ? 'rotate-180' : ''}`}>▼</span>
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-3" dir="rtl">
+          {FIELDS.map(([label, key]) => {
+            const value = campaign[key]
+            if (!value) return null
+            return (
+              <div key={key}>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
+                <dd className="text-sm text-gray-700 mt-0.5 font-medium">{String(value)}</dd>
+                {key === 'status' && (
+                  <select value={campaign.status || ''} disabled={isUpdating}
+                    onChange={(e) => {
+                      const s = e.target.value
+                      const gMap: Record<string, string> = { 'חדש': 'לא טופל', 'עלה לאוויר': 'עלה לאוויר', 'נגמר-ארכיון': 'נגמר - בארבי' }
+                      onStatusChange(campaign, s, gMap[s] || s)
+                    }}
+                    className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    {['חדש', 'עלה לאוויר', 'נגמר-ארכיון'].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )
+          })}
+          {campaign.monday_item_id && (
+            <div className="pt-3 border-t border-gray-200">
+              <a href={`https://monday.com/boards/${campaign.monday_item_id}`} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
+                פתח ב-Monday.com
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function GroupAccordion({ title, items, borderClass, onStatusChange, updatingId }: {
   title: string; items: Campaign[]; borderClass?: string
   onStatusChange: (campaign: Campaign, statusLabel: string, newGroupTitle: string) => void; updatingId: string | null
@@ -511,4 +601,4 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
       )}
     </div>
   )
-}
+                      }
