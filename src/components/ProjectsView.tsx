@@ -150,7 +150,13 @@ export default function ProjectsView({ isManager, tasks }: Props) {
   }
 
   return (
-    <div className="flex gap-0 h-full bg-gray-50">
+    <div className="flex gap-0 h-full bg-gray-50" dir="rtl">
+      <div className="w-64 flex-shrink-0 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+        <div className="p-4 space-y-3">
+          <CategoryCard label="אומנים" category="artist" items={artists} />
+          <CategoryCard label="הפקות" category="production" items={productions} />
+        </div>
+      </div>
       <div className="flex-1 min-w-0 px-8 py-8 overflow-y-auto">
         {current ? (
           <div>
@@ -245,12 +251,7 @@ export default function ProjectsView({ isManager, tasks }: Props) {
         )}
       </div>
 
-      <div className="w-64 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto">
-        <div className="p-4 space-y-3">
-          <CategoryCard label="אומנים" category="artist" items={artists} />
-          <CategoryCard label="הפקות" category="production" items={productions} />
-        </div>
-      </div>
+
     </div>
   )
 }
