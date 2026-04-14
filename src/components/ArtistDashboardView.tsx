@@ -61,6 +61,13 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [showPastEvents, setShowPastEvents] = useState(false)
 
   useEffect(() => {
+    if (initialArtist && projects.length > 0) {
+      const match = projects.find(p => p.name === initialArtist)
+      if (match) setSelectedArtist(match)
+    }
+  }, [initialArtist, projects])
+
+  useEffect(() => {
     supabase.from('projects').select('*').order('category').order('name').then(({ data }) => {
       if (data) {
         setProjects(data as Project[])
@@ -113,7 +120,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const productions = projects.filter(p => p.category === 'production')
 
   const artistTasks = selectedArtist
-    ? tasks.filter(t => t.project === selectedArtist.name)
+    ? tasks.filter(t => (t.project_name === selectedArtist.name || (t as any).project === selectedArtist.name))
     : []
 
   const hasBoardData = selectedArtist ? !!ARTIST_BOARD_MAP[selectedArtist.name] : false
