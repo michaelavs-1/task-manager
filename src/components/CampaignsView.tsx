@@ -98,6 +98,35 @@ export function CampaignsView() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  const handleStatusChange = async (
+    campaign: Campaign,
+    statusLabel: string,
+    newGroupTitle: string
+  ) => {
+    const id = campaign.id
+    setUpdatingId(id)
+    const prevStatus = campaign.status
+    const prevGroupTitle = campaign.group_title
+    setCampaigns(prev =>
+      prev.map(c => c.id === id ? { ...c, status: statusLabel, group_title: newGroupTitle } : c)
+    )
+    try {
+      const res = await fetch('/api/update-campaign-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: id, mondayItemId: campaign.monday_item_id, statusLabel, newGroupTitle })
+      })
+      if (!res.ok) throw new Error('Failed')
+    } catch {
+      setCampaigns(prev =>
+        prev.map(c => c.id === id ? { ...c, status: prevStatus, group_title: prevGroupTitle } : c)
+      )
+    } finally {
+      setUpdatingId(null)
+    }
+  }
 
   // Load campaigns
   useEffect(() => {
@@ -229,6 +258,8 @@ export function CampaignsView() {
               title={groupTitle}
               items={items}
               borderClass={GROUP_BORDER[groupTitle]}
+              onStatusChange={handleStatusChange}
+              updatingId={updatingId}
             />
           ))}
         </div>
@@ -241,10 +272,14 @@ function GroupAccordion({
   title,
   items,
   borderClass,
+  onStatusChange,
+  updatingId,
 }: {
   title: string
   items: Campaign[]
   borderClass?: string
+  onStatusChange: (campaign: Campaign, statusLabel: string, newGroupTitle: string) => void
+  updatingId: string | null
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -270,7 +305,7 @@ function GroupAccordion({
       {expanded && (
         <div className="border-t border-gray-100 divide-y divide-gray-100">
           {items.map((item) => (
-            <ItemAccordion key={item.id} campaign={item} />
+            <ItemAccordion key={item.id} campaign={item} onStatusChange={onStatusChange} updatingId={updatingId} />
           ))}
         </div>
       )}
@@ -278,7 +313,16 @@ function GroupAccordion({
   )
 }
 
-function ItemAccordion({ campaign }: { campaign: Campaign }) {
+function ItemAccordion({
+  campaign,
+  onStatusChange,
+  updatingId,
+}: {
+  campaign: Campaign
+  onStatusChange: (campaign: Campaign, statusLabel: string, newGroupTitle: string) => void
+  updatingId: string | null
+}) {
+  const isUpdating = updatingId === campaign.id
   const [expanded, setExpanded] = useState(false)
 
   const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
@@ -328,7 +372,27 @@ function ItemAccordion({ campaign }: { campaign: Campaign }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
               >
-                פתח ב-Monday.com
+                              {campaign.status === 'חדש' && (
+                <button
+                  onClick={() => onStatusChange(campaign, 'עלה לאוויר', 'עלה לאוויר')}
+                  disabled={isUpdating}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? (<svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>) : (<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>)}
+                  עלה לאוויר
+                </button>
+              )}
+              {campaign.status === 'עלה לאוויר' && (
+                <button
+                  onClick={() => onStatusChange(campaign, 'נגמר-ארכיון', 'נגמר-ארכיון')}
+                  disabled={isUpdating}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdating ? (<svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>) : null}
+                  נגמר
+                </button>
+              )}
+              פתח ב-Monday.com
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
