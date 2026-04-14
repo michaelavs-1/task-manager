@@ -13,7 +13,7 @@ type Campaign = {
   budget_type: string | null; budget_intensity: string | null
   needs_michael_call: string | null; territory: string | null; ad_number: string | null
   board: string; relevant_link: string | null; facebook_link: string | null
-  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null
+  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; booking_agency: string | null; dark_media_link: string | null
 }
 type BoardKey = 'universal' | 'barbie' | 'general'
 
@@ -34,7 +34,7 @@ const STATUS_CLS: Record<string, string> = {
 const GROUP_ORDER = ['לא טופל','עלה לאוויר','נגמר - ארכיון כל הקמפיינים','נגמר - דיסני','נגמר - אמני יוניברסל חתומים','נגמר - בארבי']
 
 const FIELDS: [string, keyof Campaign][] = [
-  ['סטאטוס','status'],['מזמין','requester'],['פלטפורמה','platforms'],
+  ['סטאטוס','status'],['שם המופע','requester'],['משרד ייצוג','booking_agency'],['פלטפורמה','platforms'],
   ['פרויקט','project_name'],['מטרת הקמפיין','campaign_goal'],
   ['לו"ז קמפיין','schedule_type'],['סוג קמפיין','campaign_type'],
   ['תאריך עלייה','launch_date'],['תאריך סיום','end_date'],
@@ -43,7 +43,7 @@ const FIELDS: [string, keyof Campaign][] = [
   ['תקציב','budget_amount'],['הוספת כפתור','has_button'],
   ['סוג כפתור','button_type'],['לינק כפתור','button_link'],
   ['לינק רלוונטי','relevant_link'],['לינק לפייסבוק','facebook_link'],
-  ['לינק לאינסטגרם','instagram_link'],['לינק לקוד טיקטוק','tiktok_code_link'],
+  ['לינק לאינסטגרם','instagram_link'],['לינק לקוד טיקטוק','tiktok_code_link'],['דארק - מדיה','dark_media_link'],
   ['דגשים','notes'],['טקסט קופי','dark_copy'],['טריטוריה','territory'],
   ['מספר מודעה','ad_number'],['שיחה עם מיכאל','needs_michael_call'],
 ]
@@ -252,10 +252,29 @@ export function CampaignsView() {
             {barbySubTab==='active' && <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">+ קמפיין חדש</button>}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(barbySubTab==='active' ? barbyActiveCampaigns : barbyArchiveCampaigns).map(campaign => (
-              <BarbyCard key={campaign.id} campaign={campaign} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} />
-            ))}
+          <div>
+            {(() => {
+              const camps = barbySubTab==='active' ? barbyActiveCampaigns : barbyArchiveCampaigns
+              const groups: Record<string,Campaign[]> = {}
+              camps.forEach(camp => {
+                const key = camp.launch_date ? camp.launch_date.substring(0,7) : 'no-date'
+                if (!groups[key]) groups[key] = []
+                groups[key].push(camp)
+              })
+              const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+              return Object.keys(groups).sort().map(key => (
+                <div key={key} className="mb-6">
+                  <h3 className="text-sm font-bold text-gray-400 tracking-widest mb-3 pb-2 border-b border-gray-200 text-right uppercase">
+                    {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {groups[key].map(camp => (
+                      <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} />
+                    ))}
+                  </div>
+                </div>
+              ))
+            })()}
           </div>
         )
       ) : sortedGroups.length === 0 ? (
@@ -330,9 +349,15 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const isUpdating = updatingId === campaign.id
   const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
   const artistName = campaign.requester || campaign.name
-  const dateStr = campaign.launch_date ? (() => {
-    try { return new Date(campaign.launch_date).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric'}) }
-    catch { return campaign.launch_date }
+  const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
+  const dateStr = localLaunchDate ? (() => {
+    try { return new Date(localLaunchDate).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric'}) }
+    catch { return localLaunchDate }
+  })() : null
+  const daysRemaining = localLaunchDate ? (() => {
+    const today = new Date(); today.setHours(0,0,0,0)
+    const launch = new Date(localLaunchDate); launch.setHours(0,0,0,0)
+    return Math.round((launch.getTime() - today.getTime()) / (1000*60*60*24))
   })() : null
 
   const handleUpload = async (file: File) => {
@@ -379,6 +404,11 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
               <div className="flex items-center gap-1.5 mt-1.5">
                 <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 <span className="text-xs text-gray-500 font-medium">{dateStr}</span>
+                {daysRemaining !== null && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${daysRemaining < 0 ? 'bg-gray-100 text-gray-400' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-pink-50 text-pink-600'}`}>
+                    {daysRemaining < 0 ? `עבר` : daysRemaining === 0 ? 'היום!' : `${daysRemaining} ימים`}
+                  </span>
+                )}
               </div>
             )}
             {localMediaUrl && (
@@ -399,12 +429,19 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
         <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-3" dir="rtl">
           {FIELDS.map(([label, key]) => {
             const value = campaign[key]
-            if (!value) return null
-            const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link'].includes(key)
+            if (!value && key !== 'launch_date') return null
+            const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link','dark_media_link'].includes(key)
             return (
               <div key={key}>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
-                {isLink ? (
+                {key === 'launch_date' ? (
+                  <input type="date" value={localLaunchDate}
+                    onChange={async e => {
+                      const d = e.target.value; setLocalLaunchDate(d)
+                      await supabase.from('campaigns').update({ launch_date: d, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    }}
+                    className="mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer w-full" />
+                ) : isLink ? (
                   <div className="flex items-center gap-2 mt-0.5">
                     <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate font-medium flex-1">{String(value)}</a>
                     <button onClick={() => navigator.clipboard.writeText(String(value))} title="העתק קישור" className="flex-shrink-0 p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
@@ -519,12 +556,23 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
   const isUpdating = updatingId === campaign.id
   const [expanded, setExpanded] = useState(false)
   const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
+  const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
+  const daysRemaining = localLaunchDate ? (() => {
+    const today = new Date(); today.setHours(0,0,0,0)
+    const launch = new Date(localLaunchDate); launch.setHours(0,0,0,0)
+    return Math.round((launch.getTime() - today.getTime()) / (1000*60*60*24))
+  })() : null
   return (
     <div>
       <button onClick={() => setExpanded(!expanded)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${statusClass}`}>{campaign.status || 'ללא סטטוס'}</span>
           <span className="font-semibold text-gray-900 truncate">{campaign.name}</span>
+          {daysRemaining !== null && (
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${daysRemaining < 0 ? 'bg-gray-100 text-gray-400' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+              {daysRemaining < 0 ? `עבר` : daysRemaining === 0 ? 'היום!' : `${daysRemaining} ימים`}
+            </span>
+          )}
         </div>
         <span className={`text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7-7m0 0L5 14m7-7v12" /></svg>
@@ -534,12 +582,19 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
         <div className="px-5 py-4 bg-gray-50 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           {FIELDS.map(([label, key]) => {
             const value = campaign[key]
-            if (!value) return null
-            const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link'].includes(key)
+            if (!value && key !== 'launch_date') return null
+            const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link','dark_media_link'].includes(key)
             return (
               <div key={key}>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
-                {isLink ? (
+                {key === 'launch_date' ? (
+                  <input type="date" value={localLaunchDate}
+                    onChange={async e => {
+                      const d = e.target.value; setLocalLaunchDate(d)
+                      await supabase.from('campaigns').update({ launch_date: d, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    }}
+                    className="mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer w-full" />
+                ) : isLink ? (
                   <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline mt-1 block truncate font-medium">{String(value)}</a>
                 ) : (
                   <dd className="text-sm text-gray-700 mt-1 font-medium">{String(value)}</dd>
