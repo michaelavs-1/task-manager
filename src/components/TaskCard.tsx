@@ -35,9 +35,10 @@ interface Props {
   onStatusChange: (taskId: string, status: Task["status"]) => void
   onDelete: (taskId: string) => void
   onArchive: (taskId: string) => void
+  onNavigateToArtist?: (projectName: string) => void
 }
 
-export default function TaskCard({ task, isManager, onStatusChange, onDelete, onArchive }: Props) {
+export default function TaskCard({ task, isManager, onStatusChange, onDelete, onArchive, onNavigateToArtist }: Props) {
   const assignedName = (task.assigned_user as any)?.name || "לא שויך"
   const creatorName = (task.creator as any)?.name || ""
   const isArchived = task.status === "archived"
@@ -67,7 +68,19 @@ export default function TaskCard({ task, isManager, onStatusChange, onDelete, on
             <p className="text-gray-600 text-sm mb-3 whitespace-pre-wrap">{task.description}</p>
           )}
 
-          <div className="flex items-center gap-4 text-xs text-gray-400">
+          <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+            {(task as any).project && (
+              <button
+                onClick={() => onNavigateToArtist && onNavigateToArtist((task as any).project)}
+                className="flex items-center gap-1 text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+                title="עבור לדף האומן"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+                {(task as any).project}
+              </button>
+            )}
             <span className="flex items-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
