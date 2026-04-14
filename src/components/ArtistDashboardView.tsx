@@ -50,7 +50,7 @@ function isUpcoming(date: string | null): boolean {
   return date >= new Date().toISOString().split('T')[0]
 }
 
-export function ArtistDashboardView({ tasks }: { tasks: Task[] }) {
+export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; initialArtist?: string }) {
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedArtist, setSelectedArtist] = useState<Project | null>(null)
   const [tab, setTab] = useState<ArtistTab>('events')
@@ -69,6 +69,12 @@ export function ArtistDashboardView({ tasks }: { tasks: Task[] }) {
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (!initialArtist || projects.length === 0) return
+    const match = projects.find(p => p.name === initialArtist)
+    if (match) { setSelectedArtist(match); setTab('tasks') }
+  }, [initialArtist, projects])
 
   const loadEvents = useCallback(async (artist: Project) => {
     const boardId = ARTIST_BOARD_MAP[artist.name]
