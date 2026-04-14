@@ -220,7 +220,7 @@ export default function Dashboard() {
               <span>{label}</span>
               {icon}
             </button>
-          )))}
+          ))}
         </nav>
 
         {/* Bottom Actions */}
