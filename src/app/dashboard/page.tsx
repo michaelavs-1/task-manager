@@ -8,11 +8,12 @@ import ProjectsView from "@/components/ProjectsView"
 import { CampaignsView } from "@/components/CampaignsView"
 import { LinksView } from "@/components/LinksView"
 import { ArtistDashboardView } from "@/components/ArtistDashboardView"
+import { ActivityLogView } from "@/components/ActivityLogView"
 import { useTheme } from "@/components/ThemeProvider"
 import { FinancialView } from "@/components/FinancialView"
 
 type Section = "management" | "financial"
-type Tab = "tasks" | "projects" | "campaigns" | "links" | "artists"
+type Tab = "tasks" | "projects" | "campaigns" | "links" | "artists" | "activity"
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme()
@@ -438,6 +439,12 @@ export default function Dashboard() {
         {activeTab === "artists" && (
           <div className="h-full">
             <ArtistDashboardView tasks={tasks} initialArtist={selectedArtistName} />
+          </div>
+        )}
+        {/* Activity Log Tab */}
+        {activeTab === "activity" && (
+          <div className="h-full">
+            <ActivityLogView tasks={tasks} />
           </div>
         )}
         </>
