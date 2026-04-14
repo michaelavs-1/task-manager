@@ -4,11 +4,11 @@ import { useState } from 'react'
 type FinTab = 'dashboard' | 'old_table'
 
 const TABS: { key: FinTab; label: string }[] = [
+  { key: 'old_table', label: 'ראשית' },
   { key: 'dashboard', label: 'דשבורד' },
-  { key: 'old_table', label: 'טבלה ישנה' },
 ]
 export function FinancialView() {
-  const [activeTab, setActiveTab] = useState<FinTab>('dashboard')
+  const [activeTab, setActiveTab] = useState<FinTab>('old_table')
 
   return (
     <div className="flex flex-col h-full bg-gray-50" dir="rtl">
