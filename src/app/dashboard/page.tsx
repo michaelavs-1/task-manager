@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [activeTab, setActiveTab] = useState<Tab>("tasks")
+  const [selectedArtistName, setSelectedArtistName] = useState<string>("")
   const [activeSection, setActiveSection] = useState<Section>("management")
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
@@ -391,7 +392,9 @@ export default function Dashboard() {
                     isManager={userRole === "manager"}
                     onStatusChange={updateTaskStatus}
                     onDelete={deleteTask}
+                    onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
                     onArchive={archiveTask}
+                    onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
                   />
                 ))
               ) : (
@@ -434,7 +437,7 @@ export default function Dashboard() {
         {/* Artist Dashboard Tab */}
         {activeTab === "artists" && (
           <div className="h-full">
-            <ArtistDashboardView tasks={tasks} />
+            <ArtistDashboardView tasks={tasks} initialArtist={selectedArtistName} />
           </div>
         )}
         </>
@@ -461,6 +464,7 @@ function EmployeeSection({
   onStatusChange,
   onDelete,
   onArchive,
+  onNavigateToArtist,
 }: {
   employeeName: string
   tasks: Task[]
@@ -468,6 +472,7 @@ function EmployeeSection({
   onStatusChange: (taskId: string, status: Task["status"]) => void
   onDelete: (taskId: string) => void
   onArchive: (taskId: string) => void
+  onNavigateToArtist?: (projectName: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
 
@@ -495,6 +500,7 @@ function EmployeeSection({
                 onStatusChange={onStatusChange}
                 onDelete={onDelete}
                 onArchive={onArchive}
+                onNavigateToArtist={onNavigateToArtist}
               />
             </div>
           ))}
