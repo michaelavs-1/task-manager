@@ -9,7 +9,9 @@ import { CampaignsView } from "@/components/CampaignsView"
 import { LinksView } from "@/components/LinksView"
 import { ArtistDashboardView } from "@/components/ArtistDashboardView"
 import { useTheme } from "@/components/ThemeProvider"
+import { FinancialView } from "@/components/FinancialView"
 
+type Section = "management" | "financial"
 type Tab = "tasks" | "projects" | "campaigns" | "links" | "artists"
 
 export default function Dashboard() {
@@ -17,6 +19,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [activeTab, setActiveTab] = useState<Tab>("tasks")
+  const [activeSection, setActiveSection] = useState<Section>("management")
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
@@ -165,21 +168,46 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }} dir="rtl">
       {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-indigo-600 to-indigo-700 text-white flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-gradient-to-b from-slate-800 to-slate-900 text-white flex flex-col flex-shrink-0">
         {/* Header */}
-        <div className="px-6 py-6 border-b border-indigo-500/30">
+        <div className="px-6 py-6 border-b border-slate-700/50">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
             <h1 className="text-lg font-bold text-white">מערכת משימות</h1>
           </div>
-          <p className="text-xs text-indigo-200">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
+          <p className="text-xs text-slate-400">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
+          {/* Section switcher */}
+          <div className="flex mt-4 bg-slate-700/40 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setActiveSection("management")}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "management" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"}`}
+            >
+              ניהול
+            </button>
+            <button
+              onClick={() => setActiveSection("financial")}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "financial" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"}`}
+            >
+              פיננסי
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ tab, label, icon }) => (
+          {activeSection === "financial" ? (
+            <button
+              onClick={() => {}}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-slate-700/50 text-white"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              סקירה כללית
+            </button>
+          ) : navItems.map(({ tab, label, icon }) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -192,11 +220,11 @@ export default function Dashboard() {
               <span>{label}</span>
               {icon}
             </button>
-          ))}
+          )))}
         </nav>
 
         {/* Bottom Actions */}
-        <div className="px-3 py-4 border-t border-indigo-500/30 space-y-3">
+        <div className="px-3 py-4 border-t border-slate-700/50 space-y-3">
           {userRole === "manager" && activeTab === "tasks" && (
             <button
               onClick={() => setShowNewTask(true)}
@@ -208,7 +236,7 @@ export default function Dashboard() {
 
           {/* Theme Toggle */}
           <div className="bg-white bg-opacity-10 rounded-xl p-3">
-            <p className="text-xs text-indigo-200 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
+            <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setTheme('light')}
