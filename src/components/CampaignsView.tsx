@@ -28,7 +28,7 @@ const GROUP_BORDER: Record<string, string> = {
   'נגמר - אמני יוניברסל חתומים': 'border-l-purple-400','נגמר - בארבי': 'border-l-pink-400',
 }
 const STATUS_CLS: Record<string, string> = {
-  'חדש': 'bg-amber-100 text-amber-700','עלה לאוויר': 'bg-emerald-100 text-emerald-700',
+  'חדש': 'bg-amber-100 text-amber-700','פעיל': 'bg-amber-100 text-amber-700','עלה לאוויר': 'bg-emerald-100 text-emerald-700',
   'נגמר- ארכיון': 'bg-sky-100 text-sky-700',
 }
 const GROUP_ORDER = ['לא טופל','עלה לאוויר','נגמר - ארכיון כל הקמפיינים','נגמר - דיסני','נגמר - אמני יוניברסל חתומים','נגמר - בארבי']
@@ -111,7 +111,7 @@ export function CampaignsView() {
     setIsCreating(true); setCreateError('')
     try {
       const { error } = await supabase.from('campaigns').insert({
-        name: artistName + ' - ' + showDate, board: 'barbie', status: 'חדש',
+        name: artistName + ' - ' + showDate, board: 'barbie', status: 'פעיל',
         group_title: 'לא טופל', launch_date: showDate, requester: artistName,
         updated_at: new Date().toISOString(),
       })
@@ -198,20 +198,20 @@ export function CampaignsView() {
   const filteredArtists = barbyArtists.filter(a => a.toLowerCase().includes(artistSearch.toLowerCase()))
 
   if (loading) return (
-    <div className="p-8 text-center text-gray-500">
+    <div className="p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-500">
       <div className="inline-block w-6 h-6 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div className="p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
+    <div className="p-8 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">קמפיינים</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">קמפיינים</h1>
         <div className="flex items-center gap-3">
           {syncError && <span className="text-sm text-red-500 font-medium">{syncError}</span>}
           {selectedBoard === 'universal' && (
             <button onClick={handleSync} disabled={isSyncing}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${isSyncing ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${isSyncing ? 'bg-gray-200 text-gray-500 dark:text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
               {isSyncing && <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
               {isSyncing ? 'סנכרון...' : 'סנכרון'}
             </button>
@@ -229,7 +229,7 @@ export function CampaignsView() {
       <div className="flex gap-2 mb-8 flex-wrap">
         {BOARDS.map(({ key, label }) => (
           <button key={key} onClick={() => setSelectedBoard(key)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${selectedBoard === key ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${selectedBoard === key ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
             {label}
           </button>
         ))}
@@ -239,9 +239,9 @@ export function CampaignsView() {
         <div className="flex gap-2 mb-6">
           {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'}].map(({key,label}) => (
             <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 dark:text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
               {label}
-              <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 text-gray-500">
+              <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500">
                 {key==='active' ? barbyActiveCampaigns.length : key==='ended' ? barbyEndedCampaigns.length : barbyArchiveCampaigns.length}
               </span>
             </button>
@@ -252,7 +252,7 @@ export function CampaignsView() {
       {selectedBoard === 'barbie' ? (
         (barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns).length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : barbySubTab==='ended' ? 'אין קמפיינים שנגמרו' : 'אין קמפיינים בארכיון'}</p>
+            <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : barbySubTab==='ended' ? 'אין קמפיינים שנגמרו' : 'אין קמפיינים בארכיון'}</p>
             {barbySubTab==='active' && <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">+ קמפיין חדש</button>}
           </div>
         ) : (
@@ -268,7 +268,7 @@ export function CampaignsView() {
               const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
               return Object.keys(groups).sort().map(key => (
                 <div key={key} className="mb-6">
-                  <h3 className="text-sm font-bold text-gray-400 tracking-widest mb-3 pb-2 border-b border-gray-200 text-right uppercase">
+                  <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 tracking-widest mb-3 pb-2 border-b border-gray-200 dark:border-gray-600 text-right uppercase">
                     {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -283,7 +283,7 @@ export function CampaignsView() {
         )
       ) : sortedGroups.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-gray-500 font-medium">אין קמפיינים בקטגוריה זו</p>
+          <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">אין קמפיינים בקטגוריה זו</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -295,43 +295,43 @@ export function CampaignsView() {
 
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowNewModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">קמפיין חדש — בארבי</h2>
-              <button onClick={() => setShowNewModal(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">קמפיין חדש — בארבי</h2>
+              <button onClick={() => setShowNewModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
             <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">בחירת אומן</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">בחירת אומן</label>
               <div className="flex gap-2 mb-3">
-                <button onClick={() => setNewArtistMode('select')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='select' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>בחר מהמאגר</button>
-                <button onClick={() => setNewArtistMode('create')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='create' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>+ אומן חדש</button>
+                <button onClick={() => setNewArtistMode('select')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='select' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-800'}`}>בחר מהמאגר</button>
+                <button onClick={() => setNewArtistMode('create')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='create' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-800'}`}>+ אומן חדש</button>
               </div>
               {newArtistMode==='select' ? (
                 <div>
-                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  <div className="max-h-44 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                    {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו אומנים</div>
+                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
+                    {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">לא נמצאו אומנים</div>
                       : filteredArtists.map(artist => (
-                        <button key={artist} onClick={() => setSelectedArtist(artist)} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>{artist}</button>
+                        <button key={artist} onClick={() => setSelectedArtist(artist)} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
                       ))}
                   </div>
                   {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
                 </div>
               ) : (
                 <div>
-                  <input type="text" placeholder="שם האומן / המופע..." value={newArtistName} onChange={e => setNewArtistName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  <p className="mt-1.5 text-xs text-gray-400">האומן יתווסף למאגר הקבוע לשימוש עתידי</p>
+                  <input type="text" placeholder="שם האומן / המופע..." value={newArtistName} onChange={e => setNewArtistName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">האומן יתווסף למאגר הקבוע לשימוש עתידי</p>
                 </div>
               )}
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">תאריך מופע</label>
-              <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע</label>
+              <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
             </div>
             {createError && <p className="mb-4 text-sm text-red-500 font-medium">{createError}</p>}
             <div className="flex gap-3">
-              <button onClick={handleCreateCampaign} disabled={isCreating} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isCreating ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-pink-600 text-white hover:bg-pink-700'}`}>{isCreating ? 'יוצר...' : 'צור קמפיין'}</button>
-              <button onClick={() => setShowNewModal(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">ביטול</button>
+              <button onClick={handleCreateCampaign} disabled={isCreating} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isCreating ? 'bg-gray-200 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-pink-600 text-white hover:bg-pink-700'}`}>{isCreating ? 'יוצר...' : 'צור קמפיין'}</button>
+              <button onClick={() => setShowNewModal(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 transition-colors">ביטול</button>
             </div>
           </div>
         </div>
@@ -351,7 +351,8 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [localMediaUrl, setLocalMediaUrl] = useState<string | null>(campaign.media_url || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isUpdating = updatingId === campaign.id
-  const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
+  const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
+  const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
   const artistName = campaign.requester || campaign.name
   const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
   const dateStr = localLaunchDate ? (() => {
@@ -398,18 +399,18 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const isVideo = localMediaUrl ? /\.(mp4|mov|avi|webm)$/i.test(localMediaUrl) : false
 
   return (
-    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 bg-white opacity-75' : 'border-pink-100 bg-white'}`}>
+    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
       <button onClick={() => setExpanded(!expanded)} className="w-full text-right p-4 focus:outline-none">
         <div className={`h-1 rounded-full mb-4 ${muted ? 'bg-gray-200' : 'bg-gradient-to-l from-pink-400 to-pink-600'}`} />
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 text-base leading-snug truncate">{artistName}</p>
+            <p className="font-bold text-gray-900 dark:text-white text-base leading-snug truncate">{artistName}</p>
             {dateStr && (
               <div className="flex items-center gap-1.5 mt-1.5">
-                <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span className="text-xs text-gray-500 font-medium">{dateStr}</span>
+                <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{dateStr}</span>
                 {daysRemaining !== null && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${daysRemaining < 0 ? 'bg-gray-100 text-gray-400' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-pink-50 text-pink-600'}`}>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${daysRemaining < 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-pink-50 text-pink-600'}`}>
                     {daysRemaining < 0 ? `עבר` : daysRemaining === 0 ? 'היום!' : `${daysRemaining} ימים`}
                   </span>
                 )}
@@ -423,37 +424,37 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             )}
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>{campaign.status || 'ללא סטטוס'}</span>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>{displayStatus}</span>
             <span className={`text-gray-300 transition-transform text-xs ${expanded ? 'rotate-180' : ''}`}>▼</span>
           </div>
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-gray-100 px-4 py-4 bg-gray-50 space-y-3" dir="rtl">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-4 bg-gray-50 dark:bg-gray-800 space-y-3" dir="rtl">
           {FIELDS.map(([label, key]) => {
             const value = campaign[key]
             if (!value && key !== 'launch_date') return null
             const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link','dark_media_link'].includes(key)
             return (
               <div key={key}>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{label}</dt>
                 {key === 'launch_date' ? (
                   <input type="date" value={localLaunchDate}
                     onChange={async e => {
                       const d = e.target.value; setLocalLaunchDate(d)
                       await supabase.from('campaigns').update({ launch_date: d, updated_at: new Date().toISOString() }).eq('id', campaign.id)
                     }}
-                    className="mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer w-full" />
+                    className="mt-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer w-full dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 ) : isLink ? (
                   <div className="flex items-center gap-2 mt-0.5">
                     <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate font-medium flex-1">{String(value)}</a>
-                    <button onClick={() => navigator.clipboard.writeText(String(value))} title="העתק קישור" className="flex-shrink-0 p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                    <button onClick={() => navigator.clipboard.writeText(String(value))} title="העתק קישור" className="flex-shrink-0 p-1 text-gray-400 dark:text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                     </button>
                   </div>
                 ) : (
-                  <dd className="text-sm text-gray-700 mt-0.5 font-medium">{String(value)}</dd>
+                  <dd className="text-sm text-gray-700 dark:text-gray-200 mt-0.5 font-medium">{String(value)}</dd>
                 )}
                 {key === 'status' && (
                   <select value={campaign.status || ''} disabled={isUpdating}
@@ -462,7 +463,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                       const gMap: Record<string,string> = {'פעיל':'לא טופל','נגמר':'נגמר - בארבי','ארכיון':'נגמר - ארכיון כל הקמפיינים'}
                       onStatusChange(campaign, s, gMap[s] || s)
                     }}
-                    className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer disabled:opacity-50">
+                    className="mt-2 w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer disabled:opacity-50 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600">
                     {['פעיל','נגמר','ארכיון'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
@@ -471,16 +472,16 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           })}
 
           {/* Media section */}
-          <div className="pt-3 border-t border-gray-200">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">מדיה</p>
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">מדיה</p>
             {localMediaUrl ? (
               <div className="space-y-2">
                 {isImage && <img src={localMediaUrl} alt="media" className="w-full rounded-lg max-h-48 object-cover" />}
                 {isVideo && <video src={localMediaUrl} controls className="w-full rounded-lg max-h-48" />}
                 {!isImage && !isVideo && (
-                  <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg">
-                    <svg className="w-8 h-8 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    <span className="text-sm text-gray-600 truncate flex-1">{localMediaUrl.split('/').pop()}</span>
+                  <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <svg className="w-8 h-8 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate flex-1">{localMediaUrl.split('/').pop()}</span>
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -504,17 +505,17 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                 onDragOver={e => { e.preventDefault(); setDragging(true) }}
                 onDragLeave={() => setDragging(false)}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${dragging ? 'border-pink-400 bg-pink-50' : 'border-gray-200 hover:border-pink-300 hover:bg-pink-50/30'}`}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${dragging ? 'border-pink-400 bg-pink-50' : 'border-gray-200 dark:border-gray-600 hover:border-pink-300 hover:bg-pink-50/30'}`}
               >
                 {uploading ? (
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
                     <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-pink-500 rounded-full animate-spin" />
                     מעלה...
                   </div>
                 ) : (
                   <>
                     <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    <p className="text-xs text-gray-400 font-medium">גרור קובץ לכאן</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">גרור קובץ לכאן</p>
                     <p className="text-xs text-gray-300 mt-0.5">או לחץ לבחירה</p>
                   </>
                 )}
@@ -535,18 +536,18 @@ function GroupAccordion({ title, items, borderClass, onStatusChange, updatingId 
 }) {
   const [expanded, setExpanded] = useState(false)
   return (
-    <div className={`bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm ${borderClass ? `border-l-4 ${borderClass}` : ''}`}>
-      <button onClick={() => setExpanded(!expanded)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+    <div className={`bg-white border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm ${borderClass ? `border-l-4 ${borderClass}` : ''}`}>
+      <button onClick={() => setExpanded(!expanded)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 dark:bg-gray-800 transition-colors">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-gray-900">{title}</span>
-          <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{items.length}</span>
+          <span className="font-semibold text-gray-900 dark:text-white">{title}</span>
+          <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">{items.length}</span>
         </div>
-        <span className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}>
+        <span className={`text-gray-400 dark:text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7-7m0 0L5 14m7-7v12" /></svg>
         </span>
       </button>
       {expanded && (
-        <div className="border-t border-gray-100 divide-y divide-gray-100">
+        <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100">
           {items.map(item => <ItemAccordion key={item.id} campaign={item} onStatusChange={onStatusChange} updatingId={updatingId} />)}
         </div>
       )}
@@ -559,7 +560,7 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
 }) {
   const isUpdating = updatingId === campaign.id
   const [expanded, setExpanded] = useState(false)
-  const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 text-gray-700'
+  const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
   const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
   const daysRemaining = localLaunchDate ? (() => {
     const today = new Date(); today.setHours(0,0,0,0)
@@ -568,40 +569,40 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
   })() : null
   return (
     <div>
-      <button onClick={() => setExpanded(!expanded)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+      <button onClick={() => setExpanded(!expanded)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 dark:bg-gray-800 transition-colors">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${statusClass}`}>{campaign.status || 'ללא סטטוס'}</span>
-          <span className="font-semibold text-gray-900 truncate">{campaign.name}</span>
+          <span className="font-semibold text-gray-900 dark:text-white truncate">{campaign.name}</span>
           {daysRemaining !== null && (
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${daysRemaining < 0 ? 'bg-gray-100 text-gray-400' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${daysRemaining < 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
               {daysRemaining < 0 ? `עבר` : daysRemaining === 0 ? 'היום!' : `${daysRemaining} ימים`}
             </span>
           )}
         </div>
-        <span className={`text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}>
+        <span className={`text-gray-400 dark:text-gray-500 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7-7m0 0L5 14m7-7v12" /></svg>
         </span>
       </button>
       {expanded && (
-        <div className="px-5 py-4 bg-gray-50 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+        <div className="px-5 py-4 bg-gray-50 dark:bg-gray-800 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           {FIELDS.map(([label, key]) => {
             const value = campaign[key]
             if (!value && key !== 'launch_date') return null
             const isLink = ['relevant_link','facebook_link','instagram_link','tiktok_code_link','button_link','dark_media_link'].includes(key)
             return (
               <div key={key}>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</dt>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{label}</dt>
                 {key === 'launch_date' ? (
                   <input type="date" value={localLaunchDate}
                     onChange={async e => {
                       const d = e.target.value; setLocalLaunchDate(d)
                       await supabase.from('campaigns').update({ launch_date: d, updated_at: new Date().toISOString() }).eq('id', campaign.id)
                     }}
-                    className="mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer w-full" />
+                    className="mt-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer w-full dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600" />
                 ) : isLink ? (
                   <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline mt-1 block truncate font-medium">{String(value)}</a>
                 ) : (
-                  <dd className="text-sm text-gray-700 mt-1 font-medium">{String(value)}</dd>
+                  <dd className="text-sm text-gray-700 dark:text-gray-200 mt-1 font-medium">{String(value)}</dd>
                 )}
                 {key === 'status' && (
                   <select value={campaign.status || ''} disabled={isUpdating}
@@ -612,7 +613,7 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
                         : {'חדש':'לא טופל','עלה לאוויר':'עלה לאוויר','נגמר-ארכיון':'נגמר-ארכיון'}
                       onStatusChange(campaign, s, gMap[s] || s)
                     }}
-                    className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer disabled:opacity-50">
+                    className="mt-2 w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer disabled:opacity-50">
                     {['פעיל','נגמר','ארכיון'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
@@ -620,7 +621,7 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
             )
           })}
           {campaign.monday_item_id && (
-            <div className="col-span-1 md:col-span-2 pt-4 border-t border-gray-200 mt-2">
+            <div className="col-span-1 md:col-span-2 pt-4 border-t border-gray-200 dark:border-gray-600 mt-2">
               <a href={`https://monday.com/boards/${campaign.monday_item_id}`} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors">
                 פתח ב-Monday.com
