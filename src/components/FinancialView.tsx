@@ -7,8 +7,10 @@ const TABS: { key: FinTab; label: string }[] = [
   { key: 'old_table', label: 'ראשית' },
   { key: 'dashboard', label: 'דשבורד' },
 ]
-export function FinancialView() {
-  const [activeTab, setActiveTab] = useState<FinTab>('old_table')
+export function FinancialView({ defaultTab }: { defaultTab?: 'overview' | 'main' } = {}) {
+  const [activeTab, setActiveTab] = useState<FinTab>(defaultTab === 'overview' ? 'dashboard' : 'old_table')
+
+  useEffect(() => { if (defaultTab === 'overview') setActiveTab('dashboard'); else setActiveTab('old_table') }, [defaultTab])
 
   return (
     <div className="flex flex-col h-full bg-gray-50" dir="rtl">
