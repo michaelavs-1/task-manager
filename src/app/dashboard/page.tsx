@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("tasks")
   const [selectedArtistName, setSelectedArtistName] = useState<string>("")
   const [activeSection, setActiveSection] = useState<Section>("management")
+  const [financialTab, setFinancialTab] = useState<'overview'|'main'>('main')
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
@@ -292,7 +293,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         {activeSection === "financial" ? (
-          <FinancialView />
+          <FinancialView defaultTab={financialTab} />
         ) : (
         <>
         {/* Tasks Tab */}
