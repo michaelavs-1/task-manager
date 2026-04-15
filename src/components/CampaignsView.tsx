@@ -72,7 +72,7 @@ export function CampaignsView() {
   const [syncError, setSyncError] = useState('')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [barbySubTab, setBarbySubTab] = useState<'active' | 'archive'>('active')
+  const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive'>('active')
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
   const [artistSearch, setArtistSearch] = useState('')
@@ -178,11 +178,15 @@ export function CampaignsView() {
 
   const filteredCampaigns = filterCampaigns(campaigns, selectedBoard)
   const barbyArchiveGroups = ['נגמר - בארבי','נגמר - ארכיון כל הקמפיינים']
+  const _today = new Date(); _today.setHours(0,0,0,0)
   const barbyActiveCampaigns = filteredCampaigns
-    .filter(c => !barbyArchiveGroups.includes(c.group_title || ''))
+    .filter(c => c.status !== 'ארכיון' && (!c.launch_date || new Date(c.launch_date) >= _today))
     .sort((a, b) => (a.launch_date || '').localeCompare(b.launch_date || ''))
+  const barbyEndedCampaigns = filteredCampaigns
+    .filter(c => c.status !== 'ארכיון' && c.launch_date && new Date(c.launch_date) < _today)
+    .sort((a, b) => (b.launch_date || '').localeCompare(a.launch_date || ''))
   const barbyArchiveCampaigns = filteredCampaigns
-    .filter(c => barbyArchiveGroups.includes(c.group_title || ''))
+    .filter(c => c.status === 'ארכיון')
     .sort((a, b) => (b.launch_date || '').localeCompare(a.launch_date || ''))
   const grouped = filteredCampaigns.reduce((acc, c) => {
     const group = c.group_title || 'לא טופל'
@@ -233,8 +237,8 @@ export function CampaignsView() {
 
       {selectedBoard === 'barbie' && (
         <div className="flex gap-2 mb-6">
-          {[{key:'active',label:'קמפיינים פעילים'},{key:'archive',label:'ארכיון קמפיינים'}].map(({key,label}) => (
-            <button key={key} onClick={() => setBarbySubTab(key as 'active'|'archive')}
+          {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'}].map(({key,label}) => (
+            <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive')}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
               {label}
               <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 text-gray-500">
@@ -246,7 +250,7 @@ export function CampaignsView() {
       )}
 
       {selectedBoard === 'barbie' ? (
-        (barbySubTab==='active' ? barbyActiveCampaigns : barbyArchiveCampaigns).length === 0 ? (
+        (barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns).length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : 'אין קמפיינים בארכיון'}</p>
             {barbySubTab==='active' && <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">+ קמפיין חדש</button>}
@@ -459,7 +463,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                       onStatusChange(campaign, s, gMap[s] || s)
                     }}
                     className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer disabled:opacity-50">
-                    {['חדש','עלה לאוויר','נגמר-ארכיון'].map(s => <option key={s} value={s}>{s}</option>)}
+                    {['פעיל','נגמר','ארכיון'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
               </div>
@@ -609,7 +613,7 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
                       onStatusChange(campaign, s, gMap[s] || s)
                     }}
                     className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer disabled:opacity-50">
-                    {(campaign.board==='michael' ? ['חדש','באוויר','נגמר'] : ['חדש','עלה לאוויר','נגמר-ארכיון']).map(s => <option key={s} value={s}>{s}</option>)}
+                    {['פעיל','נגמר','ארכיון'].map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 )}
               </div>
