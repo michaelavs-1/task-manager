@@ -242,7 +242,7 @@ export function CampaignsView() {
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>
               {label}
               <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 text-gray-500">
-                {key==='active' ? barbyActiveCampaigns.length : barbyArchiveCampaigns.length}
+                {key==='active' ? barbyActiveCampaigns.length : key==='ended' ? barbyEndedCampaigns.length : barbyArchiveCampaigns.length}
               </span>
             </button>
           ))}
@@ -252,13 +252,13 @@ export function CampaignsView() {
       {selectedBoard === 'barbie' ? (
         (barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns).length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : 'אין קמפיינים בארכיון'}</p>
+            <p className="text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : barbySubTab==='ended' ? 'אין קמפיינים שנגמרו' : 'אין קמפיינים בארכיון'}</p>
             {barbySubTab==='active' && <button onClick={() => setShowNewModal(true)} className="px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">+ קמפיין חדש</button>}
           </div>
         ) : (
           <div>
             {(() => {
-              const camps = barbySubTab==='active' ? barbyActiveCampaigns : barbyArchiveCampaigns
+              const camps = barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns
               const groups: Record<string,Campaign[]> = {}
               camps.forEach(camp => {
                 const key = camp.launch_date ? camp.launch_date.substring(0,7) : 'no-date'
@@ -459,7 +459,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                   <select value={campaign.status || ''} disabled={isUpdating}
                     onChange={e => {
                       const s = e.target.value
-                      const gMap: Record<string,string> = {'חדש':'לא טופל','עלה לאוויר':'עלה לאוויר','נגמר-ארכיון':'נגמר - בארבי'}
+                      const gMap: Record<string,string> = {'פעיל':'לא טופל','נגמר':'נגמר - בארבי','ארכיון':'נגמר - ארכיון כל הקמפיינים'}
                       onStatusChange(campaign, s, gMap[s] || s)
                     }}
                     className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 cursor-pointer disabled:opacity-50">
