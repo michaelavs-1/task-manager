@@ -73,6 +73,7 @@ export function CampaignsView() {
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive'>('active')
+  const [barbyViewMode, setBarbyViewMode] = useState<'cards' | 'table'>('cards')
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
   const [artistSearch, setArtistSearch] = useState('')
@@ -259,6 +260,42 @@ export function CampaignsView() {
           <div>
             {(() => {
               const camps = barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns
+              if (barbyViewMode === 'table') {
+                const _today2 = new Date(); _today2.setHours(0,0,0,0)
+                return (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl overflow-hidden shadow-sm">
+                    <table className="w-full text-sm" dir="rtl">
+                      <thead>
+                        <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                          {['אומן','תאריך מופע','ימים','סטאטוס','פלטפורמה','מדיה','הערות'].map(h=>(
+                            <th key={h} className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                        {camps.map(camp => {
+                          const dL = camp.launch_date ? Math.round((new Date(camp.launch_date).setHours(0,0,0,0) - _today2.getTime()) / 86400000) : null
+                          const dS = camp.status === 'חדש' ? 'פעיל' : (camp.status || '—')
+                          const sCls = STATUS_CLS[camp.status||''] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          return (
+                            <tr key={camp.id} className="hover:bg-pink-50/30 dark:hover:bg-gray-750 transition-colors">
+                              <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{camp.requester || camp.name}</td>
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{camp.launch_date ? new Date(camp.launch_date).toLocaleDateString('he-IL') : '—'}</td>
+                              <td className="px-4 py-3">
+                                {dL !== null && <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${dL<0?'bg-gray-100 dark:bg-gray-700 text-gray-400':dL===0?'bg-green-100 text-green-700':dL<=7?'bg-red-100 text-red-600':'bg-pink-50 text-pink-600'}`}>{dL<0?'עבר':dL===0?'היום!':dL+' ימים'}</span>}
+                              </td>
+                              <td className="px-4 py-3"><span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${sCls}`}>{dS}</span></td>
+                              <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{camp.platforms || '—'}</td>
+                              <td className="px-4 py-3">{camp.media_url ? <a href={camp.media_url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 hover:underline">צפייה</a> : <span className="text-gray-300 dark:text-gray-600 text-xs">לא הועלה</span>}</td>
+                              <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs max-w-xs truncate">{camp.notes || '—'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              }
               const groups: Record<string,Campaign[]> = {}
               camps.forEach(camp => {
                 const key = camp.launch_date ? camp.launch_date.substring(0,7) : 'no-date'
