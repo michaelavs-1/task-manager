@@ -56,7 +56,7 @@ export function TicketTrackingView() {
     const val = parseInt(inputValues[campaignId] ?? '')
     if (isNaN(val)) return
     setSavingId(campaignId)
-    const today = new Date().toISOString().split('T')[0]
+    const today = snapshotDate
     await supabase.from('campaigns')
       .update({ tickets_sold: val, updated_at: new Date().toISOString() })
       .eq('id', campaignId)
