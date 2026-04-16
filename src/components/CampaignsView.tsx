@@ -447,49 +447,58 @@ export function CampaignsView() {
                 const pctBg = pct !== null ? (pct >= 80 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : pct >= 50 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' : 'bg-pink-50 border-pink-200 dark:bg-pink-900/20 dark:border-pink-800') : ''
                 const barColor = pct !== null ? (pct >= 80 ? 'bg-gradient-to-l from-emerald-400 to-emerald-500' : pct >= 50 ? 'bg-gradient-to-l from-amber-400 to-amber-500' : 'bg-gradient-to-l from-pink-400 to-pink-500') : 'bg-pink-300'
                 return (
-                  <div key={key} className="mb-8">
-                    {/* Month stats header */}
-                    <div className="mb-3 rounded-2xl border border-pink-100 dark:border-gray-700 px-5 py-4 flex items-center justify-between bg-gradient-to-l from-pink-50 to-white dark:from-gray-800 dark:to-gray-850">
-                      {/* Stats pills */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
-                          <span className="text-lg font-extrabold text-gray-800 dark:text-white leading-none">{monthCamps.length}</span>
-                          <span className="text-xs text-gray-400 mt-0.5">מופעים</span>
+                  <div key={key} className="mb-10">
+                    {/* Month section header */}
+                    <div className="mb-5">
+                      {/* Title row with dividers */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent to-pink-200 dark:to-pink-900" />
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-gray-800 border-2 border-pink-200 dark:border-pink-900 shadow-sm">
+                          <span className="text-2xl">📅</span>
+                          <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                            {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
+                          </h3>
+                        </div>
+                        <div className="flex-1 h-px bg-gradient-to-l from-transparent to-pink-200 dark:to-pink-900" />
+                      </div>
+                      {/* Stats bar */}
+                      <div className="flex items-stretch gap-3 flex-wrap justify-center">
+                        <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
+                          <span className="text-2xl font-black text-gray-800 dark:text-white leading-none">{monthCamps.length}</span>
+                          <span className="text-xs text-gray-400 mt-1 font-medium">מופעים</span>
                         </div>
                         {totalForSale > 0 && (
                           <>
-                            <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
-                              <span className="text-lg font-extrabold text-pink-600 leading-none">{totalForSale.toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 mt-0.5">למכירה</span>
+                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
+                              <span className="text-2xl font-black text-pink-600 leading-none">{totalForSale.toLocaleString()}</span>
+                              <span className="text-xs text-gray-400 mt-1 font-medium">כרטיסים למכירה</span>
                             </div>
-                            <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
-                              <span className="text-lg font-extrabold text-indigo-600 leading-none">{totalSold.toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 mt-0.5">נמכרו</span>
+                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
+                              <span className="text-2xl font-black text-indigo-600 leading-none">{totalSold.toLocaleString()}</span>
+                              <span className="text-xs text-gray-400 mt-1 font-medium">נמכרו</span>
+                            </div>
+                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
+                              <span className="text-2xl font-black text-gray-400 leading-none">{(totalForSale - totalSold).toLocaleString()}</span>
+                              <span className="text-xs text-gray-400 mt-1 font-medium">נותרו</span>
                             </div>
                             {pct !== null && (
-                              <div className={'flex flex-col items-center rounded-xl px-3 py-2 border min-w-[52px] shadow-sm ' + pctBg}>
-                                <span className={'text-lg font-extrabold leading-none ' + pctColor}>{pct}%</span>
-                                <span className="text-xs text-gray-400 mt-0.5">נמכר</span>
+                              <div className={'flex flex-col items-center rounded-2xl px-5 py-3 border shadow-sm min-w-[72px] ' + pctBg}>
+                                <span className={'text-2xl font-black leading-none ' + pctColor}>{pct}%</span>
+                                <span className="text-xs text-gray-400 mt-1 font-medium">נמכר</span>
                               </div>
                             )}
                           </>
                         )}
                       </div>
-                      {/* Month title */}
-                      <div className="text-right">
-                        <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                          {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
-                        </h3>
-                      </div>
-                    </div>
-                    {/* Progress bar */}
-                    {totalForSale > 0 && pct !== null && (
-                      <div className="mb-4 px-1">
-                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div className={'h-full rounded-full transition-all ' + barColor} style={{ width: Math.min(100, pct) + '%' }} />
+                      {/* Progress bar */}
+                      {totalForSale > 0 && pct !== null && (
+                        <div className="mt-3 px-1">
+                          <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div className={'h-full rounded-full transition-all ' + barColor} style={{ width: Math.min(100, pct) + '%' }} />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {groups[key].map(camp => (
                         <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} />
