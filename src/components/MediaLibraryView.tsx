@@ -33,6 +33,11 @@ export function MediaLibraryView() {
   useEffect(() => {
     loadCampaigns()
     loadGallery()
+    // Load Dropbox token from localStorage
+    try {
+      const t = localStorage.getItem('dropbox_token_v1')
+      if (t) setDropboxToken(t)
+    } catch {}
   }, [])
 
   async function loadCampaigns() {
