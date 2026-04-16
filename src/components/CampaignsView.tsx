@@ -880,7 +880,6 @@ function PixelsView() {
 
       {pixels.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-4xl mb-3">🔲</p>
           <p className="text-gray-400 font-medium">אין פיקסלים עדיין</p>
           <p className="text-gray-300 text-sm mt-1">לחץ על "פיקסל חדש" להוספה</p>
         </div>

@@ -190,7 +190,7 @@ export function ActivityLogView({ tasks }: { tasks: Task[] }) {
             {(['all', 'task', 'campaign'] as const).map(t => (
               <button key={t} onClick={() => setTypeFilter(t)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${typeFilter === t ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
-                {t === 'all' ? 'הכל' : t === 'task' ? '✓ משימות' : '📣 קמפיינים'}
+                {t === 'all' ? 'הכל' : t === 'task' ? 'משימות' : 'קמפיינים'}
               </button>
             ))}
           </div>
