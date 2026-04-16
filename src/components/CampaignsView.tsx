@@ -652,6 +652,14 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                 <span className="text-xs text-pink-500 font-medium">מדיה מצורפת</span>
               </div>
             )}
+            {ticketsRemaining !== null && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <svg className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ticketsRemaining <= 0 ? 'bg-red-100 text-red-600' : ticketsRemaining <= 20 ? 'bg-orange-100 text-orange-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                  {ticketsRemaining <= 0 ? 'אזלו הכרטיסים' : `נותרו ${ticketsRemaining} כרטיסים`}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusClass}`}>{displayStatus}</span>
