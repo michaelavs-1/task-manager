@@ -166,6 +166,47 @@ export function CampaignsView() {
     })
   }
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BARBY_CONTACTS_KEY)
+      if (stored) setBarbyContacts(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BARBY_ARTIST_META_KEY)
+      if (stored) setArtistMeta(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const saveContact = (name: string, phone: string) => {
+    const trimName = name.trim(); const trimPhone = phone.trim()
+    if (!trimName) return
+    const newContact: Contact = { id: Date.now().toString(), name: trimName, phone: trimPhone }
+    setBarbyContacts(prev => {
+      const next = [...prev, newContact]
+      try { localStorage.setItem(BARBY_CONTACTS_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  const removeContact = (id: string) => {
+    setBarbyContacts(prev => {
+      const next = prev.filter(c => c.id !== id)
+      try { localStorage.setItem(BARBY_CONTACTS_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  const saveArtistMeta = (artistName: string, meta: Partial<ArtistMeta>) => {
+    setArtistMeta(prev => {
+      const next = { ...prev, [artistName]: { ...prev[artistName], ...meta } }
+      try { localStorage.setItem(BARBY_ARTIST_META_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   const handleCreateCampaign = async () => {
     const artistName = newArtistMode === 'create' ? newArtistName.trim() : selectedArtist
     if (!artistName) { setCreateError('יש לבחור או להזין שם אומן'); return }
