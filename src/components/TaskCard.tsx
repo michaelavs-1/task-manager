@@ -118,6 +118,17 @@ export default function TaskCard({ task, isManager, onStatusChange, onDelete, on
           {/* Action Buttons - Manager Only, Hidden Until Hover */}
           {isManager && (
             <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Remind Button */}
+              {onRemind && (
+                <button
+                  onClick={onRemind}
+                  title={hasEmail ? "שלח תזכורת לעובד" : "אין מייל מוגדר לעובד זה"}
+                  className={`text-xs px-2 py-1.5 rounded-lg font-medium transition-colors ${hasEmail ? 'text-indigo-500 hover:bg-indigo-50 hover:text-indigo-700' : 'text-gray-300 cursor-not-allowed'}`}
+                >
+                  הזכר
+                </button>
+              )}
+
               {/* Archive Button */}
               {!isArchived && (
                 <button
