@@ -229,7 +229,7 @@ export function CampaignsView() {
       setShowNewModal(false); setSelectedArtist('')
       setSelectedOffice(''); setSelectedContactId('')
       setOfficeSearch(''); setNewArtistName('')
-      setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setTicketsForSale('')
+      setShowDate(''); setShowTimeSlot(''); setArtistSearch(''); setNewArtistMode('select'); setTicketsForSale('')
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'שגיאה ביצירת הקמפיין')
     } finally { setIsCreating(false) }
