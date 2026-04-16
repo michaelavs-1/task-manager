@@ -4,10 +4,16 @@ import { supabase } from '@/lib/supabase'
 import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 
-type ArtistTab = 'shows' | 'tasks' | 'meetings' | 'links' | 'financial'
-type Project = { id: string; name: string; category: string }
+type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns'
+type Project = {
+  id: string; name: string; category: string
+  status?: string; genre?: string; audience?: string
+  contact_name?: string; contact_phone?: string; contact_email?: string
+  monthly_revenue_target?: number
+}
 type MeetingNote = { id: string; artist_name: string; title: string; content: string; meeting_date: string; created_at: string }
 type ArtistLink = { id: string; artist_name: string; title: string; url: string; category: string; created_at: string }
+type ArtistCampaign = { id: string; name: string; status: string | null; group_title: string | null; launch_date: string | null; platforms: string | null }
 
 const STATUS_COLORS: Record<string, string> = {
   'קורה': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
