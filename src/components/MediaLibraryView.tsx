@@ -254,6 +254,10 @@ export function MediaLibraryView() {
             </div>
             <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => handleFiles(e.target.files)} />
             {uploadError && <p className="mt-2 text-sm text-red-500">{uploadError}</p>}
+            {dropboxStatus === 'uploading' && <p className="mt-2 text-xs text-blue-500 flex items-center gap-1"><span className="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-500 rounded-full animate-spin" />\u05DE\u05E2\u05DC\u05D4 \u05DC-Dropbox...</p>}
+            {dropboxStatus === 'ok' && <p className="mt-2 text-xs text-emerald-500">\u2713 \u05E0\u05E9\u05DE\u05E8 \u05D1-Dropbox</p>}
+            {dropboxStatus === 'err' && <p className="mt-2 text-xs text-orange-500">\u26A0 Dropbox \u05DC\u05D0 \u05D6\u05DE\u05D9\u05DF (\u05E0\u05E9\u05DE\u05E8 \u05D1-Supabase \u05D1\u05DC\u05D1\u05D3)</p>}
+            {dropboxToken && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox \u05DE\u05D7\u05D5\u05D1\u05E8</p>}
           </div>
         )}
       </div>
