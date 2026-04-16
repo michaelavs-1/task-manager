@@ -575,12 +575,16 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [uploadError, setUploadError] = useState('')
   const [dragging, setDragging] = useState(false)
   const [localMediaUrl, setLocalMediaUrl] = useState<string | null>(campaign.media_url || null)
+  const [localTicketsSold, setLocalTicketsSold] = useState<string>(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isUpdating = updatingId === campaign.id
   const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
   const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
   const artistName = campaign.requester || campaign.name
   const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
+  const ticketsForSale = campaign.tickets_for_sale ?? null
+  const ticketsSoldNum = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
+  const ticketsRemaining = ticketsForSale != null && ticketsSoldNum != null ? ticketsForSale - ticketsSoldNum : ticketsForSale != null ? ticketsForSale : null
   const dateStr = localLaunchDate ? (() => {
     try { return new Date(localLaunchDate).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric'}) }
     catch { return localLaunchDate }
