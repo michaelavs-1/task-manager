@@ -13,7 +13,8 @@ type Campaign = {
   budget_type: string | null; budget_intensity: string | null
   needs_michael_call: string | null; territory: string | null; ad_number: string | null
   board: string; relevant_link: string | null; facebook_link: string | null
-  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; booking_agency: string | null; dark_media_link: string | null
+  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; booking_agency: string | null; office?: string
+ dark_media_link: string | null
 }
 type BoardKey = 'universal' | 'barbie' | 'general'
 
@@ -61,6 +62,9 @@ const BARBY_ARTISTS_INITIAL: string[] = [
   'אקו','מיצי','סינרגיה','אביב בכר','ד"ר קספר',
 ]
 
+const BARBY_OFFICES_STORAGE_KEY = 'barby_offices_bank_v1'
+const BARBY_OFFICES_INITIAL: string[] = []
+
 function filterCampaigns(campaigns: Campaign[], board: BoardKey): Campaign[] {
   return campaigns.filter((c) => (c.board || 'universal') === board)
 }
@@ -86,6 +90,12 @@ export function CampaignsView() {
   const [showRosterModal, setShowRosterModal] = useState(false)
   const [newRosterArtist, setNewRosterArtist] = useState('')
   const [rosterSearch, setRosterSearch] = useState('')
+  const [barbyOffices, setBarbyOffices] = useState<string[]>(BARBY_OFFICES_INITIAL)
+  const [officeSearch, setOfficeSearch] = useState('')
+  const [selectedOffice, setSelectedOffice] = useState('')
+  const [showOfficesModal, setShowOfficesModal] = useState(false)
+  const [newOfficeInput, setNewOfficeInput] = useState('')
+  const [officeRosterSearch, setOfficeRosterSearch] = useState('')
 
   useEffect(() => {
     try {
@@ -118,6 +128,26 @@ export function CampaignsView() {
     })
   }
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(BARBY_OFFICES_STORAGE_KEY)
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored)
+        setBarbyOffices(parsed.length > 0 ? parsed : BARBY_OFFICES_INITIAL)
+      } else {
+        localStorage.setItem(BARBY_OFFICES_STORAGE_KEY, JSON.stringify(BARBY_OFFICES_INITIAL))
+      }
+    } catch {}
+  }, [])
+
+  const removeOfficeFromBank = (name: string) => {
+    setBarbyOffices(prev => {
+      const next = prev.filter(a => a !== name)
+      try { localStorage.setItem(BARBY_OFFICES_STORAGE_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   const handleCreateCampaign = async () => {
     const artistName = newArtistMode === 'create' ? newArtistName.trim() : selectedArtist
     if (!artistName) { setCreateError('יש לבחור או להזין שם אומן'); return }
@@ -125,7 +155,7 @@ export function CampaignsView() {
     setIsCreating(true); setCreateError('')
     try {
       const { error } = await supabase.from('campaigns').insert({
-        name: artistName + ' - ' + showDate, board: 'barbie', status: 'פעיל',
+        name: artistName + ' - ' + showDate, office: selectedOffice, board: 'barbie', status: 'פעיל',
         group_title: 'לא טופל', launch_date: showDate, requester: artistName,
         updated_at: new Date().toISOString(),
       })
@@ -133,7 +163,9 @@ export function CampaignsView() {
       if (newArtistMode === 'create') saveArtistToBank(artistName)
       const { data } = await supabase.from('campaigns').select('*')
       if (data) setCampaigns(data)
-      setShowNewModal(false); setSelectedArtist(''); setNewArtistName('')
+      setShowNewModal(false); setSelectedArtist('')
+      setSelectedOffice('')
+      setOfficeSearch(''); setNewArtistName('')
       setShowDate(''); setArtistSearch(''); setNewArtistMode('select')
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'שגיאה ביצירת הקמפיין')
@@ -230,7 +262,13 @@ export function CampaignsView() {
               {isSyncing ? 'סנכרון...' : 'סנכרון'}
             </button>
           )}
-          {selectedBoard === 'barbie' && ( <> <button onClick={() => { setRosterSearch(''); setNewRosterArtist(''); setShowRosterModal(true) }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-gray-800 text-pink-600 border border-pink-200 dark:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"> <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> מאגר אומנים </button>             <button onClick={() => { setCreateError(''); setSelectedArtist(''); setNewArtistName(''); setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setShowNewModal(true) }}
+          {selectedBoard === 'barbie' && ( <> <button onClick={() => { setRosterSearch(''); setNewRosterArtist(''); setShowRosterModal(true) }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-gray-800 text-pink-600 border border-pink-200 dark:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"> <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg> מאגר אומנים </button>
+        <button
+          onClick={() => { setOfficeRosterSearch(''); setShowOfficesModal(true) }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          🏢 מאגר משרדים
+        </button>             <button onClick={() => { setCreateError(''); setSelectedArtist(''); setNewArtistName(''); setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setShowNewModal(true) }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               קמפיין חדש
@@ -342,6 +380,64 @@ export function CampaignsView() {
         </div>
       )}
 
+            {showOfficesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowOfficesModal(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={() => setShowOfficesModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white">מאגר משרדים</h2>
+            </div>
+            <input
+              type="text"
+              placeholder="חיפוש..."
+              value={officeRosterSearch}
+              onChange={e => setOfficeRosterSearch(e.target.value)}
+              className="w-full mb-3 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+            <div className="divide-y divide-gray-100 dark:divide-gray-700 mb-4 max-h-64 overflow-y-auto">
+              {barbyOffices.filter(o => !officeRosterSearch || o.includes(officeRosterSearch)).map(office => (
+                <div key={office} className="flex items-center justify-between py-2 px-1">
+                  <button onClick={() => removeOfficeFromBank(office)} className="text-xs text-red-400 hover:text-red-600 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded">הסר</button>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{office}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const trimmed = newOfficeInput.trim()
+                  if (trimmed && !barbyOffices.includes(trimmed)) {
+                    const next = [...barbyOffices, trimmed].sort((a,b) => a.localeCompare(b, 'he'))
+                    setBarbyOffices(next)
+                    try { localStorage.setItem(BARBY_OFFICES_STORAGE_KEY, JSON.stringify(next)) } catch {}
+                    setNewOfficeInput('')
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+              >הוסף</button>
+              <input
+                type="text"
+                placeholder="שם משרד חדש..."
+                value={newOfficeInput}
+                onChange={e => setNewOfficeInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const trimmed = newOfficeInput.trim()
+                    if (trimmed && !barbyOffices.includes(trimmed)) {
+                      const next = [...barbyOffices, trimmed].sort((a,b) => a.localeCompare(b, 'he'))
+                      setBarbyOffices(next)
+                      try { localStorage.setItem(BARBY_OFFICES_STORAGE_KEY, JSON.stringify(next)) } catch {}
+                      setNewOfficeInput('')
+                    }
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm text-right border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRosterModal && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowRosterModal(false) }}> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" dir="rtl"> <div className="flex items-center justify-between mb-5"> <div> <h2 className="text-lg font-bold text-gray-900 dark:text-white">מאגר אומנים</h2> <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{barbyArtists.length} אומנים במאגר</p> </div> <button onClick={() => setShowRosterModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button> </div> <div className="flex gap-2 mb-3"> <input type="text" placeholder="חיפוש אומן..." value={rosterSearch} onChange={e => setRosterSearch(e.target.value)} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" /> </div> <div className="flex gap-2 mb-4"> <input type="text" placeholder="הוסף אומן חדש..." value={newRosterArtist} onChange={e => setNewRosterArtist(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" /> <button onClick={() => { if(newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="px-4 py-2 rounded-lg text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors whitespace-nowrap">הוסף</button> </div> <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-xl"> {barbyArtists.filter(a => !rosterSearch || a.toLowerCase().includes(rosterSearch.toLowerCase())).sort((a,b) => a.localeCompare(b,'he')).map(artist => ( <div key={artist} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700"> <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{artist}</span> <button onClick={() => removeArtistFromBank(artist)} className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors">הסר</button> </div> ))} </div> </div> </div> )} {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowNewModal(false) }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
@@ -374,7 +470,33 @@ export function CampaignsView() {
               )}
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">משרד מייצג</label>
+                <input
+                  type="text"
+                  placeholder="חיפוש משרד..."
+                  value={officeSearch}
+                  onChange={e => setOfficeSearch(e.target.value)}
+                  className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300"
+                />
+                {officeSearch.length > 0 && (
+                  <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
+                    {barbyOffices.filter(o => o.includes(officeSearch)).map(office => (
+                      <button key={office} onClick={() => { setSelectedOffice(office); setOfficeSearch('') }}
+                        className="w-full text-right px-3 py-2 text-sm hover:bg-pink-50 dark:hover:bg-gray-700">
+                        {office}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedOffice && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-pink-50 dark:bg-gray-700 rounded-lg text-sm">
+                    <button onClick={() => setSelectedOffice('')} className="text-gray-400 hover:text-red-500">✕</button>
+                    <span className="font-medium text-pink-700 dark:text-pink-300">{selectedOffice}</span>
+                  </div>
+                )}
+              </div>
+</label>
               <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
             </div>
             {createError && <p className="mb-4 text-sm text-red-500 font-medium">{createError}</p>}
