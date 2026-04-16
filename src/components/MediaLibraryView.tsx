@@ -99,16 +99,41 @@ export function MediaLibraryView() {
     } catch { return d }
   }
 
+  async function uploadToDropbox(file: File, safeName: string) {
+    if (!dropboxToken) return
+    try {
+      setDropboxStatus('uploading')
+      const artistSlug = selectedArtist.replace(/[/\\:*?"<>|]/g, '_').trim()
+      const showSlug = (selectedCampaign?.launch_date || selectedCampaign?.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
+      const dbxPath = '/' + artistSlug + '/' + showSlug + '/' + safeName
+      const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dropboxToken,
+          'Dropbox-API-Arg': JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }),
+          'Content-Type': 'application/octet-stream'
+        },
+        body: file
+      })
+      if (r.ok) setDropboxStatus('ok')
+      else { console.error('Dropbox upload failed', await r.text()); setDropboxStatus('err') }
+    } catch (e) {
+      console.error('Dropbox upload error', e)
+      setDropboxStatus('err')
+    }
+  }
+
   async function handleFiles(files: FileList | null) {
     if (!files || !selectedCampaign) return
-    setUploading(true); setUploadError('')
+    setUploading(true); setUploadError(''); setDropboxStatus('idle')
     try {
       for (const file of Array.from(files)) {
-        const ext = file.name.split('.').pop()
         const safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
         const path = ML_PREFIX + '/' + selectedCampaign.id + '/' + safeName
         const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
         if (error) throw error
+        // Also upload to Dropbox in parallel (non-blocking)
+        uploadToDropbox(file, safeName)
       }
       await loadGallery()
       setStep(1); setSelectedArtist(''); setSelectedCampaign(null); setArtistSearch('')
