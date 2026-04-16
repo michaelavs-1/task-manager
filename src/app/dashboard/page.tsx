@@ -426,9 +426,7 @@ export default function Dashboard() {
 
         {/* Projects Tab */}
         {activeTab === "projects" && (
-          <div className="h-full p-8">
-            <ProjectsView isManager={userRole === "manager"} tasks={tasks} />
-          </div>
+          <div className="h-full" />
         )}
 
         {/* Campaigns Tab */}
