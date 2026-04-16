@@ -1072,7 +1072,18 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
 
   return (
     <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : isSoldOut ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
-      <button onClick={() => setExpanded(!expanded)} className="w-full text-right p-4 focus:outline-none">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-right focus:outline-none">
+        {localMediaUrl && isImage && (
+          <div className="relative w-full overflow-hidden" style={{height:'180px'}}>
+            <img src={localMediaUrl} alt="" className="w-full h-full object-cover" />
+            {isSoldOut && (
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-red-600 py-3 px-4 flex items-center justify-center">
+                <span className="text-white font-black text-xl tracking-wide">! כרטיסים אזלו</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="p-4">
         <div className={`h-1 rounded-full mb-4 ${muted ? 'bg-gray-200' : 'bg-gradient-to-l from-pink-400 to-pink-600'}`} />
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
