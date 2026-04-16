@@ -780,7 +780,7 @@ export function CampaignsView() {
                         {contact.phone && <span className="mr-2 text-xs text-gray-400">{contact.phone}</span>}
                       </button>
                     ))}
-                    {barbyContacts.length === 0 && <p className="px-3 py-3 text-sm text-gray-400 text-center">אין אנשי קשר — הוסף דרך מאגר אנשי קשר</p>}
+                    {barbyContacts.length === 0 && !contactModalSearch && <p className="px-3 py-3 text-sm text-gray-400 text-center">אין אנשי קשר — הוסף ידנית למטה</p>}
                   </div>
                   {selectedContactId && (
                     <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-gray-700 rounded-lg text-sm mt-2">
@@ -788,6 +788,46 @@ export function CampaignsView() {
                       <span className="font-medium text-indigo-700 dark:text-indigo-300">{barbyContacts.find(c => c.id === selectedContactId)?.name}</span>
                     </div>
                   )}
+                  <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-1.5">הוסף איש קשר ידנית</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="שם"
+                        value={newContactName}
+                        onChange={e => setNewContactName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newContactName.trim()) {
+                            saveContact(newContactName, newContactPhone)
+                            setNewContactName(''); setNewContactPhone('')
+                          }
+                        }}
+                        className="flex-1 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="טלפון"
+                        value={newContactPhone}
+                        onChange={e => setNewContactPhone(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newContactName.trim()) {
+                            saveContact(newContactName, newContactPhone)
+                            setNewContactName(''); setNewContactPhone('')
+                          }
+                        }}
+                        className="w-28 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newContactName.trim()) return
+                          saveContact(newContactName, newContactPhone)
+                          setNewContactName(''); setNewContactPhone('')
+                        }}
+                        className="px-3 py-1.5 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      >+</button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
