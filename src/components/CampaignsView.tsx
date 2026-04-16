@@ -99,6 +99,7 @@ export function CampaignsView() {
   const [officeRosterSearch, setOfficeRosterSearch] = useState('')
   const [modalArtistOpen, setModalArtistOpen] = useState(true)
   const [modalOfficeOpen, setModalOfficeOpen] = useState(false)
+  const [ticketsForSale, setTicketsForSale] = useState('')
 
   useEffect(() => {
     try {
