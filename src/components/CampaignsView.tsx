@@ -13,7 +13,7 @@ type Campaign = {
   budget_type: string | null; budget_intensity: string | null
   needs_michael_call: string | null; territory: string | null; ad_number: string | null
   board: string; relevant_link: string | null; facebook_link: string | null
-  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; booking_agency: string | null; office?: string
+  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string
  dark_media_link: string | null
 }
 type BoardKey = 'universal' | 'barbie' | 'general' | 'pixels'
