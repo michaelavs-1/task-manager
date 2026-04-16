@@ -12,9 +12,10 @@ import { ActivityLogView } from "@/components/ActivityLogView"
 import { useTheme } from "@/components/ThemeProvider"
 import { FinancialView } from "@/components/FinancialView"
 import { UserManagementView } from "@/components/UserManagementView"
+import { MeetingsView } from "@/components/MeetingsView"
 
 type Section = "management" | "financial"
-type Tab = "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users"
+type Tab = "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users" | "meetings"
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme()
