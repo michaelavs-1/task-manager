@@ -16,6 +16,8 @@ type Campaign = {
   instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string
  dark_media_link: string | null
 }
+type Contact = { id: string; name: string; phone: string }
+type ArtistMeta = { defaultOffice?: string; defaultContactId?: string }
 type BoardKey = 'universal' | 'barbie' | 'general' | 'pixels'
 
 const BOARDS: { key: BoardKey; label: string }[] = [
