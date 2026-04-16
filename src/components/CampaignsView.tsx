@@ -912,4 +912,4 @@ function PixelsView() {
       )}
     </div>
   )
-
+}
