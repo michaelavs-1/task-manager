@@ -512,6 +512,13 @@ export default function Dashboard() {
             <ActivityLogView tasks={tasks} />
           </div>
         )}
+
+        {/* User Management Tab */}
+        {activeTab === "users" && (
+          <div className="h-full">
+            <UserManagementView />
+          </div>
+        )}
         </>
         )}
       </main>
