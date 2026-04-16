@@ -1224,25 +1224,26 @@ function ItemAccordion({ campaign, onStatusChange, updatingId }: {
 function PixelsView() {
   const [pixels, setPixels] = useState<{id: string; name: string; pixel_id: string; platform: string; notes: string | null}[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [pixelId, setPixelId] = useState('')
-  const [platform, setPlatform] = useState('Meta')
-  const [notes, setNotes] = useState('')
+  const [artistName, setArtistName] = useState('')
+  const [pixelValue, setPixelValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
   useEffect(() => {
-    supabase.from('pixels').select('*').order('platform').order('name').then(({ data }) => {
+    supabase.from('pixels').select('*').order('name').then(({ data }) => {
       setPixels((data as any[]) || [])
       setLoading(false)
     })
   }, [])
 
   const save = async () => {
-    if (!name.trim() || !pixelId.trim()) return
+    if (!artistName.trim() || !pixelValue.trim()) return
     setSaving(true)
-    const { data, error } = await supabase.from('pixels').insert({ name: name.trim(), pixel_id: pixelId.trim(), platform, notes: notes.trim() || null }).select()
-    if (!error && data) { setPixels(prev => [...prev, (data as any[])[0]]) }
-    setName(''); setPixelId(''); setNotes(''); setShowForm(false); setSaving(false)
+    const { data, error } = await supabase.from('pixels').insert({ name: artistName.trim(), pixel_id: pixelValue.trim(), platform: 'Meta', notes: null }).select()
+    if (!error && data) setPixels(prev => [...prev, (data as any[])[0]])
+    setArtistName('')
+    setPixelValue('')
+    setSaving(false)
   }
 
   const remove = async (id: string) => {
@@ -1250,60 +1251,81 @@ function PixelsView() {
     setPixels(prev => prev.filter(p => p.id !== id))
   }
 
-  const platforms = ['Meta', 'TikTok', 'Google', 'Snapchat', 'Pinterest', 'אחר']
+  const copyPixel = (p: {id: string; pixel_id: string}) => {
+    navigator.clipboard.writeText(p.pixel_id)
+    setCopiedId(p.id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   if (loading) return <div className="text-center py-16 text-gray-400">טוען...</div>
 
   return (
     <div dir="rtl">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-bold text-gray-800 dark:text-white">פיקסלים</h2>
-        <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">+ פיקסל חדש</button>
-      </div>
-
-      {showForm && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="שם הפיקסל / אתר..." className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            <select value={platform} onChange={e => setPlatform(e.target.value)} className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              {platforms.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <input value={pixelId} onChange={e => setPixelId(e.target.value)} placeholder="Pixel ID..." className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono" />
-            <input value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות..." className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button onClick={save} disabled={saving || !name.trim() || !pixelId.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? 'שומר...' : 'שמור'}</button>
-            <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">ביטול</button>
-          </div>
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">הוסף פיקסל חדש</p>
+        <div className="flex gap-3 flex-wrap">
+          <input
+            value={artistName}
+            onChange={e => setArtistName(e.target.value)}
+            placeholder="שם האומן..."
+            className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+          />
+          <input
+            value={pixelValue}
+            onChange={e => setPixelValue(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') save() }}
+            placeholder="הזן פיקסל..."
+            className="flex-1 min-w-[220px] px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300 font-mono"
+          />
+          <button
+            onClick={save}
+            disabled={saving || !artistName.trim() || !pixelValue.trim()}
+            className="px-5 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            {saving ? 'שומר...' : '+ הוסף'}
+          </button>
         </div>
-      )}
+      </div>
 
       {pixels.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-gray-400 font-medium">אין פיקסלים עדיין</p>
-          <p className="text-gray-300 text-sm mt-1">לחץ על "פיקסל חדש" להוספה</p>
+          <p className="text-gray-300 text-sm mt-1">הזן שם אומן ופיקסל למעלה</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              {['שם','פלטפורמה','Pixel ID','הערות',''].map(h => <th key={h} className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>)}
-            </tr></thead>
+          <table className="w-full text-sm" dir="rtl">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <th className="text-right px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">שם האומן</th>
+                <th className="text-right px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">פיקסל</th>
+                <th className="px-4 py-3 w-24"></th>
+                <th className="px-4 py-3 w-10"></th>
+              </tr>
+            </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
               {pixels.map(p => (
-                <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
-                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-white">{p.name}</td>
-                  <td className="px-4 py-3"><span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 font-medium">{p.platform}</span></td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center gap-2">
-                      <span>{p.pixel_id}</span>
-                      <button onClick={() => navigator.clipboard.writeText(p.pixel_id)} className="p-1 text-gray-300 hover:text-indigo-500 rounded" title="העתק">
+                <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-700/40 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-gray-800 dark:text-white">{p.name}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{p.pixel_id}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => copyPixel(p)}
+                      className={'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ' + (copiedId === p.id ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-pink-100 hover:text-pink-700')}
+                    >
+                      {copiedId === p.id ? (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      ) : (
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                      </button>
-                    </div>
+                      )}
+                      {copiedId === p.id ? 'הועתק!' : 'העתק פיקסל'}
+                    </button>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">{p.notes || '—'}</td>
-                  <td className="px-4 py-3"><button onClick={() => remove(p.id)} className="text-gray-300 hover:text-red-500 p-1 rounded transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => remove(p.id)} className="text-gray-300 hover:text-red-500 p-1 rounded transition-colors">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
