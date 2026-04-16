@@ -297,15 +297,29 @@ export function CampaignsView() {
   const filteredCampaigns = filterCampaigns(campaigns, selectedBoard)
   const barbyArchiveGroups = ['נגמר - בארבי','נגמר - ארכיון כל הקמפיינים']
   const _today = new Date(); _today.setHours(0,0,0,0)
+  const _slotOrder = (c: Campaign) => {
+    const n = (c.name || '') + (c.notes || '')
+    if (n.includes('צהריים')) return 0
+    if (n.includes('ערב')) return 1
+    return 0
+  }
+  const _sortAsc = (a: Campaign, b: Campaign) => {
+    const d = (a.launch_date || '').localeCompare(b.launch_date || '')
+    return d !== 0 ? d : _slotOrder(a) - _slotOrder(b)
+  }
+  const _sortDesc = (a: Campaign, b: Campaign) => {
+    const d = (b.launch_date || '').localeCompare(a.launch_date || '')
+    return d !== 0 ? d : _slotOrder(a) - _slotOrder(b)
+  }
   const barbyActiveCampaigns = filteredCampaigns
     .filter(c => c.status !== 'ארכיון' && (!c.launch_date || new Date(c.launch_date) >= _today))
-    .sort((a, b) => (a.launch_date || '').localeCompare(b.launch_date || ''))
+    .sort(_sortAsc)
   const barbyEndedCampaigns = filteredCampaigns
     .filter(c => c.status !== 'ארכיון' && c.launch_date && new Date(c.launch_date) < _today)
-    .sort((a, b) => (b.launch_date || '').localeCompare(a.launch_date || ''))
+    .sort(_sortDesc)
   const barbyArchiveCampaigns = filteredCampaigns
     .filter(c => c.status === 'ארכיון')
-    .sort((a, b) => (b.launch_date || '').localeCompare(a.launch_date || ''))
+    .sort(_sortDesc)
   const grouped = filteredCampaigns.reduce((acc, c) => {
     const group = c.group_title || 'לא טופל'
     if (!acc[group]) acc[group] = []
