@@ -484,14 +484,15 @@ export default function Dashboard() {
                   </svg>
                   <p style={{ color: 'var(--text-secondary)' }}>אין משימות {filter !== "all" ? "בקטגוריה זו" : ""}</p>
                 </div>
-              ) : viewByEmployee ? (
-                sortedEmployees.map((employeeName) => {
-                  const empUser = users.find(u => u.name === employeeName)
+              ) : selectedEmployee ? (
+                (() => {
+                  const empUser = users.find(u => u.name === selectedEmployee)
+                  const empTasks = groupedByEmployee[selectedEmployee] || []
                   return (
                     <EmployeeSection
-                      key={employeeName}
-                      employeeName={employeeName}
-                      tasks={groupedByEmployee[employeeName]}
+                      key={selectedEmployee}
+                      employeeName={selectedEmployee}
+                      tasks={empTasks}
                       isManager={userRole === "manager"}
                       onStatusChange={updateTaskStatus}
                       onDelete={deleteTask}
@@ -500,7 +501,7 @@ export default function Dashboard() {
                       userEmail={empUser?.email}
                       onRemindAll={() => {
                         if (!empUser?.email) return alert("אין מייל מוגדר לעובד זה")
-                        const open = groupedByEmployee[employeeName].filter(t => t.status !== 'completed' && t.status !== 'archived')
+                        const open = empTasks.filter(t => t.status !== 'completed' && t.status !== 'archived')
                         if (!open.length) return alert("אין משימות פתוחות לעובד זה")
                         sendRemindEmail(empUser.email, empUser.name, open).then(() => alert("תזכורת נשלחה!"))
                       }}
@@ -510,7 +511,7 @@ export default function Dashboard() {
                       }}
                     />
                   )
-                })
+                })()
               ) : (
                 filteredTasks.map((task) => (
                   <TaskCard
