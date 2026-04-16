@@ -467,15 +467,20 @@ export function CampaignsView() {
                 const barColor = pct !== null ? (pct >= 80 ? 'bg-gradient-to-l from-emerald-400 to-emerald-500' : pct >= 50 ? 'bg-gradient-to-l from-amber-400 to-amber-500' : 'bg-gradient-to-l from-pink-400 to-pink-500') : 'bg-pink-300'
                 return (
                   <div key={key} className="mb-10">
-                    {/* Month section header - dark tech style */}
+                    {/* Month section header - dark tech style, accordion */}
                     <div className="mb-5 rounded-xl overflow-hidden shadow-lg" style={{background:'linear-gradient(135deg,#0f172a 0%,#1e293b 100%)'}}>
-                      <div className="flex items-center justify-between px-5 py-3 gap-4 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setCollapsedMonths(prev => ({...prev, [key]: !prev[key]}))}
+                        className="w-full flex items-center justify-between px-5 py-3 gap-4 flex-wrap cursor-pointer hover:bg-white/5 transition-colors"
+                      >
                         {/* Month title */}
                         <div className="flex items-center gap-3">
                           <div className="w-1 h-8 rounded-full bg-pink-500 shadow-sm" style={{boxShadow:'0 0 8px #ec4899'}} />
                           <h3 className="text-lg font-black text-white tracking-widest uppercase" style={{letterSpacing:'0.12em'}}>
                             {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
                           </h3>
+                          <svg className={`w-4 h-4 text-gray-500 transition-transform flex-shrink-0 ${collapsedMonths[key] ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                         </div>
                         {/* Stats inline */}
                         <div className="flex items-center gap-1 flex-wrap">
@@ -506,7 +511,7 @@ export function CampaignsView() {
                             </>
                           )}
                         </div>
-                      </div>
+                      </button>
                       {/* Progress bar */}
                       {totalForSale > 0 && pct !== null && (
                         <div className="h-1 bg-white/5">
@@ -514,11 +519,13 @@ export function CampaignsView() {
                         </div>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {groups[key].map(camp => (
-                        <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} collapseSignal={collapseSignal} />
-                      ))}
-                    </div>
+                    {!collapsedMonths[key] && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {groups[key].map(camp => (
+                          <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} collapseSignal={collapseSignal} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })
