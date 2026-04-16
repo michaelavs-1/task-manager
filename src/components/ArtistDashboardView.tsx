@@ -293,7 +293,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Revenue */}
                 {hasBoardData && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">💰 פיננסים</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">פיננסים</p>
                     <div className="flex gap-6 flex-wrap">
                       <div><p className="text-xs text-slate-400">הכנסות כולל</p><p className="text-xl font-bold text-blue-600">₪{fmtNum(String(totalRevenue))}</p></div>
                       <div><p className="text-xs text-slate-400">רווח אומן</p><p className="text-xl font-bold text-indigo-600">₪{fmtNum(String(artistTotal))}</p></div>
