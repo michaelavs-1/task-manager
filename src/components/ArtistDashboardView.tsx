@@ -540,6 +540,147 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   )
 }
 
+type Quote = { id: string; artist_name: string; title: string; amount: number | null; status: string; notes: string | null; quote_date: string | null; created_at: string }
+const QUOTE_STATUSES = ['טיוטה', 'נשלח', 'אושר', 'נדחה']
+const QUOTE_STATUS_COLOR: Record<string, string> = {
+  'טיוטה': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  'נשלח': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  'אושר': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  'נדחה': 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
+}
+const iCls = 'w-full border border-slate-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white bg-slate-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300'
+
+function QuotesTab({ artistName }: { artistName: string }) {
+  const [quotes, setQuotes] = useState<Quote[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [title, setTitle] = useState('')
+  const [amount, setAmount] = useState('')
+  const [status, setStatus] = useState('טיוטה')
+  const [notes, setNotes] = useState('')
+  const [quoteDate, setQuoteDate] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('quotes').select('*').eq('artist_name', artistName).order('created_at', { ascending: false })
+    setQuotes((data as Quote[]) || [])
+    setLoading(false)
+  }, [artistName])
+
+  useEffect(() => { load() }, [load])
+
+  function openNew() {
+    setEditId(null); setTitle(''); setAmount(''); setStatus('טיוטה'); setNotes(''); setQuoteDate(''); setShowForm(true)
+  }
+  function openEdit(q: Quote) {
+    setEditId(q.id); setTitle(q.title); setAmount(q.amount != null ? String(q.amount) : ''); setStatus(q.status); setNotes(q.notes || ''); setQuoteDate(q.quote_date || ''); setShowForm(true)
+  }
+  function cancel() { setShowForm(false); setEditId(null) }
+
+  async function save() {
+    if (!title.trim()) return
+    setSaving(true)
+    const payload = { artist_name: artistName, title: title.trim(), amount: amount ? parseFloat(amount) : null, status, notes: notes.trim() || null, quote_date: quoteDate || null }
+    if (editId) {
+      await supabase.from('quotes').update(payload).eq('id', editId)
+    } else {
+      await supabase.from('quotes').insert(payload)
+    }
+    setSaving(false); setShowForm(false); setEditId(null); load()
+  }
+
+  async function updateStatus(id: string, newStatus: string) {
+    await supabase.from('quotes').update({ status: newStatus }).eq('id', id)
+    setQuotes(prev => prev.map(q => q.id === id ? { ...q, status: newStatus } : q))
+  }
+
+  async function remove(id: string) {
+    if (!confirm('למחוק הצעת מחיר זו?')) return
+    await supabase.from('quotes').delete().eq('id', id)
+    setQuotes(prev => prev.filter(q => q.id !== id))
+  }
+
+  const totalApproved = quotes.filter(q => q.status === 'אושר').reduce((s, q) => s + (q.amount || 0), 0)
+
+  if (loading) return <div className="text-center py-16 text-slate-400">טוען...</div>
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {quotes.length} הצעות · אושרו: <span className="font-semibold text-green-600">₪{fmtNum(String(totalApproved))}</span>
+          </p>
+        </div>
+        <button onClick={openNew} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+          + הצעה חדשה
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
+          <h3 className="font-semibold text-slate-800 dark:text-white mb-4 text-sm">{editId ? 'עריכת הצעה' : 'הצעת מחיר חדשה'}</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="כותרת ההצעה..." className={iCls + ' col-span-2'} />
+            <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="סכום (₪)..." className={iCls} />
+            <input value={quoteDate} onChange={e => setQuoteDate(e.target.value)} type="date" className={iCls} />
+            <div className="flex gap-2 col-span-2">
+              {QUOTE_STATUSES.map(s => (
+                <button key={s} type="button" onClick={() => setStatus(s)}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border-2 transition-all ${status === s ? QUOTE_STATUS_COLOR[s] + ' border-current' : 'border-slate-200 text-slate-400'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות..." className={iCls + ' col-span-2'} rows={2} />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={cancel} className="flex-1 border border-slate-200 dark:border-gray-600 text-slate-600 dark:text-slate-300 py-2 rounded-lg text-sm font-medium">ביטול</button>
+            <button onClick={save} disabled={saving || !title.trim()} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">{saving ? 'שומר...' : 'שמור'}</button>
+          </div>
+        </div>
+      )}
+
+      {quotes.length === 0 ? (
+        <Empty msg="אין הצעות מחיר עדיין" sub='לחץ על "הצעה חדשה" להוספה' />
+      ) : (
+        <div className="space-y-3">
+          {quotes.map(q => (
+            <div key={q.id} className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-4 flex items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <p className="font-semibold text-slate-800 dark:text-white text-sm">{q.title}</p>
+                  <select
+                    value={q.status}
+                    onChange={e => updateStatus(q.id, e.target.value)}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium border-0 outline-none cursor-pointer ${QUOTE_STATUS_COLOR[q.status] || 'bg-slate-100 text-slate-600'}`}
+                  >
+                    {QUOTE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  {q.amount != null && <span className="font-semibold text-indigo-600 dark:text-indigo-400">₪{fmtNum(String(q.amount))}</span>}
+                  {q.quote_date && <span>{fmtDate(q.quote_date)}</span>}
+                  {q.notes && <span className="truncate max-w-xs">{q.notes}</span>}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => openEdit(q)} className="p-1.5 text-slate-400 hover:text-indigo-500 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </button>
+                <button onClick={() => remove(q.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SHead({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{children}</h3>
 }
