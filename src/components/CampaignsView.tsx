@@ -517,7 +517,72 @@ export function CampaignsView() {
         </div>
       )}
 
-      {showRosterModal && ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowRosterModal(false) }}> <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" dir="rtl"> <div className="flex items-center justify-between mb-5"> <div> <h2 className="text-lg font-bold text-gray-900 dark:text-white">מאגר אומנים</h2> <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{barbyArtists.length} אומנים במאגר</p> </div> <button onClick={() => setShowRosterModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button> </div> <div className="flex gap-2 mb-3"> <input type="text" placeholder="חיפוש אומן..." value={rosterSearch} onChange={e => setRosterSearch(e.target.value)} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" /> </div> <div className="flex gap-2 mb-4"> <input type="text" placeholder="הוסף אומן חדש..." value={newRosterArtist} onChange={e => setNewRosterArtist(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" /> <button onClick={() => { if(newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="px-4 py-2 rounded-lg text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors whitespace-nowrap">הוסף</button> </div> <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-xl"> {barbyArtists.filter(a => !rosterSearch || a.toLowerCase().includes(rosterSearch.toLowerCase())).sort((a,b) => a.localeCompare(b,'he')).map(artist => ( <div key={artist} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700"> <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{artist}</span> <button onClick={() => removeArtistFromBank(artist)} className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors">הסר</button> </div> ))} </div> </div> </div> )} {showNewModal && (
+      {showRosterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) { setShowRosterModal(false); setRosterLinkArtist(null) } }}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" dir="rtl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">מאגר אומנים</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{barbyArtists.length} אומנים במאגר</p>
+              </div>
+              <button onClick={() => { setShowRosterModal(false); setRosterLinkArtist(null) }} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <input type="text" placeholder="חיפוש אומן..." value={rosterSearch} onChange={e => setRosterSearch(e.target.value)} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+            </div>
+            <div className="flex gap-2 mb-4">
+              <input type="text" placeholder="הוסף אומן חדש..." value={newRosterArtist} onChange={e => setNewRosterArtist(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+              <button onClick={() => { if(newRosterArtist.trim()) { saveArtistToBank(newRosterArtist.trim()); setNewRosterArtist('') }}} className="px-4 py-2 rounded-lg text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors whitespace-nowrap">הוסף</button>
+            </div>
+            <div className="max-h-96 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-xl">
+              {barbyArtists.filter(a => !rosterSearch || a.toLowerCase().includes(rosterSearch.toLowerCase())).sort((a,b) => a.localeCompare(b,'he')).map(artist => {
+                const meta = artistMeta[artist] || {}
+                const linkedContact = barbyContacts.find(c => c.id === meta.defaultContactId)
+                const isLinking = rosterLinkArtist === artist
+                return (
+                  <div key={artist} className="px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setRosterLinkArtist(isLinking ? null : artist)} className="text-xs text-indigo-500 hover:text-indigo-700 border border-indigo-200 dark:border-indigo-700 px-2 py-0.5 rounded transition-colors">
+                          {isLinking ? 'סגור' : 'קשר'}
+                        </button>
+                        <button onClick={() => removeArtistFromBank(artist)} className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors">הסר</button>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{artist}</p>
+                        <div className="flex items-center gap-2 justify-end mt-0.5">
+                          {meta.defaultOffice && <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">{meta.defaultOffice}</span>}
+                          {linkedContact && <span className="text-xs text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-1.5 py-0.5 rounded">{linkedContact.name}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    {isLinking && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">משרד ברירת מחדל</p>
+                          <select value={meta.defaultOffice || ''} onChange={e => saveArtistMeta(artist, { defaultOffice: e.target.value || undefined })}
+                            className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300">
+                            <option value="">ללא</option>
+                            {barbyOffices.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">איש קשר ברירת מחדל</p>
+                          <select value={meta.defaultContactId || ''} onChange={e => saveArtistMeta(artist, { defaultContactId: e.target.value || undefined })}
+                            className="w-full text-sm px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                            <option value="">ללא</option>
+                            {barbyContacts.map(c => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ''}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )} {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowNewModal(false) }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
             <div className="flex items-center justify-between mb-6">
