@@ -16,12 +16,13 @@ type Campaign = {
   instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; booking_agency: string | null; office?: string
  dark_media_link: string | null
 }
-type BoardKey = 'universal' | 'barbie' | 'general'
+type BoardKey = 'universal' | 'barbie' | 'general' | 'pixels'
 
 const BOARDS: { key: BoardKey; label: string }[] = [
   { key: 'universal', label: 'קידומים יוניברסל' },
   { key: 'barbie', label: 'קידומים בארבי' },
   { key: 'general', label: 'שיווק אומנים כללי' },
+  { key: 'pixels', label: '🔲 פיקסלים' },
 ]
 const GROUP_BORDER: Record<string, string> = {
   'לא טופל': 'border-l-blue-500','עלה לאוויר': 'border-l-emerald-500',
