@@ -1015,12 +1015,17 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           <div className="flex-1 min-w-0">
             <p className="font-bold text-gray-900 dark:text-white text-base leading-snug truncate">{artistName}</p>
             {dateStr && (
-              <div className="flex items-center gap-1.5 mt-1.5">
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                {dayOfWeek && (
+                  <span className={'text-xs font-bold px-2 py-0.5 rounded-full ' + (dayOfWeek === 'שישי' ? 'bg-orange-100 text-orange-700' : dayOfWeek === 'שבת' ? 'bg-red-100 text-red-700' : 'bg-violet-50 text-violet-600')}>
+                    יום {dayOfWeek}
+                  </span>
+                )}
                 <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{dateStr}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{dateStr}</span>
                 {daysRemaining !== null && (
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${daysRemaining < 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500' : daysRemaining === 0 ? 'bg-green-100 text-green-700' : daysRemaining <= 7 ? 'bg-red-100 text-red-600' : 'bg-pink-50 text-pink-600'}`}>
-                    {daysRemaining < 0 ? `עבר` : daysRemaining === 0 ? 'היום!' : `${daysRemaining} ימים`}
+                    {daysRemaining < 0 ? 'עבר' : daysRemaining === 0 ? 'היום!' : daysRemaining + ' ימים'}
                   </span>
                 )}
               </div>
