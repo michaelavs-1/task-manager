@@ -403,6 +403,33 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
+            {tab === 'campaigns' && (
+              <div>
+                <SHead>קמפיינים ({campaigns.length})</SHead>
+                {campaigns.length === 0 ? <Empty icon="📣" msg="אין קמפיינים לאומן זה" sub="קמפיינים מקושרים לפי שם האומן" /> : (
+                  <div className="space-y-2">
+                    {campaigns.map(c => (
+                      <div key={c.id} className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'פעיל' ? 'bg-green-100 text-green-700' : c.status === 'נגמר' ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{c.status || '—'}</span>
+                            {c.group_title && <span className="text-xs text-slate-400">{c.group_title}</span>}
+                          </div>
+                          <div className="text-right flex-1">
+                            <p className="font-medium text-slate-800 dark:text-white text-sm">{c.name}</p>
+                            <div className="flex items-center gap-3 mt-0.5 justify-end text-xs text-slate-400">
+                              {c.launch_date && <span>{fmtDate(c.launch_date)}</span>}
+                              {c.platforms && <span>{c.platforms}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {tab === 'meetings' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
