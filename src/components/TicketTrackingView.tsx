@@ -154,6 +154,10 @@ export function TicketTrackingView() {
               const sold = isNaN(soldVal) ? (camp.tickets_sold ?? 0) : soldVal
               const remaining = camp.tickets_for_sale != null ? camp.tickets_for_sale - sold : null
               const pct = camp.tickets_for_sale ? Math.round(sold / camp.tickets_for_sale * 100) : null
+              const daysToShow = camp.launch_date
+                ? Math.ceil((new Date(camp.launch_date + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0)) / 86400000)
+                : null
+              const daysColor = daysToShow === null ? '' : daysToShow < 0 ? 'text-gray-400' : daysToShow === 0 ? 'text-green-600 font-black' : daysToShow <= 7 ? 'text-red-500 font-bold' : daysToShow <= 30 ? 'text-orange-500 font-semibold' : 'text-indigo-500 font-medium'
               const rowBg = i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
               return (
                 <tr key={camp.id} className={rowBg}>
