@@ -624,6 +624,42 @@ export function CampaignsView() {
               />
             </div>
 
+            {/* Contact accordion */}
+            <div className="mb-4 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setModalContactOpen(!modalContactOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-pink-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">איש קשר</span>
+                  {selectedContactId && <span className="text-xs text-indigo-600 font-medium">{barbyContacts.find(c => c.id === selectedContactId)?.name}</span>}
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${modalContactOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {modalContactOpen && (
+                <div className="px-4 py-3">
+                  <input type="text" placeholder="חיפוש איש קשר..." value={contactModalSearch} onChange={e => setContactModalSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white" />
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                    {barbyContacts.filter(c => !contactModalSearch || c.name.includes(contactModalSearch) || c.phone.includes(contactModalSearch)).map(contact => (
+                      <button key={contact.id} onClick={() => { setSelectedContactId(contact.id); setContactModalSearch(''); setModalContactOpen(false) }}
+                        className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedContactId===contact.id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>
+                        <span className="font-medium">{contact.name}</span>
+                        {contact.phone && <span className="mr-2 text-xs text-gray-400">{contact.phone}</span>}
+                      </button>
+                    ))}
+                    {barbyContacts.length === 0 && <p className="px-3 py-3 text-sm text-gray-400 text-center">אין אנשי קשר — הוסף דרך מאגר אנשי קשר</p>}
+                  </div>
+                  {selectedContactId && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-gray-700 rounded-lg text-sm mt-2">
+                      <button onClick={() => setSelectedContactId('')} className="text-gray-400 hover:text-red-500">✕</button>
+                      <span className="font-medium text-indigo-700 dark:text-indigo-300">{barbyContacts.find(c => c.id === selectedContactId)?.name}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {createError && <p className="mb-4 text-sm text-red-500 font-medium">{createError}</p>}
             <div className="flex gap-3">
               <button onClick={handleCreateCampaign} disabled={isCreating} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isCreating ? 'bg-gray-200 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-pink-600 text-white hover:bg-pink-700'}`}>{isCreating ? 'יוצר...' : 'צור קמפיין'}</button>
