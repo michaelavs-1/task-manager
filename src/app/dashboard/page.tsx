@@ -250,7 +250,7 @@ export default function Dashboard() {
                     : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                ☀️
+                בהיר
               </button>
               <button
                 onClick={() => setTheme('middle')}
@@ -261,7 +261,7 @@ export default function Dashboard() {
                     : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                ◑
+                בינוני
               </button>
               <button
                 onClick={() => setTheme('dark')}
@@ -272,7 +272,7 @@ export default function Dashboard() {
                     : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
                 }`}
               >
-                🌙
+                כהה
               </button>
             </div>
           </div>
