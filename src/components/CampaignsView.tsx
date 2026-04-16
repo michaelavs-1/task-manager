@@ -549,7 +549,12 @@ export function CampaignsView() {
                       {artistSearch.length > 0 && <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
                         {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו אומנים</div>
                           : filteredArtists.map(artist => (
-                            <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); setModalArtistOpen(false) }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
+                            <button key={artist} onClick={() => {
+                              setSelectedArtist(artist); setArtistSearch(''); setModalArtistOpen(false)
+                              const meta = artistMeta[artist]
+                              if (meta?.defaultOffice) { setSelectedOffice(meta.defaultOffice); setOfficeSearch('') }
+                              if (meta?.defaultContactId) setSelectedContactId(meta.defaultContactId)
+                            }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
                           ))}
                       </div>}
                       {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
