@@ -143,7 +143,12 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
   useEffect(() => {
     if (!selectedArtist) return
-    loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist)
+    setMetaGenre(selectedArtist.genre || '')
+    setMetaAudience(selectedArtist.audience || '')
+    setMetaContactName(selectedArtist.contact_name || '')
+    setMetaContactPhone(selectedArtist.contact_phone || '')
+    setMetaRevenueTarget(selectedArtist.monthly_revenue_target ? String(selectedArtist.monthly_revenue_target) : '')
+    loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist); loadCampaigns(selectedArtist)
   }, [selectedArtist, loadEvents, loadMeetings, loadLinks])
 
   const saveMeeting = async () => {
