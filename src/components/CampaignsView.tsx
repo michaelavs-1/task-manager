@@ -364,11 +364,11 @@ export function CampaignsView() {
       {selectedBoard === 'barbie' && (
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex gap-2 flex-wrap">
-            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'}].map(({key,label}) => (
-              <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking')}
+            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
+              <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'pixels')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 dark:text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
                 {label}
-                {key !== 'tracking' && (
+                {key !== 'tracking' && key !== 'pixels' && (
                   <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500">
                     {key==='active' ? barbyActiveCampaigns.length : key==='ended' ? barbyEndedCampaigns.length : barbyArchiveCampaigns.length}
                   </span>
