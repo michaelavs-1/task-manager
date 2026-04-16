@@ -557,6 +557,9 @@ function EmployeeSection({
   onDelete,
   onArchive,
   onNavigateToArtist,
+  userEmail,
+  onRemindAll,
+  onRemindTask,
 }: {
   employeeName: string
   tasks: Task[]
@@ -565,22 +568,33 @@ function EmployeeSection({
   onDelete: (taskId: string) => void
   onArchive: (taskId: string) => void
   onNavigateToArtist?: (projectName: string) => void
+  userEmail?: string
+  onRemindAll?: () => void
+  onRemindTask?: (task: Task) => void
 }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
     <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-6 py-4 flex items-center justify-between transition-colors"
+      <div
+        className="px-6 py-4 flex items-center justify-between"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        <div className="flex items-center gap-3">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-3 flex-1 text-right">
           <span className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>{employeeName}</span>
           <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>({tasks.length})</span>
-        </div>
-        <span style={{ color: 'var(--text-secondary)' }} className="text-xs">{expanded ? "▼" : "▶"}</span>
-      </button>
+          <span style={{ color: 'var(--text-secondary)' }} className="text-xs">{expanded ? "▼" : "▶"}</span>
+        </button>
+        {isManager && onRemindAll && (
+          <button
+            onClick={onRemindAll}
+            title={userEmail ? "שלח תזכורת על כל המשימות הפתוחות" : "אין מייל מוגדר לעובד זה"}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors ${userEmail ? 'border-indigo-200 text-indigo-600 hover:bg-indigo-50' : 'border-slate-200 text-slate-400 cursor-not-allowed'}`}
+          >
+            הזכר הכל
+          </button>
+        )}
+      </div>
 
       {expanded && (
         <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
@@ -593,6 +607,8 @@ function EmployeeSection({
                 onDelete={onDelete}
                 onArchive={onArchive}
                 onNavigateToArtist={onNavigateToArtist}
+                onRemind={onRemindTask ? () => onRemindTask(task) : undefined}
+                hasEmail={!!userEmail}
               />
             </div>
           ))}
