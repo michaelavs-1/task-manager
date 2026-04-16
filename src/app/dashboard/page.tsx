@@ -452,19 +452,32 @@ export default function Dashboard() {
                   <p style={{ color: 'var(--text-secondary)' }}>אין משימות {filter !== "all" ? "בקטגוריה זו" : ""}</p>
                 </div>
               ) : viewByEmployee ? (
-                sortedEmployees.map((employeeName) => (
-                  <EmployeeSection
-                    key={employeeName}
-                    employeeName={employeeName}
-                    tasks={groupedByEmployee[employeeName]}
-                    isManager={userRole === "manager"}
-                    onStatusChange={updateTaskStatus}
-                    onDelete={deleteTask}
-                    onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
-                    onArchive={archiveTask}
-                    onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
-                  />
-                ))
+                sortedEmployees.map((employeeName) => {
+                  const empUser = users.find(u => u.name === employeeName)
+                  return (
+                    <EmployeeSection
+                      key={employeeName}
+                      employeeName={employeeName}
+                      tasks={groupedByEmployee[employeeName]}
+                      isManager={userRole === "manager"}
+                      onStatusChange={updateTaskStatus}
+                      onDelete={deleteTask}
+                      onArchive={archiveTask}
+                      onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
+                      userEmail={empUser?.email}
+                      onRemindAll={() => {
+                        if (!empUser?.email) return alert("אין מייל מוגדר לעובד זה")
+                        const open = groupedByEmployee[employeeName].filter(t => t.status !== 'completed' && t.status !== 'archived')
+                        if (!open.length) return alert("אין משימות פתוחות לעובד זה")
+                        sendRemindEmail(empUser.email, empUser.name, open).then(() => alert("תזכורת נשלחה!"))
+                      }}
+                      onRemindTask={(task) => {
+                        if (!empUser?.email) return alert("אין מייל מוגדר לעובד זה")
+                        sendRemindSingleEmail(empUser.email, empUser.name, task).then(() => alert("תזכורת נשלחה!"))
+                      }}
+                    />
+                  )
+                })
               ) : (
                 filteredTasks.map((task) => (
                   <TaskCard
