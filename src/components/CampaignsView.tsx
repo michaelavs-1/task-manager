@@ -161,6 +161,7 @@ export function CampaignsView() {
       const { error } = await supabase.from('campaigns').insert({
         name: artistName + ' - ' + showDate, office: selectedOffice, board: 'barbie', status: 'פעיל',
         group_title: 'לא טופל', launch_date: showDate, requester: artistName,
+        tickets_for_sale: ticketsForSale ? parseInt(ticketsForSale) : null,
         updated_at: new Date().toISOString(),
       })
       if (error) throw error
