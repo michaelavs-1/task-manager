@@ -758,7 +758,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           {/* Tickets sold section */}
           {ticketsForSale != null && (
             <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">כרטיסים שנמכרו</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">עדכון מספר כרטיסים</p>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -766,14 +766,25 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                   max={ticketsForSale}
                   value={localTicketsSold}
                   onChange={e => setLocalTicketsSold(e.target.value)}
-                  onBlur={async () => {
-                    const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
-                    await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter') {
+                      const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
+                      await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    }
                   }}
                   placeholder="0"
                   className="w-24 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
                 />
-                <span className="text-sm text-gray-500 dark:text-gray-400">מתוך {ticketsForSale}</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">מתוך {ticketsForSale}</span>
+                <button
+                  onClick={async () => {
+                    const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
+                    await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                  }}
+                  className="px-3 py-1.5 text-sm font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                >
+                  שמור
+                </button>
                 {ticketsRemaining !== null && (
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ticketsRemaining <= 0 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
                     {ticketsRemaining <= 0 ? 'אזלו' : `נותרו ${ticketsRemaining}`}
