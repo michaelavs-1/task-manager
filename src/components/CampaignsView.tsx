@@ -77,6 +77,7 @@ export function CampaignsView() {
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
   const [artistSearch, setArtistSearch] = useState('')
+  const [showArtistDropdown, setShowArtistDropdown] = useState(false)
   const [newArtistMode, setNewArtistMode] = useState<'select' | 'create'>('select')
   const [selectedArtist, setSelectedArtist] = useState('')
   const [newArtistName, setNewArtistName] = useState('')
@@ -200,7 +201,7 @@ export function CampaignsView() {
     return acc
   }, {} as Record<string, Campaign[]>)
   const sortedGroups = Object.entries(grouped).sort(([a],[b]) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b))
-  const filteredArtists = barbyArtists.filter(a => a.toLowerCase().includes(artistSearch.toLowerCase()))
+  const filteredArtists = barbyArtists.filter(a => a.toLowerCase().includes(artistSearch.toLowerCase())).sort((a,b) => a.localeCompare(b,'he'))
 
   if (loading) return (
     <div className="p-8 text-center text-gray-500 dark:text-gray-400 dark:text-gray-500">
