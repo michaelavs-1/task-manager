@@ -968,6 +968,24 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             )
           })}
 
+          {/* Office + Contact */}
+          {(campaign.office || campaign.contact_name) && (
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-600 flex gap-6 flex-wrap">
+              {campaign.office && (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">משרד</dt>
+                  <dd className="text-sm text-gray-700 dark:text-gray-200 mt-0.5 font-medium">{campaign.office}</dd>
+                </div>
+              )}
+              {campaign.contact_name && (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">איש קשר</dt>
+                  <dd className="text-sm text-gray-700 dark:text-gray-200 mt-0.5 font-medium">{campaign.contact_name}</dd>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tickets section — always visible */}
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">כרטיסים</p>
