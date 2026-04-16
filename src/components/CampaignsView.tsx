@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { TicketTrackingView } from './TicketTrackingView'
+import { MediaLibraryView } from './MediaLibraryView'
 
 type Campaign = {
   id: string; monday_item_id: string; name: string; status: string | null
