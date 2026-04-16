@@ -1012,6 +1012,8 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [localTicketsSold, setLocalTicketsSold] = useState<string>(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const [localTicketsForSale, setLocalTicketsForSale] = useState<number | null>(campaign.tickets_for_sale ?? null)
   const [ticketsForSaleInput, setTicketsForSaleInput] = useState<string>(campaign.tickets_for_sale != null ? String(campaign.tickets_for_sale) : '')
+  const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string}[]>([])
+  const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isUpdating = updatingId === campaign.id
   const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
