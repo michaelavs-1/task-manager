@@ -116,6 +116,20 @@ export function TicketTrackingView() {
   return (
     <div dir="rtl" className="space-y-10">
 
+      <div className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 shadow-sm">
+        <svg className="w-4 h-4 text-pink-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">תאריך העדכון:</span>
+        <input
+          type="date"
+          value={snapshotDate}
+          onChange={e => setSnapshotDate(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+        />
+        <span className="text-xs text-gray-400">כל לחיצת שמור תירשם לתאריך זה</span>
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <table className="min-w-full text-sm bg-white dark:bg-gray-800">
           <thead>
