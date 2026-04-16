@@ -97,6 +97,8 @@ export function CampaignsView() {
   const [showOfficesModal, setShowOfficesModal] = useState(false)
   const [newOfficeInput, setNewOfficeInput] = useState('')
   const [officeRosterSearch, setOfficeRosterSearch] = useState('')
+  const [modalArtistOpen, setModalArtistOpen] = useState(true)
+  const [modalOfficeOpen, setModalOfficeOpen] = useState(false)
 
   useEffect(() => {
     try {
