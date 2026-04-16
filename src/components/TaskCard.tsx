@@ -36,9 +36,11 @@ interface Props {
   onDelete: (taskId: string) => void
   onArchive: (taskId: string) => void
   onNavigateToArtist?: (projectName: string) => void
+  onRemind?: () => void
+  hasEmail?: boolean
 }
 
-export default function TaskCard({ task, isManager, onStatusChange, onDelete, onArchive, onNavigateToArtist }: Props) {
+export default function TaskCard({ task, isManager, onStatusChange, onDelete, onArchive, onNavigateToArtist, onRemind, hasEmail }: Props) {
   const assignedName = (task.assigned_user as any)?.name || "לא שויך"
   const creatorName = (task.creator as any)?.name || ""
   const isArchived = task.status === "archived"
