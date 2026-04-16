@@ -171,7 +171,7 @@ export function CampaignsView() {
       setShowNewModal(false); setSelectedArtist('')
       setSelectedOffice('')
       setOfficeSearch(''); setNewArtistName('')
-      setShowDate(''); setArtistSearch(''); setNewArtistMode('select')
+      setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setTicketsForSale('')
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'שגיאה ביצירת הקמפיין')
     } finally { setIsCreating(false) }
