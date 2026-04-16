@@ -830,11 +830,9 @@ function PixelsView() {
   const [platform, setPlatform] = useState('Meta')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const { supabase: sb } = { supabase: require('../lib/supabase').supabase }
-
   useEffect(() => {
-    sb.from('pixels').select('*').order('platform').order('name').then(({ data }: { data: any }) => {
-      setPixels(data || [])
+    supabase.from('pixels').select('*').order('platform').order('name').then(({ data }) => {
+      setPixels((data as any[]) || [])
       setLoading(false)
     })
   }, [])
@@ -842,13 +840,13 @@ function PixelsView() {
   const save = async () => {
     if (!name.trim() || !pixelId.trim()) return
     setSaving(true)
-    const { data, error } = await sb.from('pixels').insert({ name: name.trim(), pixel_id: pixelId.trim(), platform, notes: notes.trim() || null }).select()
-    if (!error && data) { setPixels(prev => [...prev, data[0]]) }
+    const { data, error } = await supabase.from('pixels').insert({ name: name.trim(), pixel_id: pixelId.trim(), platform, notes: notes.trim() || null }).select()
+    if (!error && data) { setPixels(prev => [...prev, (data as any[])[0]]) }
     setName(''); setPixelId(''); setNotes(''); setShowForm(false); setSaving(false)
   }
 
   const remove = async (id: string) => {
-    await sb.from('pixels').delete().eq('id', id)
+    await supabase.from('pixels').delete().eq('id', id)
     setPixels(prev => prev.filter(p => p.id !== id))
   }
 
