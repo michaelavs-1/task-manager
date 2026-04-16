@@ -11,9 +11,10 @@ import { ArtistDashboardView } from "@/components/ArtistDashboardView"
 import { ActivityLogView } from "@/components/ActivityLogView"
 import { useTheme } from "@/components/ThemeProvider"
 import { FinancialView } from "@/components/FinancialView"
+import { UserManagementView } from "@/components/UserManagementView"
 
 type Section = "management" | "financial"
-type Tab = "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity"
+type Tab = "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users"
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme()
