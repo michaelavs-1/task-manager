@@ -117,6 +117,7 @@ export function CampaignsView() {
   const [contactModalSearch, setContactModalSearch] = useState('')
   const [rosterLinkArtist, setRosterLinkArtist] = useState<string | null>(null)
   const [collapseSignal, setCollapseSignal] = useState(0)
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     try {
