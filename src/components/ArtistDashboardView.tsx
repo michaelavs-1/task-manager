@@ -528,47 +528,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
-            {tab === 'financial' && (
-              <div>
-                {!hasBoardData ? <Empty icon="💰" msg="אין נתונים פיננסיים לאומן זה" /> :
-                loadingEvents ? <div className="text-center py-10 text-slate-400">טוען...</div> :
-                pastEvents.length===0 ? <Empty icon="💰" msg="אין נתונים פיננסיים עדיין" sub="נתונים יוצגו לאחר הופעות" /> : (
-                  <>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      {[
-                        { label: 'סהִבך הכנסות', val: `₪${fmtNum(String(totalRevenue))}`, color: 'text-blue-600' },
-                        { label: 'רווח אומן', val: `₪${fmtNum(String(artistTotal))}`, color: 'text-indigo-600' },
-                        { label: 'מספר הופעות', val: pastEvents.length, color: 'text-slate-700 dark:text-white' },
-                      ].map(({ label, val, color }) => (
-                        <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-5 text-right">
-                          <div className={`text-2xl font-bold ${color}`}>{val}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead><tr className="border-b border-slate-100 dark:border-gray-700">
-                          {['הופעה','תאריך','מיקום','הכנסות','רווח אומן'].map(h=>(
-                            <th key={h} className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                          ))}
-                        </tr></thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-gray-700">
-                          {pastEvents.map(event=>(
-                            <tr key={event.id} className="hover:bg-slate-50 dark:hover:bg-gray-750">
-                              <td className="px-4 py-3 font-medium text-slate-800 dark:text-white">{event.name}</td>
-                              <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{fmtDate(event.date)}</td>
-                              <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{event.location||'—'}</td>
-                              <td className="px-4 py-3 text-blue-600 font-medium">{event.total_revenue?`₪${fmtNum(event.total_revenue)}`:'—'}</td>
-                              <td className="px-4 py-3 text-indigo-600 font-medium">{event.artist_share?`₪${fmtNum(event.artist_share)}`:'—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
+            {tab === 'financial' && selectedArtist && (
+              <QuotesTab artistName={selectedArtist.name} />
             )}
           </div>
         ) : (
