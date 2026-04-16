@@ -395,7 +395,7 @@ export function CampaignsView() {
         </div>
       )}
 
-      {selectedBoard === 'pixels' ? (
+      {selectedBoard === 'barbie' && barbySubTab === 'pixels' ? (
         <PixelsView />
       ) : selectedBoard === 'barbie' && barbySubTab === 'tracking' ? (
         <TicketTrackingView />
