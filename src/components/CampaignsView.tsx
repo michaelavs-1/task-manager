@@ -360,11 +360,11 @@ export function CampaignsView() {
               </div>
               {newArtistMode==='select' ? (
                 <div>
-                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => { setArtistSearch(e.target.value); setShowArtistDropdown(true); }} onClick={() => setShowArtistDropdown(true)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  {showArtistDropdown && <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
+                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  {artistSearch.length > 0 && <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
                     {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">לא נמצאו אומנים</div>
                       : filteredArtists.map(artist => (
-                        <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); setShowArtistDropdown(false); }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
+                        <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
                       ))}
                   </div>}
                   {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
