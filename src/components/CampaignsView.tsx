@@ -108,6 +108,7 @@ export function CampaignsView() {
     } catch {}
   }
 
+  const removeArtistFromBank = (name: string) => { setBarbyArtists(prev => { const next = prev.filter(a => a !== name); try { localStorage.setItem(BARBY_ARTISTS_STORAGE_KEY, JSON.stringify(next)) } catch {} return next }) }
   const handleCreateCampaign = async () => {
     const artistName = newArtistMode === 'create' ? newArtistName.trim() : selectedArtist
     if (!artistName) { setCreateError('יש לבחור או להזין שם אומן'); return }
