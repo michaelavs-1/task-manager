@@ -207,8 +207,39 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
         {selectedArtist ? (
           <div className="p-6 max-w-5xl">
             <div className="mb-5">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedArtist.name}</h2>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">{selectedArtist.category === 'artist' ? 'אומן' : 'הפקה'}{hasBoardData ? '' : ' · אין נתוני לוח אירועים'}</p>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedArtist.name}</h2>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {selectedArtist.genre && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300">{selectedArtist.genre}</span>}
+                    {selectedArtist.audience && <span className="text-xs text-slate-400 dark:text-slate-500">· {selectedArtist.audience}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedArtist.category === 'artist' && (
+                    <select value={selectedArtist.status || 'prospect'} onChange={e => updateArtistStatus(selectedArtist, e.target.value)}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300 ${getArtistStatus(selectedArtist.status).color}`}>
+                      {ARTIST_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    </select>
+                  )}
+                  <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">✏️ עריכה</button>
+                </div>
+              </div>
+              {editingMeta && (
+                <div className="mt-3 p-4 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl shadow-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={metaGenre} onChange={e => setMetaGenre(e.target.value)} placeholder="ז'אנר..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaAudience} onChange={e => setMetaAudience(e.target.value)} placeholder="קהל יעד..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaContactName} onChange={e => setMetaContactName(e.target.value)} placeholder="איש קשר..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaContactPhone} onChange={e => setMetaContactPhone(e.target.value)} placeholder="טלפון..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaRevenueTarget} onChange={e => setMetaRevenueTarget(e.target.value)} placeholder="יעד הכנסה חודשי (₪)..." type="number" className="col-span-2 px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={saveMeta} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">שמור</button>
+                    <button onClick={() => setEditingMeta(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">ביטול</button>
+                  </div>
+                </div>
+              )}
             </div>
             {hasBoardData && (
               <div className="grid grid-cols-4 gap-3 mb-5">
