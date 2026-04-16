@@ -19,13 +19,12 @@ type Campaign = {
 }
 type Contact = { id: string; name: string; phone: string }
 type ArtistMeta = { defaultOffice?: string; defaultContactId?: string }
-type BoardKey = 'universal' | 'barbie' | 'general' | 'pixels'
+type BoardKey = 'universal' | 'barbie' | 'general'
 
 const BOARDS: { key: BoardKey; label: string }[] = [
   { key: 'universal', label: 'קידומים יוניברסל' },
   { key: 'barbie', label: 'קידומים בארבי' },
   { key: 'general', label: 'שיווק אומנים כללי' },
-  { key: 'pixels', label: 'פיקסלים' },
 ]
 const GROUP_BORDER: Record<string, string> = {
   'לא טופל': 'border-l-blue-500','עלה לאוויר': 'border-l-emerald-500',
