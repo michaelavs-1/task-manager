@@ -29,27 +29,32 @@ export function TicketTrackingView() {
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
-    const [{ data: camps }, { data: snaps }] = await Promise.all([
-      supabase.from('campaigns')
-        .select('id, requester, name, launch_date, tickets_for_sale, tickets_sold')
-        .eq('board', 'barbie')
-        .order('launch_date', { ascending: true }),
-      supabase.from('ticket_snapshots').select('*').order('snapshot_date', { ascending: true }),
-    ])
-    if (camps) {
-      setCampaigns(camps.map(c => ({
-        id: c.id,
-        name: c.requester || c.name,
-        launch_date: c.launch_date,
-        tickets_for_sale: c.tickets_for_sale,
-        tickets_sold: c.tickets_sold,
-      })))
-      const initial: Record<string, string> = {}
-      camps.forEach(c => { initial[c.id] = c.tickets_sold != null ? String(c.tickets_sold) : '' })
-      setInputValues(initial)
+    try {
+      const [campsRes, snapsRes] = await Promise.all([
+        supabase.from('campaigns')
+          .select('id, requester, name, launch_date, tickets_for_sale, tickets_sold')
+          .eq('board', 'barbie')
+          .order('launch_date', { ascending: true }),
+        supabase.from('ticket_snapshots').select('*').order('snapshot_date', { ascending: true }),
+      ])
+      if (campsRes.data) {
+        setCampaigns(campsRes.data.map((c: any) => ({
+          id: c.id,
+          name: c.requester || c.name,
+          launch_date: c.launch_date,
+          tickets_for_sale: c.tickets_for_sale,
+          tickets_sold: c.tickets_sold,
+        })))
+        const initial: Record<string, string> = {}
+        campsRes.data.forEach((c: any) => { initial[c.id] = c.tickets_sold != null ? String(c.tickets_sold) : '' })
+        setInputValues(initial)
+      }
+      if (snapsRes.data) setSnapshots(snapsRes.data)
+    } catch (err) {
+      console.error('loadData error:', err)
+    } finally {
+      setLoading(false)
     }
-    if (snaps) setSnapshots(snaps)
-    setLoading(false)
   }
 
   const handleSave = async (campaignId: string) => {
