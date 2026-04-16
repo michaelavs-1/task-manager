@@ -702,6 +702,11 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if(f) handleUpload(f) }} />
             {uploadError && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
           </div>
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+            <button onClick={() => onDelete(campaign.id)} className="w-full py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              🗑 מחק קמפיין
+            </button>
+          </div>
         </div>
       )}
     </div>
