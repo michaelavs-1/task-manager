@@ -18,6 +18,34 @@ interface Project {
 const inputCls = "w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-slate-50 focus:bg-white"
 const labelCls = "block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide"
 
+function buildTaskEmailHtml({
+  taskTitle, description, priority, dueDate, assignedName, creatorName, projectName
+}: {
+  taskTitle: string; description: string; priority: string; dueDate: string | null;
+  assignedName: string; creatorName: string; projectName: string | null;
+}) {
+  const priorityMap: Record<string, string> = { urgent: 'דחוף', high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+  const priorityLabel = priorityMap[priority] || priority
+  return `
+<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #f8fafc; padding: 24px; border-radius: 12px;">
+  <div style="background: #4f46e5; color: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;">
+    <h2 style="margin: 0 0 4px 0; font-size: 18px;">משימה חדשה הוקצתה לך</h2>
+    <p style="margin: 0; opacity: 0.85; font-size: 14px;">מאלגוריתם הפקות</p>
+  </div>
+  <div style="background: white; border-radius: 10px; padding: 20px 24px; border: 1px solid #e2e8f0;">
+    <h3 style="margin: 0 0 16px 0; font-size: 17px; color: #1e293b;">${taskTitle}</h3>
+    ${description ? `<p style="color: #475569; font-size: 14px; margin: 0 0 16px 0; line-height: 1.6;">${description}</p>` : ''}
+    <table style="width: 100%; font-size: 13px; color: #64748b;">
+      <tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">עדיפות:</td><td>${priorityLabel}</td></tr>
+      ${dueDate ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">דדליין:</td><td>${new Date(dueDate).toLocaleDateString('he-IL')}</td></tr>` : ''}
+      ${projectName ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">פרויקט:</td><td>${projectName}</td></tr>` : ''}
+      <tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">נוצר על ידי:</td><td>${creatorName}</td></tr>
+    </table>
+  </div>
+  <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 16px;">אלגוריתם הפקות — מערכת ניהול משימות</p>
+</div>`
+}
+
 export default function NewTaskModal({ users, creatorId, onClose, onCreated }: Props) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -57,6 +85,31 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
       alert("שגיאה בשמירת המשימה: " + error.message)
       return
     }
+
+    // Send email notification to assigned user
+    const assignedUser = users.find(u => u.id === assignedTo)
+    const creatorUser = users.find(u => u.id === creatorId)
+    if (assignedUser?.email) {
+      const html = buildTaskEmailHtml({
+        taskTitle: title.trim(),
+        description,
+        priority,
+        dueDate: hasDeadline && dueDate ? dueDate : null,
+        assignedName: assignedUser.name,
+        creatorName: creatorUser?.name || 'מנהל',
+        projectName: proj?.name || null,
+      })
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: assignedUser.email,
+          subject: `משימה חדשה: ${title.trim()}`,
+          html,
+        }),
+      }).catch(() => {}) // fire-and-forget, don't block UX
+    }
+
     onCreated()
   }
 
