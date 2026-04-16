@@ -23,6 +23,17 @@ const STATUS_COLORS: Record<string, string> = {
   'ירד': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
 }
 
+const ARTIST_STATUSES: { key: string; label: string; color: string; dot: string }[] = [
+  { key: 'prospect',   label: 'Prospect / בפיתוח',      color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',       dot: 'bg-slate-400' },
+  { key: 'signing',    label: 'חתימה / משא ומתן',       color: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',       dot: 'bg-amber-400' },
+  { key: 'active',     label: 'Active',                  color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',       dot: 'bg-green-500' },
+  { key: 'growth',     label: 'Growth Mode',             color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',          dot: 'bg-blue-500' },
+  { key: 'release',    label: 'Album / Release Cycle',   color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',  dot: 'bg-purple-500' },
+  { key: 'touring',    label: 'Touring',                 color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',  dot: 'bg-indigo-500' },
+  { key: 'dormant',    label: 'Dormant',                 color: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',             dot: 'bg-red-400' },
+]
+function getArtistStatus(key?: string) { return ARTIST_STATUSES.find(s => s.key === key) || ARTIST_STATUSES[0] }
+
 const LINK_CATS = ['כללי', 'חוזה', 'רידר', 'מדיה', 'פייסבוק', 'אינסטרגרם', 'ספוטיפיי', 'יוטיוב', 'אחר']
 
 const TAB_DEFS: { id: ArtistTab; label: string; icon: string }[] = [
