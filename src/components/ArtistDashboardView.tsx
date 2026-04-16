@@ -121,6 +121,26 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setLoadingLinks(false)
   }, [])
 
+  const loadCampaigns = useCallback(async (artist: Project) => {
+    const { data } = await supabase.from('campaigns').select('id,name,status,group_title,launch_date,platforms').eq('requester', artist.name).order('launch_date', { ascending: false })
+    setCampaigns((data as ArtistCampaign[]) || [])
+  }, [])
+
+  const updateArtistStatus = async (artist: Project, newStatus: string) => {
+    await supabase.from('projects').update({ status: newStatus }).eq('id', artist.id)
+    setProjects(prev => prev.map(p => p.id === artist.id ? { ...p, status: newStatus } : p))
+    setSelectedArtist(prev => prev ? { ...prev, status: newStatus } : prev)
+  }
+
+  const saveMeta = async () => {
+    if (!selectedArtist) return
+    const updates = { genre: metaGenre, audience: metaAudience, contact_name: metaContactName, contact_phone: metaContactPhone, monthly_revenue_target: metaRevenueTarget ? parseInt(metaRevenueTarget) : null }
+    await supabase.from('projects').update(updates).eq('id', selectedArtist.id)
+    setProjects(prev => prev.map(p => p.id === selectedArtist.id ? { ...p, ...updates } : p))
+    setSelectedArtist(prev => prev ? { ...prev, ...updates } : prev)
+    setEditingMeta(false)
+  }
+
   useEffect(() => {
     if (!selectedArtist) return
     loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist)
