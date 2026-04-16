@@ -360,7 +360,7 @@ export function CampaignsView() {
               </div>
               {newArtistMode==='select' ? (
                 <div>
-                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => { setArtistSearch(e.target.value); setShowArtistDropdown(true); }} onFocus={() => setShowArtistDropdown(true)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => { setArtistSearch(e.target.value); setShowArtistDropdown(true); }} onClick={() => setShowArtistDropdown(true)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
                   {showArtistDropdown && <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
                     {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">לא נמצאו אומנים</div>
                       : filteredArtists.map(artist => (
