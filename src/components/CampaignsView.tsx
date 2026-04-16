@@ -946,12 +946,13 @@ function TicketsTableRow({ campaign }: { campaign: Campaign }) {
   )
 }
 
-function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaUpdate, onDelete }: {
+function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaUpdate, onDelete, collapseSignal }: {
   campaign: Campaign; onStatusChange: (c: Campaign, s: string, g: string) => void
   updatingId: string | null; muted?: boolean; onMediaUpdate: (id: string, url: string | null) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void; collapseSignal?: number
 }) {
   const [expanded, setExpanded] = useState(false)
+  useEffect(() => { if (collapseSignal) setExpanded(false) }, [collapseSignal])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [dragging, setDragging] = useState(false)
