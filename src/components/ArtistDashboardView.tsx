@@ -43,7 +43,7 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'campaigns',  label: 'קמפיינים' },
   { id: 'meetings',   label: 'פגישות' },
   { id: 'links',      label: 'קישורים' },
-  { id: 'financial',  label: 'פיננסים' },
+  { id: 'financial',  label: 'הצעות מחיר' },
 ]
 
 function fmtNum(v: string | null) { if (!v) return '—'; const n = parseFloat(v); return isNaN(n) ? '—' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
