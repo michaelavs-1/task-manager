@@ -36,14 +36,14 @@ function getArtistStatus(key?: string) { return ARTIST_STATUSES.find(s => s.key 
 
 const LINK_CATS = ['כללי', 'חוזה', 'רידר', 'מדיה', 'פייסבוק', 'אינסטרגרם', 'ספוטיפיי', 'יוטיוב', 'אחר']
 
-const TAB_DEFS: { id: ArtistTab; label: string; icon: string }[] = [
-  { id: 'overview',   label: 'סקירה כללית',    icon: '⚡' },
-  { id: 'shows',      label: 'הופעות',          icon: '🎤' },
-  { id: 'tasks',      label: 'משימות',          icon: '✅' },
-  { id: 'campaigns',  label: 'קמפיינים',        icon: '📣' },
-  { id: 'meetings',   label: 'פגישות',          icon: '📝' },
-  { id: 'links',      label: 'קישורים',         icon: '🔗' },
-  { id: 'financial',  label: 'פיננסים',         icon: '💰' },
+const TAB_DEFS: { id: ArtistTab; label: string }[] = [
+  { id: 'overview',   label: 'סקירה כללית' },
+  { id: 'shows',      label: 'הופעות' },
+  { id: 'tasks',      label: 'משימות' },
+  { id: 'campaigns',  label: 'קמפיינים' },
+  { id: 'meetings',   label: 'פגישות' },
+  { id: 'links',      label: 'קישורים' },
+  { id: 'financial',  label: 'פיננסים' },
 ]
 
 function fmtNum(v: string | null) { if (!v) return '—'; const n = parseFloat(v); return isNaN(n) ? '—' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
