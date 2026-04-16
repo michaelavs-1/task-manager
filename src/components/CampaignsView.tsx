@@ -716,7 +716,30 @@ export function CampaignsView() {
             {/* Date */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע</label>
-              <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+              <div className="flex items-center gap-2">
+                <input type="date" value={showDate} onChange={e => { setShowDate(e.target.value); setShowTimeSlot('') }} className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+                {showDate && (() => {
+                  const d = new Date(showDate + 'T12:00:00')
+                  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת']
+                  const dayName = days[d.getDay()]
+                  const isFriday = d.getDay() === 5
+                  return <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${isFriday ? 'bg-orange-100 text-orange-700' : 'bg-pink-50 text-pink-600'}`}>יום {dayName}</span>
+                })()}
+              </div>
+              {showDate && new Date(showDate + 'T12:00:00').getDay() === 5 && (
+                <div className="mt-3 flex gap-3">
+                  {(['צהריים', 'ערב'] as const).map(slot => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setShowTimeSlot(showTimeSlot === slot ? '' : slot)}
+                      className={'flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-colors ' + (showTimeSlot === slot ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-gray-200 dark:border-gray-600 text-gray-500 hover:border-orange-300')}
+                    >
+                      מופע {slot}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Tickets for sale */}
