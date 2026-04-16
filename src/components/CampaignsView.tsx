@@ -1001,6 +1001,11 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const isVideo = localMediaUrl ? /\.(mp4|mov|avi|webm)$/i.test(localMediaUrl) : false
 
   const isSoldOut = localTicketsForSale != null && ticketsSoldNum != null && ticketsSoldNum >= localTicketsForSale
+  const dayOfWeek = localLaunchDate ? (() => {
+    const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת']
+    try { return days[new Date(localLaunchDate + 'T12:00:00').getDay()] }
+    catch { return null }
+  })() : null
 
   return (
     <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : isSoldOut ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
