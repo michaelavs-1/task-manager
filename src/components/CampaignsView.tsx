@@ -307,7 +307,9 @@ export function CampaignsView() {
         </div>
       )}
 
-      {selectedBoard === 'barbie' ? (
+      {selectedBoard === 'pixels' ? (
+        <PixelsView />
+      ) : selectedBoard === 'barbie' ? (
         (barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns).length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium mb-4">{barbySubTab==='active' ? 'אין קמפיינים פעילים' : barbySubTab==='ended' ? 'אין קמפיינים שנגמרו' : 'אין קמפיינים בארכיון'}</p>
