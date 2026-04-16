@@ -1342,6 +1342,46 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if(f) handleUpload(f) }} />
             {uploadError && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
           </div>
+          {/* Media Library section */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">מאגר מדיה</p>
+            {mediaLibraryLoading ? (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-pink-500 rounded-full animate-spin" />
+                טוען...
+              </div>
+            ) : mediaLibraryFiles.length === 0 ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500">אין מדיה משויכת למופע זה</p>
+            ) : (
+              <div className="space-y-2">
+                {mediaLibraryFiles.map(file => {
+                  const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
+                  const isVid = /\.(mp4|mov|avi|webm)$/i.test(file.name)
+                  return (
+                    <div key={file.name} className="flex items-center gap-3 p-2 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-lg">
+                      {isImg ? (
+                        <img src={file.url} alt={file.name} className="w-10 h-10 object-cover rounded-md flex-shrink-0" />
+                      ) : isVid ? (
+                        <div className="w-10 h-10 flex items-center justify-center bg-pink-50 dark:bg-pink-900/30 rounded-md flex-shrink-0">
+                          <svg className="w-5 h-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-gray-600 rounded-md flex-shrink-0">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        </div>
+                      )}
+                      <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">{file.name}</span>
+                      <a href={file.url} download={file.name}
+                        className="flex-shrink-0 px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors">
+                        הורדה
+                      </a>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
             <button onClick={() => onDelete(campaign.id)} className="w-full py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               מחק קמפיין
