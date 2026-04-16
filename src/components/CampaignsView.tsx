@@ -517,9 +517,10 @@ export function CampaignsView() {
   )
 }
 
-function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaUpdate }: {
+function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaUpdate, onDelete }: {
   campaign: Campaign; onStatusChange: (c: Campaign, s: string, g: string) => void
   updatingId: string | null; muted?: boolean; onMediaUpdate: (id: string, url: string | null) => void
+  onDelete: (id: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [uploading, setUploading] = useState(false)
