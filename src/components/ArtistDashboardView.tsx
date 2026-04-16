@@ -184,12 +184,16 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
       <div className="w-52 flex-shrink-0 bg-slate-50 dark:bg-gray-900 border-l border-slate-200 dark:border-gray-700 overflow-y-auto p-3">
         <div className="mb-4">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">אומנים</p>
-          {artists.map(a => (
-            <button key={a.id} onClick={() => { setSelectedArtist(a); setTab('shows') }}
-              className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all ${selectedArtist?.id === a.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
-              {a.name}
-            </button>
-          ))}
+          {artists.map(a => {
+            const st = getArtistStatus(a.status)
+            return (
+              <button key={a.id} onClick={() => { setSelectedArtist(a); setTab('overview') }}
+                className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all flex items-center gap-2 ${selectedArtist?.id === a.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedArtist?.id === a.id ? 'bg-white/70' : st.dot}`} />
+                <span className="truncate">{a.name}</span>
+              </button>
+            )
+          })}
         </div>
         {productions.length > 0 && (
           <div>
