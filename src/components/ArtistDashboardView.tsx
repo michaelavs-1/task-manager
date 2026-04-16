@@ -330,7 +330,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Active campaigns */}
                 {campaigns.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">📣 קמפיינים אחרונים</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">קמפיינים אחרונים</p>
                     <div className="space-y-2">
                       {campaigns.slice(0, 3).map(c => (
                         <div key={c.id} className="flex items-center justify-between py-1.5">
