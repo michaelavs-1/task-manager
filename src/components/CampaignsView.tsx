@@ -535,10 +535,24 @@ export function CampaignsView() {
             </div>
 
             {/* Date */}
-            <div className="mb-5">
+            <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע</label>
               <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
             </div>
+
+            {/* Tickets for sale */}
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">כרטיסים למכירה</label>
+              <input
+                type="number"
+                min="0"
+                value={ticketsForSale}
+                onChange={e => setTicketsForSale(e.target.value)}
+                placeholder="כמות כרטיסים עומדים למכירה..."
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
             {createError && <p className="mb-4 text-sm text-red-500 font-medium">{createError}</p>}
             <div className="flex gap-3">
               <button onClick={handleCreateCampaign} disabled={isCreating} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isCreating ? 'bg-gray-200 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-pink-600 text-white hover:bg-pink-700'}`}>{isCreating ? 'יוצר...' : 'צור קמפיין'}</button>
