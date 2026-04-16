@@ -346,7 +346,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Contact */}
                 {(selectedArtist.contact_name || selectedArtist.contact_phone) && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">👤 איש קשר</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">איש קשר</p>
                     {selectedArtist.contact_name && <p className="text-sm font-medium text-slate-800 dark:text-white">{selectedArtist.contact_name}</p>}
                     {selectedArtist.contact_phone && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{selectedArtist.contact_phone}</p>}
                   </div>
@@ -355,7 +355,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Last meeting */}
                 {meetings.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📝 פגישה אחרונה</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">פגישה אחרונה</p>
                     <p className="font-semibold text-slate-800 dark:text-white text-sm">{meetings[0].title}</p>
                     <p className="text-xs text-slate-400 mb-2">{fmtDate(meetings[0].meeting_date)}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 whitespace-pre-wrap">{meetings[0].content}</p>
