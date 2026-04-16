@@ -319,7 +319,7 @@ export function CampaignsView() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 sticky top-0 z-20 bg-gray-50 dark:bg-gray-900 py-4 -mx-8 px-8 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">קמפיינים</h1>
         <div className="flex items-center gap-3">
           {syncError && <span className="text-sm text-red-500 font-medium">{syncError}</span>}
