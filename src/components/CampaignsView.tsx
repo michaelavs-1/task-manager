@@ -110,7 +110,6 @@ export function CampaignsView() {
     } catch {}
   }
 
-  const removeArtistFromBank = (name: string) => { setBarbyArtists(prev => { const next = prev.filter(a => a !== name); try { localStorage.setItem(BARBY_ARTISTS_STORAGE_KEY, JSON.stringify(next)) } catch {} return next }) }
   const removeArtistFromBank = (name: string) => {
     setBarbyArtists(prev => {
       const next = prev.filter(a => a !== name)
