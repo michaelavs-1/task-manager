@@ -149,7 +149,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setMetaContactPhone(selectedArtist.contact_phone || '')
     setMetaRevenueTarget(selectedArtist.monthly_revenue_target ? String(selectedArtist.monthly_revenue_target) : '')
     loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist); loadCampaigns(selectedArtist)
-  }, [selectedArtist, loadEvents, loadMeetings, loadLinks])
+  }, [selectedArtist, loadEvents, loadMeetings, loadLinks, loadCampaigns])
 
   const saveMeeting = async () => {
     if (!selectedArtist || !meetingTitle.trim() || !meetingContent.trim()) return
