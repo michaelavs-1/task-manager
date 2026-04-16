@@ -67,6 +67,8 @@ const BARBY_ARTISTS_INITIAL: string[] = [
 
 const BARBY_OFFICES_STORAGE_KEY = 'barby_offices_bank_v1'
 const BARBY_OFFICES_INITIAL: string[] = []
+const BARBY_CONTACTS_KEY = 'barby_contacts_v1'
+const BARBY_ARTIST_META_KEY = 'barby_artist_meta_v1'
 
 function filterCampaigns(campaigns: Campaign[], board: BoardKey): Campaign[] {
   return campaigns.filter((c) => (c.board || 'universal') === board)
