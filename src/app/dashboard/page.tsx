@@ -570,6 +570,13 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Meetings Tab */}
+        {activeTab === "meetings" && (
+          <div className="h-full">
+            <MeetingsView />
+          </div>
+        )}
+
         {/* User Management Tab */}
         {activeTab === "users" && (
           <div className="h-full">
