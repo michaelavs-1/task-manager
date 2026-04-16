@@ -456,59 +456,86 @@ export function CampaignsView() {
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">קמפיין חדש — בארבי</h2>
               <button onClick={() => setShowNewModal(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            <div className="mb-5">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">בחירת אומן</label>
-              <div className="flex gap-2 mb-3">
-                <button onClick={() => setNewArtistMode('select')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='select' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-800'}`}>בחר מהמאגר</button>
-                <button onClick={() => setNewArtistMode('create')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='create' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:bg-gray-800'}`}>+ אומן חדש</button>
-              </div>
-              {newArtistMode==='select' ? (
-                <div>
-                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  {artistSearch.length > 0 && <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
-                    {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">לא נמצאו אומנים</div>
-                      : filteredArtists.map(artist => (
-                        <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
-                      ))}
-                  </div>}
-                  {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
+            {/* Artist accordion */}
+            <div className="mb-3 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setModalArtistOpen(!modalArtistOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-pink-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">אומנים</span>
+                  {selectedArtist && <span className="text-xs text-pink-600 font-medium">{selectedArtist}</span>}
                 </div>
-              ) : (
-                <div>
-                  <input type="text" placeholder="שם האומן / המופע..." value={newArtistName} onChange={e => setNewArtistName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">האומן יתווסף למאגר הקבוע לשימוש עתידי</p>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${modalArtistOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {modalArtistOpen && (
+                <div className="px-4 py-3">
+                  <div className="flex gap-2 mb-3">
+                    <button onClick={() => setNewArtistMode('select')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='select' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50'}`}>בחר מהמאגר</button>
+                    <button onClick={() => setNewArtistMode('create')} className={`flex-1 py-1.5 rounded-lg text-sm font-medium border transition-colors ${newArtistMode==='create' ? 'bg-pink-50 border-pink-300 text-pink-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-50'}`}>+ אומן חדש</button>
+                  </div>
+                  {newArtistMode==='select' ? (
+                    <div>
+                      <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+                      {artistSearch.length > 0 && <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                        {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו אומנים</div>
+                          : filteredArtists.map(artist => (
+                            <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); setModalArtistOpen(false) }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
+                          ))}
+                      </div>}
+                      {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
+                    </div>
+                  ) : (
+                    <div>
+                      <input type="text" placeholder="שם האומן / המופע..." value={newArtistName} onChange={e => setNewArtistName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+                      <p className="mt-1.5 text-xs text-gray-400">האומן יתווסף למאגר הקבוע לשימוש עתידי</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-right">משרד מייצג</label>
-                <input
-                  type="text"
-                  placeholder="חיפוש משרד..."
-                  value={officeSearch}
-                  onChange={e => setOfficeSearch(e.target.value)}
-                  className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300"
-                />
-                {officeSearch.length > 0 && (
-                  <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
-                    {barbyOffices.filter(o => o.includes(officeSearch)).map(office => (
-                      <button key={office} onClick={() => { setSelectedOffice(office); setOfficeSearch('') }}
-                        className="w-full text-right px-3 py-2 text-sm hover:bg-pink-50 dark:hover:bg-gray-700">
-                        {office}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {selectedOffice && (
-                  <div className="flex items-center justify-between px-3 py-2 bg-pink-50 dark:bg-gray-700 rounded-lg text-sm">
-                    <button onClick={() => setSelectedOffice('')} className="text-gray-400 hover:text-red-500">✕</button>
-                    <span className="font-medium text-pink-700 dark:text-pink-300">{selectedOffice}</span>
-                  </div>
-                )}
-              </div>
-</label>
-              <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+
+            {/* Office accordion */}
+            <div className="mb-4 border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setModalOfficeOpen(!modalOfficeOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-pink-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">משרד</span>
+                  {selectedOffice && <span className="text-xs text-pink-600 font-medium">{selectedOffice}</span>}
+                </div>
+                <svg className={`w-4 h-4 text-gray-400 transition-transform ${modalOfficeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {modalOfficeOpen && (
+                <div className="px-4 py-3">
+                  <input type="text" placeholder="חיפוש משרד..." value={officeSearch} onChange={e => setOfficeSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+                  {officeSearch.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                      {barbyOffices.filter(o => o.toLowerCase().includes(officeSearch.toLowerCase())).map(office => (
+                        <button key={office} onClick={() => { setSelectedOffice(office); setOfficeSearch(''); setModalOfficeOpen(false) }}
+                          className="w-full text-right px-3 py-2 text-sm hover:bg-pink-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+                          {office}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedOffice && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-pink-50 dark:bg-gray-700 rounded-lg text-sm mt-1">
+                      <button onClick={() => setSelectedOffice('')} className="text-gray-400 hover:text-red-500">✕</button>
+                      <span className="font-medium text-pink-700 dark:text-pink-300">{selectedOffice}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Date */}
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">תאריך מופע</label>
+              <input type="date" value={showDate} onChange={e => setShowDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
             </div>
             {createError && <p className="mb-4 text-sm text-red-500 font-medium">{createError}</p>}
             <div className="flex gap-3">
