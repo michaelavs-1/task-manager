@@ -197,6 +197,12 @@ export function CampaignsView() {
     setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, media_url: mediaUrl } : c))
   }
 
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (!confirm('למחוק את הקמפיין?')) return
+    const { error } = await supabase.from('campaigns').delete().eq('id', campaignId)
+    if (!error) setCampaigns(prev => prev.filter(c => c.id !== campaignId))
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
