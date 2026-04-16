@@ -268,6 +268,100 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
               ))}
             </div>
 
+            {tab === 'overview' && (
+              <div className="space-y-5">
+                {/* Status + KPIs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { val: upcomingEvents.length, label: 'הופעות קרובות', color: 'text-slate-800 dark:text-white', icon: '🎤' },
+                    { val: confirmedEvents.length, label: 'מאושרות', color: 'text-green-600', icon: '✅' },
+                    { val: campaigns.filter(c => c.status === 'פעיל' || c.status === 'חדש').length, label: 'קמפיינים פעילים', color: 'text-purple-600', icon: '📣' },
+                    { val: artistTasks.filter(t => t.status !== 'completed').length, label: 'משימות פתוחות', color: 'text-indigo-600', icon: '📋' },
+                  ].map(({ val, label, color, icon }) => (
+                    <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 text-right">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-lg">{icon}</span>
+                        <div className={`text-2xl font-bold ${color}`}>{val}</div>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Revenue */}
+                {hasBoardData && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">💰 פיננסים</p>
+                    <div className="flex gap-6 flex-wrap">
+                      <div><p className="text-xs text-slate-400">הכנסות כולל</p><p className="text-xl font-bold text-blue-600">₪{fmtNum(String(totalRevenue))}</p></div>
+                      <div><p className="text-xs text-slate-400">רווח אומן</p><p className="text-xl font-bold text-indigo-600">₪{fmtNum(String(artistTotal))}</p></div>
+                      {selectedArtist.monthly_revenue_target ? (
+                        <div><p className="text-xs text-slate-400">יעד חודשי</p><p className="text-xl font-bold text-slate-700 dark:text-white">₪{fmtNum(String(selectedArtist.monthly_revenue_target))}</p></div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {/* Next show */}
+                {upcomingEvents.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">🎤 הופעה הקרובה</p>
+                    <EventRow event={upcomingEvents[0]} />
+                  </div>
+                )}
+
+                {/* Critical tasks */}
+                {artistTasks.filter(t => t.status !== 'completed').length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">✅ משימות פתוחות</p>
+                    <div className="space-y-2">
+                      {artistTasks.filter(t => t.status !== 'completed').slice(0, 5).map(task => (
+                        <div key={task.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-gray-700 last:border-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${task.priority === 'urgent' ? 'bg-red-100 text-red-600' : task.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'}`}>{task.priority === 'urgent' ? 'דחוף' : task.priority === 'high' ? 'גבוהה' : 'בינוני'}</span>
+                          <p className="text-sm text-slate-700 dark:text-slate-200 font-medium flex-1 text-right px-3">{task.title}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active campaigns */}
+                {campaigns.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">📣 קמפיינים אחרונים</p>
+                    <div className="space-y-2">
+                      {campaigns.slice(0, 3).map(c => (
+                        <div key={c.id} className="flex items-center justify-between py-1.5">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'פעיל' ? 'bg-green-100 text-green-700' : c.status === 'נגמר' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>{c.status || '—'}</span>
+                          <p className="text-sm text-slate-700 dark:text-slate-200 font-medium flex-1 text-right px-3">{c.name}</p>
+                          {c.launch_date && <span className="text-xs text-slate-400">{fmtDate(c.launch_date)}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact */}
+                {(selectedArtist.contact_name || selectedArtist.contact_phone) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">👤 איש קשר</p>
+                    {selectedArtist.contact_name && <p className="text-sm font-medium text-slate-800 dark:text-white">{selectedArtist.contact_name}</p>}
+                    {selectedArtist.contact_phone && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{selectedArtist.contact_phone}</p>}
+                  </div>
+                )}
+
+                {/* Last meeting */}
+                {meetings.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📝 פגישה אחרונה</p>
+                    <p className="font-semibold text-slate-800 dark:text-white text-sm">{meetings[0].title}</p>
+                    <p className="text-xs text-slate-400 mb-2">{fmtDate(meetings[0].meeting_date)}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 whitespace-pre-wrap">{meetings[0].content}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {tab === 'shows' && (
               <div>
                 {!hasBoardData ? <Empty icon="🎤" msg="אין נתוני הופעות לאומן זה" sub="לוח אירועים לא מוגדר" /> :
