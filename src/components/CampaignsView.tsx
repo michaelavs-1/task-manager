@@ -952,8 +952,10 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const isImage = localMediaUrl ? /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(localMediaUrl) : false
   const isVideo = localMediaUrl ? /\.(mp4|mov|avi|webm)$/i.test(localMediaUrl) : false
 
+  const isSoldOut = localTicketsForSale != null && ticketsSoldNum != null && ticketsSoldNum >= localTicketsForSale
+
   return (
-    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
+    <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : isSoldOut ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
       <button onClick={() => setExpanded(!expanded)} className="w-full text-right p-4 focus:outline-none">
         <div className={`h-1 rounded-full mb-4 ${muted ? 'bg-gray-200' : 'bg-gradient-to-l from-pink-400 to-pink-600'}`} />
         <div className="flex items-start justify-between gap-2">
