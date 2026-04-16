@@ -438,18 +438,66 @@ export function CampaignsView() {
                 groups[key].push(camp)
               })
               const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
-              return Object.keys(groups).sort().map(key => (
-                <div key={key} className="mb-6">
-                  <h3 className="text-sm font-bold text-gray-400 dark:text-gray-500 tracking-widest mb-3 pb-2 border-b border-gray-200 dark:border-gray-600 text-right uppercase">
-                    {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {groups[key].map(camp => (
-                      <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} />
-                    ))}
+              return Object.keys(groups).sort().map(key => {
+                const monthCamps = groups[key]
+                const totalForSale = monthCamps.reduce((s, c) => s + (c.tickets_for_sale || 0), 0)
+                const totalSold = monthCamps.reduce((s, c) => s + (c.tickets_sold || 0), 0)
+                const pct = totalForSale > 0 ? Math.round(totalSold / totalForSale * 100) : null
+                const pctColor = pct !== null ? (pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-pink-600') : ''
+                const pctBg = pct !== null ? (pct >= 80 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' : pct >= 50 ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800' : 'bg-pink-50 border-pink-200 dark:bg-pink-900/20 dark:border-pink-800') : ''
+                const barColor = pct !== null ? (pct >= 80 ? 'bg-gradient-to-l from-emerald-400 to-emerald-500' : pct >= 50 ? 'bg-gradient-to-l from-amber-400 to-amber-500' : 'bg-gradient-to-l from-pink-400 to-pink-500') : 'bg-pink-300'
+                return (
+                  <div key={key} className="mb-8">
+                    {/* Month stats header */}
+                    <div className="mb-3 rounded-2xl border border-pink-100 dark:border-gray-700 px-5 py-4 flex items-center justify-between bg-gradient-to-l from-pink-50 to-white dark:from-gray-800 dark:to-gray-850">
+                      {/* Stats pills */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
+                          <span className="text-lg font-extrabold text-gray-800 dark:text-white leading-none">{monthCamps.length}</span>
+                          <span className="text-xs text-gray-400 mt-0.5">מופעים</span>
+                        </div>
+                        {totalForSale > 0 && (
+                          <>
+                            <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
+                              <span className="text-lg font-extrabold text-pink-600 leading-none">{totalForSale.toLocaleString()}</span>
+                              <span className="text-xs text-gray-400 mt-0.5">למכירה</span>
+                            </div>
+                            <div className="flex flex-col items-center bg-white dark:bg-gray-700 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-600 min-w-[52px] shadow-sm">
+                              <span className="text-lg font-extrabold text-indigo-600 leading-none">{totalSold.toLocaleString()}</span>
+                              <span className="text-xs text-gray-400 mt-0.5">נמכרו</span>
+                            </div>
+                            {pct !== null && (
+                              <div className={'flex flex-col items-center rounded-xl px-3 py-2 border min-w-[52px] shadow-sm ' + pctBg}>
+                                <span className={'text-lg font-extrabold leading-none ' + pctColor}>{pct}%</span>
+                                <span className="text-xs text-gray-400 mt-0.5">נמכר</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {/* Month title */}
+                      <div className="text-right">
+                        <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                          {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
+                        </h3>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    {totalForSale > 0 && pct !== null && (
+                      <div className="mb-4 px-1">
+                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                          <div className={'h-full rounded-full transition-all ' + barColor} style={{ width: Math.min(100, pct) + '%' }} />
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {groups[key].map(camp => (
+                        <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             })()}
           </div>
         )
