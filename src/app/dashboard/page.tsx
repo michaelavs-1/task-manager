@@ -427,20 +427,51 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* View Toggle - Manager Only */}
+            {/* Employee Picker - Manager Only */}
             {userRole === "manager" && (
-              <div className="mb-6 flex gap-3">
+              <div className="mb-6">
                 <button
-                  onClick={() => setViewByEmployee(!viewByEmployee)}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                  onClick={() => setShowEmployeePicker(!showEmployeePicker)}
+                  className={'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ' + (selectedEmployee ? 'bg-indigo-600 border-indigo-600' : '')}
                   style={{
-                    backgroundColor: viewByEmployee ? '#4F46E5' : 'transparent',
-                    color: viewByEmployee ? 'white' : 'var(--text-primary)',
-                    border: viewByEmployee ? 'none' : `1px solid var(--border-color)`,
+                    color: selectedEmployee ? 'white' : 'var(--text-primary)',
+                    borderColor: selectedEmployee ? '#4F46E5' : 'var(--border-color)',
+                    backgroundColor: selectedEmployee ? '#4F46E5' : 'transparent',
                   }}
                 >
-                  לפי עובד
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>{selectedEmployee || 'בחר עובד'}</span>
+                  {selectedEmployee && (
+                    <span
+                      onClick={(e) => { e.stopPropagation(); setSelectedEmployee(null); setShowEmployeePicker(false) }}
+                      className="text-indigo-200 hover:text-white cursor-pointer text-xs ml-1"
+                    >✕</span>
+                  )}
+                  <span className="text-xs opacity-60 mr-1">{showEmployeePicker ? '▲' : '▼'}</span>
                 </button>
+
+                {showEmployeePicker && (
+                  <div className="mt-2 p-3 rounded-2xl border shadow-sm flex flex-wrap gap-2" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+                    {sortedEmployees.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => { setSelectedEmployee(name); setShowEmployeePicker(false) }}
+                        className={'px-3 py-2 rounded-xl text-sm font-semibold border transition-colors flex items-center gap-1.5 ' + (selectedEmployee === name ? 'bg-indigo-600 border-indigo-600 text-white' : 'hover:bg-indigo-50 hover:border-indigo-300')}
+                        style={{
+                          color: selectedEmployee === name ? 'white' : 'var(--text-primary)',
+                          borderColor: selectedEmployee === name ? '#4F46E5' : 'var(--border-color)',
+                        }}
+                      >
+                        <span>{name}</span>
+                        <span className={'text-xs rounded-full px-1.5 py-0.5 font-medium ' + (selectedEmployee === name ? 'bg-indigo-500 text-indigo-100' : 'bg-gray-100 text-gray-500')}>
+                          {(groupedByEmployee[name] || []).length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
