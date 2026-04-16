@@ -90,6 +90,7 @@ export function CampaignsView() {
   const [selectedArtist, setSelectedArtist] = useState('')
   const [newArtistName, setNewArtistName] = useState('')
   const [showDate, setShowDate] = useState('')
+  const [showTimeSlot, setShowTimeSlot] = useState<'ערב' | 'צהריים' | ''>('')
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState('')
   const [showRosterModal, setShowRosterModal] = useState(false)
