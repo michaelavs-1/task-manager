@@ -24,6 +24,7 @@ export function TicketTrackingView() {
   const [inputValues, setInputValues] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
+  const [snapshotDate, setSnapshotDate] = useState(new Date().toISOString().split('T')[0])
 
   useEffect(() => { loadData() }, [])
 
