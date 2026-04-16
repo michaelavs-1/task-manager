@@ -97,6 +97,62 @@ export default function Dashboard() {
     loadTasks()
   }
 
+  async function sendRemindEmail(toEmail: string, toName: string, taskList: Task[]) {
+    const priorityMap: Record<string, string> = { urgent: 'דחוף', high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+    const rows = taskList.map(t => `
+      <tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;">${t.title}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;">${priorityMap[t.priority] || t.priority}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;">${t.due_date ? new Date(t.due_date).toLocaleDateString('he-IL') : '—'}</td>
+      </tr>`).join('')
+    const html = `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;background:#f8fafc;padding:24px;border-radius:12px;">
+      <div style="background:#4f46e5;color:white;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
+        <h2 style="margin:0 0 4px 0;font-size:18px;">תזכורת: משימות פתוחות</h2>
+        <p style="margin:0;opacity:0.85;font-size:14px;">שלום ${toName}</p>
+      </div>
+      <div style="background:white;border-radius:10px;padding:20px 24px;border:1px solid #e2e8f0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">משימה</th>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">עדיפות</th>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">דדליין</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">אלגוריתם הפקות</p>
+    </div>`
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: toEmail, subject: `תזכורת: ${taskList.length} משימות פתוחות`, html }),
+    })
+  }
+
+  async function sendRemindSingleEmail(toEmail: string, toName: string, task: Task) {
+    const priorityMap: Record<string, string> = { urgent: 'דחוף', high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+    const html = `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:24px;border-radius:12px;">
+      <div style="background:#4f46e5;color:white;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
+        <h2 style="margin:0 0 4px 0;font-size:18px;">תזכורת: משימה ממתינה</h2>
+        <p style="margin:0;opacity:0.85;font-size:14px;">שלום ${toName}</p>
+      </div>
+      <div style="background:white;border-radius:10px;padding:20px 24px;border:1px solid #e2e8f0;">
+        <h3 style="margin:0 0 12px 0;font-size:16px;color:#1e293b;">${task.title}</h3>
+        ${task.description ? `<p style="color:#475569;font-size:14px;margin:0 0 12px 0;">${task.description}</p>` : ''}
+        <table style="font-size:13px;color:#64748b;">
+          <tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">עדיפות:</td><td>${priorityMap[task.priority] || task.priority}</td></tr>
+          ${task.due_date ? `<tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">דדליין:</td><td>${new Date(task.due_date).toLocaleDateString('he-IL')}</td></tr>` : ''}
+        </table>
+      </div>
+      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">אלגוריתם הפקות</p>
+    </div>`
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: toEmail, subject: `תזכורת: ${task.title}`, html }),
+    })
+  }
+
   function logout() {
     localStorage.clear()
     window.location.href = "/"
