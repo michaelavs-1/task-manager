@@ -307,7 +307,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Next show */}
                 {upcomingEvents.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">🎤 הופעה הקרובה</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">הופעה הקרובה</p>
                     <EventRow event={upcomingEvents[0]} />
                   </div>
                 )}
