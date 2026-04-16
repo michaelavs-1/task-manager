@@ -53,7 +53,7 @@ function isUpcoming(d: string | null) { return !!d && d >= new Date().toISOStrin
 export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; initialArtist?: string }) {
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedArtist, setSelectedArtist] = useState<Project | null>(null)
-  const [tab, setTab] = useState<ArtistTab>('shows')
+  const [tab, setTab] = useState<ArtistTab>('overview')
   const [events, setEvents] = useState<ArtistEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [eventsError, setEventsError] = useState('')
