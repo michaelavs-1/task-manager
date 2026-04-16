@@ -502,7 +502,7 @@ export function CampaignsView() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {groups[key].map(camp => (
-                        <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} />
+                        <BarbyCard key={camp.id} campaign={camp} onStatusChange={handleStatusChange} updatingId={updatingId} muted={barbySubTab==='archive'} onMediaUpdate={handleMediaUpdate} onDelete={handleDeleteCampaign} collapseSignal={collapseSignal} />
                       ))}
                     </div>
                   </div>
