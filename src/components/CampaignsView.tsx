@@ -403,6 +403,8 @@ export function CampaignsView() {
         <PixelsView />
       ) : selectedBoard === 'barbie' && barbySubTab === 'tracking' ? (
         <TicketTrackingView />
+      ) : selectedBoard === 'barbie' && barbySubTab === 'media' ? (
+        <MediaLibraryView />
       ) : selectedBoard === 'barbie' ? (
         (barbySubTab==='active' ? barbyActiveCampaigns : barbySubTab==='ended' ? barbyEndedCampaigns : barbyArchiveCampaigns).length === 0 ? (
           <div className="text-center py-16">
