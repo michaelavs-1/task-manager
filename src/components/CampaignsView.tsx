@@ -756,44 +756,89 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             )
           })}
 
-          {/* Tickets sold section */}
-          {ticketsForSale != null && (
-            <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">עדכון מספר כרטיסים</p>
+          {/* Tickets section — always visible */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">כרטיסים</p>
+            {localTicketsForSale == null ? (
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
-                  max={ticketsForSale}
-                  value={localTicketsSold}
-                  onChange={e => setLocalTicketsSold(e.target.value)}
-                  onKeyDown={async e => {
-                    if (e.key === 'Enter') {
-                      const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
-                      await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
-                    }
-                  }}
-                  placeholder="0"
-                  className="w-24 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                  value={ticketsForSaleInput}
+                  onChange={e => setTicketsForSaleInput(e.target.value)}
+                  placeholder="כמות כרטיסים למכירה..."
+                  className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
                 />
-                <span className="text-sm text-gray-400 dark:text-gray-500">מתוך {ticketsForSale}</span>
                 <button
                   onClick={async () => {
-                    const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
-                    await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    const val = ticketsForSaleInput !== '' ? parseInt(ticketsForSaleInput) : null
+                    if (val == null) return
+                    await supabase.from('campaigns').update({ tickets_for_sale: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    setLocalTicketsForSale(val)
                   }}
-                  className="px-3 py-1.5 text-sm font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                  className="px-3 py-1.5 text-sm font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors whitespace-nowrap"
                 >
-                  שמור
+                  הגדר
                 </button>
-                {ticketsRemaining !== null && (
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ticketsRemaining <= 0 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                    {ticketsRemaining <= 0 ? 'אזלו' : `נותרו ${ticketsRemaining}`}
-                  </span>
-                )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">למכירה:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={ticketsForSaleInput}
+                    onChange={e => setTicketsForSaleInput(e.target.value)}
+                    className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                  />
+                  <button
+                    onClick={async () => {
+                      const val = ticketsForSaleInput !== '' ? parseInt(ticketsForSaleInput) : null
+                      if (val == null) return
+                      await supabase.from('campaigns').update({ tickets_for_sale: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                      setLocalTicketsForSale(val)
+                    }}
+                    className="px-2 py-1 text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    עדכן
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">נמכרו:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={localTicketsForSale}
+                    value={localTicketsSold}
+                    onChange={e => setLocalTicketsSold(e.target.value)}
+                    onKeyDown={async e => {
+                      if (e.key === 'Enter') {
+                        const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
+                        await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                      }
+                    }}
+                    placeholder="0"
+                    className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                  />
+                  <button
+                    onClick={async () => {
+                      const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
+                      await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                    }}
+                    className="px-3 py-1 text-sm font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                  >
+                    שמור
+                  </button>
+                  {ticketsRemaining !== null && (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ticketsRemaining <= 0 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      {ticketsRemaining <= 0 ? 'אזלו' : `נותרו ${ticketsRemaining}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Media section */}
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
