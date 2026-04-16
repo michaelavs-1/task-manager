@@ -103,7 +103,17 @@ export function CampaignsView() {
   const [officeRosterSearch, setOfficeRosterSearch] = useState('')
   const [modalArtistOpen, setModalArtistOpen] = useState(true)
   const [modalOfficeOpen, setModalOfficeOpen] = useState(false)
+  const [modalContactOpen, setModalContactOpen] = useState(false)
   const [ticketsForSale, setTicketsForSale] = useState('')
+  const [barbyContacts, setBarbyContacts] = useState<Contact[]>([])
+  const [artistMeta, setArtistMeta] = useState<Record<string, ArtistMeta>>({})
+  const [showContactsModal, setShowContactsModal] = useState(false)
+  const [contactRosterSearch, setContactRosterSearch] = useState('')
+  const [newContactName, setNewContactName] = useState('')
+  const [newContactPhone, setNewContactPhone] = useState('')
+  const [selectedContactId, setSelectedContactId] = useState('')
+  const [contactModalSearch, setContactModalSearch] = useState('')
+  const [rosterLinkArtist, setRosterLinkArtist] = useState<string | null>(null)
 
   useEffect(() => {
     try {
