@@ -274,7 +274,7 @@ export function CampaignsView() {
           onClick={() => { setOfficeRosterSearch(''); setShowOfficesModal(true) }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
-          🏢 מאגר משרדים
+          מאגר משרדים
         </button>             <button onClick={() => { setCreateError(''); setSelectedArtist(''); setNewArtistName(''); setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setShowNewModal(true) }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -707,7 +707,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           </div>
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
             <button onClick={() => onDelete(campaign.id)} className="w-full py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-              🗑 מחק קמפיין
+              מחק קמפיין
             </button>
           </div>
         </div>
