@@ -1124,6 +1124,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             <span className={`text-gray-300 transition-transform text-xs ${expanded ? 'rotate-180' : ''}`}>▼</span>
           </div>
         </div>
+        </div>
       </button>
 
       {expanded && (
