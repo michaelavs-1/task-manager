@@ -87,13 +87,16 @@ export function CampaignsView() {
   const [showRosterModal, setShowRosterModal] = useState(false)
   const [newRosterArtist, setNewRosterArtist] = useState('')
   const [rosterSearch, setRosterSearch] = useState('')
+  const [showArtistDropdown, setShowArtistDropdown] = useState(false)
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(BARBY_ARTISTS_STORAGE_KEY)
       if (stored) {
-        const extra: string[] = JSON.parse(stored)
-        setBarbyArtists([...BARBY_ARTISTS_INITIAL, ...extra.filter(a => !BARBY_ARTISTS_INITIAL.includes(a))])
+        const parsed: string[] = JSON.parse(stored)
+        setBarbyArtists(parsed.length > 0 ? parsed : BARBY_ARTISTS_INITIAL)
+      } else {
+        localStorage.setItem(BARBY_ARTISTS_STORAGE_KEY, JSON.stringify(BARBY_ARTISTS_INITIAL))
       }
     } catch {}
   }, [])
@@ -110,6 +113,14 @@ export function CampaignsView() {
   }
 
   const removeArtistFromBank = (name: string) => { setBarbyArtists(prev => { const next = prev.filter(a => a !== name); try { localStorage.setItem(BARBY_ARTISTS_STORAGE_KEY, JSON.stringify(next)) } catch {} return next }) }
+  const removeArtistFromBank = (name: string) => {
+    setBarbyArtists(prev => {
+      const next = prev.filter(a => a !== name)
+      try { localStorage.setItem(BARBY_ARTISTS_STORAGE_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   const handleCreateCampaign = async () => {
     const artistName = newArtistMode === 'create' ? newArtistName.trim() : selectedArtist
     if (!artistName) { setCreateError('יש לבחור או להזין שם אומן'); return }
@@ -349,13 +360,13 @@ export function CampaignsView() {
               </div>
               {newArtistMode==='select' ? (
                 <div>
-                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
-                  <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
+                  <input type="text" placeholder="חיפוש אומן..." value={artistSearch} onChange={e => { setArtistSearch(e.target.value); setShowArtistDropdown(true); }} onFocus={() => setShowArtistDropdown(true)} className="w-full mb-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300" />
+                  {showArtistDropdown && <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100">
                     {filteredArtists.length===0 ? <div className="px-3 py-3 text-sm text-gray-400 dark:text-gray-500 text-center">לא נמצאו אומנים</div>
                       : filteredArtists.map(artist => (
-                        <button key={artist} onClick={() => setSelectedArtist(artist)} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
+                        <button key={artist} onClick={() => { setSelectedArtist(artist); setArtistSearch(''); setShowArtistDropdown(false); }} className={`w-full text-right px-3 py-2 text-sm transition-colors ${selectedArtist===artist ? 'bg-pink-50 text-pink-700 font-semibold' : 'hover:bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}>{artist}</button>
                       ))}
-                  </div>
+                  </div>}
                   {selectedArtist && <div className="mt-2 flex items-center gap-2 text-sm text-pink-600 font-medium"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>{selectedArtist}</div>}
                 </div>
               ) : (
