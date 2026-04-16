@@ -144,6 +144,7 @@ export function TicketTrackingView() {
               <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים למכירה</th>
               <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים מכורים עדכני</th>
               <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">נותרו</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">ימים למופע</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
