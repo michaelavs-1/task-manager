@@ -517,6 +517,44 @@ export function CampaignsView() {
         </div>
       )}
 
+      {showContactsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowContactsModal(false) }}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">אנשי קשר</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{barbyContacts.length} אנשי קשר</p>
+              </div>
+              <button onClick={() => setShowContactsModal(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <input type="text" placeholder="חיפוש..." value={contactRosterSearch} onChange={e => setContactRosterSearch(e.target.value)} className="w-full mb-3 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white" />
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-xl mb-4">
+              {barbyContacts.filter(c => !contactRosterSearch || c.name.includes(contactRosterSearch) || c.phone.includes(contactRosterSearch)).map(contact => (
+                <div key={contact.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <button onClick={() => removeContact(contact.id)} className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors">הסר</button>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{contact.name}</p>
+                    {contact.phone && <p className="text-xs text-gray-400">{contact.phone}</p>}
+                  </div>
+                </div>
+              ))}
+              {barbyContacts.length === 0 && <p className="px-4 py-4 text-sm text-gray-400 text-center">אין אנשי קשר עדיין</p>}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">הוסף איש קשר חדש</p>
+              <input type="text" placeholder="שם..." value={newContactName} onChange={e => setNewContactName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white" />
+              <input type="text" placeholder="טלפון..." value={newContactPhone} onChange={e => setNewContactPhone(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white" />
+              <button
+                onClick={() => { if (newContactName.trim()) { saveContact(newContactName, newContactPhone); setNewContactName(''); setNewContactPhone('') }}}
+                className="w-full py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              >
+                הוסף
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRosterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) { setShowRosterModal(false); setRosterLinkArtist(null) } }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative" dir="rtl">
