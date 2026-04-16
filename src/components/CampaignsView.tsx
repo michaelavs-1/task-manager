@@ -450,54 +450,50 @@ export function CampaignsView() {
                 const barColor = pct !== null ? (pct >= 80 ? 'bg-gradient-to-l from-emerald-400 to-emerald-500' : pct >= 50 ? 'bg-gradient-to-l from-amber-400 to-amber-500' : 'bg-gradient-to-l from-pink-400 to-pink-500') : 'bg-pink-300'
                 return (
                   <div key={key} className="mb-10">
-                    {/* Month section header */}
-                    <div className="mb-5">
-                      {/* Title row with dividers */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="flex-1 h-px bg-gradient-to-r from-transparent to-pink-200 dark:to-pink-900" />
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-gray-800 border-2 border-pink-200 dark:border-pink-900 shadow-sm">
-                          <span className="text-2xl">📅</span>
-                          <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                    {/* Month section header - dark tech style */}
+                    <div className="mb-5 rounded-xl overflow-hidden shadow-lg" style={{background:'linear-gradient(135deg,#0f172a 0%,#1e293b 100%)'}}>
+                      <div className="flex items-center justify-between px-5 py-3 gap-4 flex-wrap">
+                        {/* Month title */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-1 h-8 rounded-full bg-pink-500 shadow-sm" style={{boxShadow:'0 0 8px #ec4899'}} />
+                          <h3 className="text-lg font-black text-white tracking-widest uppercase" style={{letterSpacing:'0.12em'}}>
                             {key === 'no-date' ? 'ללא תאריך' : heMonths[parseInt(key.split('-')[1])-1] + ' ' + key.split('-')[0]}
                           </h3>
                         </div>
-                        <div className="flex-1 h-px bg-gradient-to-l from-transparent to-pink-200 dark:to-pink-900" />
-                      </div>
-                      {/* Stats bar */}
-                      <div className="flex items-stretch gap-3 flex-wrap justify-center">
-                        <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
-                          <span className="text-2xl font-black text-gray-800 dark:text-white leading-none">{monthCamps.length}</span>
-                          <span className="text-xs text-gray-400 mt-1 font-medium">מופעים</span>
-                        </div>
-                        {totalForSale > 0 && (
-                          <>
-                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
-                              <span className="text-2xl font-black text-pink-600 leading-none">{totalForSale.toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 mt-1 font-medium">כרטיסים למכירה</span>
-                            </div>
-                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
-                              <span className="text-2xl font-black text-indigo-600 leading-none">{totalSold.toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 mt-1 font-medium">נמכרו</span>
-                            </div>
-                            <div className="flex flex-col items-center bg-white dark:bg-gray-800 rounded-2xl px-5 py-3 border border-gray-100 dark:border-gray-700 shadow-sm min-w-[72px]">
-                              <span className="text-2xl font-black text-gray-400 leading-none">{(totalForSale - totalSold).toLocaleString()}</span>
-                              <span className="text-xs text-gray-400 mt-1 font-medium">נותרו</span>
-                            </div>
-                            {pct !== null && (
-                              <div className={'flex flex-col items-center rounded-2xl px-5 py-3 border shadow-sm min-w-[72px] ' + pctBg}>
-                                <span className={'text-2xl font-black leading-none ' + pctColor}>{pct}%</span>
-                                <span className="text-xs text-gray-400 mt-1 font-medium">נמכר</span>
+                        {/* Stats inline */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            <span className="text-gray-400 text-xs font-medium">מופעים</span>
+                            <span className="text-white font-black text-sm">{monthCamps.length}</span>
+                          </div>
+                          {totalForSale > 0 && (
+                            <>
+                              <div className="w-px h-5 bg-white/10 mx-1" />
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                <span className="text-gray-400 text-xs font-medium">למכירה</span>
+                                <span className="text-pink-400 font-black text-sm">{totalForSale.toLocaleString()}</span>
                               </div>
-                            )}
-                          </>
-                        )}
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                <span className="text-gray-400 text-xs font-medium">נמכרו</span>
+                                <span className="text-indigo-300 font-black text-sm">{totalSold.toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                <span className="text-gray-400 text-xs font-medium">נותרו</span>
+                                <span className="text-gray-300 font-black text-sm">{(totalForSale - totalSold).toLocaleString()}</span>
+                              </div>
+                              {pct !== null && (
+                                <div className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-black text-sm ' + (pct >= 80 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : pct >= 50 ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-pink-500/10 border-pink-500/30 text-pink-400')}>
+                                  {pct}%
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                       {/* Progress bar */}
                       {totalForSale > 0 && pct !== null && (
-                        <div className="mt-3 px-1">
-                          <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                            <div className={'h-full rounded-full transition-all ' + barColor} style={{ width: Math.min(100, pct) + '%' }} />
-                          </div>
+                        <div className="h-1 bg-white/5">
+                          <div className={'h-full transition-all ' + barColor} style={{ width: Math.min(100, pct) + '%' }} />
                         </div>
                       )}
                     </div>
