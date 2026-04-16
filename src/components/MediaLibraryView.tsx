@@ -21,6 +21,8 @@ export function MediaLibraryView() {
   const [galleryItems, setGalleryItems] = useState<{ campaignId: string; artistName: string; campaignName: string; url: string; name: string; isImage: boolean }[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [filterArtist, setFilterArtist] = useState('')
+  const [dropboxToken, setDropboxToken] = useState('')
+  const [dropboxStatus, setDropboxStatus] = useState<'idle' | 'uploading' | 'ok' | 'err'>('idle')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const today = new Date()
