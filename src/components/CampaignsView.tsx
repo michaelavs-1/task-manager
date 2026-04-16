@@ -727,7 +727,38 @@ export function CampaignsView() {
                     </div>
                   ) : (
                     <div>
-                      <input type="text" placeholder="שם האומן / המופע..." value={newArtistName} onChange={e => setNewArtistName(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="שם האומן / המופע..."
+                          value={newArtistName}
+                          onChange={e => setNewArtistName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              const name = newArtistName.trim()
+                              if (!name) return
+                              saveArtistToBank(name)
+                              setSelectedArtist(name)
+                              setModalArtistOpen(false)
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const name = newArtistName.trim()
+                            if (!name) return
+                            saveArtistToBank(name)
+                            setSelectedArtist(name)
+                            setModalArtistOpen(false)
+                          }}
+                          disabled={!newArtistName.trim()}
+                          className="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap flex-shrink-0"
+                        >
+                          ✓ שמור
+                        </button>
+                      </div>
                       <p className="mt-1.5 text-xs text-gray-400">האומן יתווסף למאגר הקבוע לשימוש עתידי</p>
                     </div>
                   )}
