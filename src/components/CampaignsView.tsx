@@ -387,7 +387,7 @@ export function CampaignsView() {
               <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'pixels'|'media')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 dark:text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
                 {label}
-                {key !== 'tracking' && key !== 'pixels' && (
+                {key !== 'tracking' && key !== 'pixels' && key !== 'media' && (
                   <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500">
                     {key==='active' ? barbyActiveCampaigns.length : key==='ended' ? barbyEndedCampaigns.length : barbyArchiveCampaigns.length}
                   </span>
