@@ -55,20 +55,16 @@ export function TicketTrackingView() {
     const val = parseInt(inputValues[campaignId] ?? '')
     if (isNaN(val)) return
     setSavingId(campaignId)
-
     const today = new Date().toISOString().split('T')[0]
-
     await supabase.from('campaigns')
       .update({ tickets_sold: val, updated_at: new Date().toISOString() })
       .eq('id', campaignId)
-
     const existing = snapshots.find(s => s.campaign_id === campaignId && s.snapshot_date === today)
     if (existing) {
       await supabase.from('ticket_snapshots').update({ tickets_sold: val }).eq('id', existing.id)
     } else {
       await supabase.from('ticket_snapshots').insert({ campaign_id: campaignId, snapshot_date: today, tickets_sold: val })
     }
-
     await loadData()
     setSavingId(null)
     setSavedId(campaignId)
@@ -93,19 +89,22 @@ export function TicketTrackingView() {
     if (days <= 0) return ''
     const delta = last.tickets_sold - prev.tickets_sold
     const rate = (delta / days).toFixed(1)
-    return `${delta >= 0 ? '+' : ''}${delta} / ${days}י (${rate}/י)`
+    return (delta >= 0 ? '+' : '') + delta + ' / ' + days + 'י (' + rate + '/י)'
   }
 
   const fmtDate = (d: string | null) => {
     if (!d) return '—'
-    const dt = new Date(d + 'T00:00:00')
-    return dt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    return new Date(d + 'T00:00:00').toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })
   }
 
-  const fmtShort = (d: string) => {
-    const dt = new Date(d + 'T00:00:00')
-    return dt.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
-  }
+  const fmtShort = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
+
+  const pctBarColor = (pct: number) =>
+    pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-orange-400' : 'bg-emerald-400'
+
+  const remainingColor = (r: number) =>
+    r <= 0 ? 'text-red-500' : r < 100 ? 'text-orange-500' : 'text-emerald-600'
 
   if (loading) return (
     <div className="p-8 text-center text-gray-400">
@@ -116,14 +115,16 @@ export function TicketTrackingView() {
   return (
     <div dir="rtl" className="space-y-10">
 
-      {/* ── עדכון כרטיסים ── */}
       <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
         <table className="min-w-full text-sm bg-white dark:bg-gray-800">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-              {['תאריך מופע', 'שם המופע', 'כרטיסים למכירה', 'כרטיסים מכורים עדכני', 'נותרו', ''].map(h => (
-                <th key={h} className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-              ))}
+              <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">תאריך מופע</th>
+              <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">שם המופע</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים למכירה</th>
+              <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים מכורים עדכני</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">נותרו</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
@@ -132,23 +133,19 @@ export function TicketTrackingView() {
               const sold = isNaN(soldVal) ? (camp.tickets_sold ?? 0) : soldVal
               const remaining = camp.tickets_for_sale != null ? camp.tickets_for_sale - sold : null
               const pct = camp.tickets_for_sale ? Math.round(sold / camp.tickets_for_sale * 100) : null
+              const rowBg = i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
               return (
-                <tr key={camp.id} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'}>
+                <tr key={camp.id} className={rowBg}>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtDate(camp.launch_date)}</td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-gray-900 dark:text-white">{camp.name}</p>
                     {pct !== null && (
                       <div className="mt-1 h-1 w-28 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-orange-400' : 'bg-emerald-400'}`}
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
+                        <div className={'h-full rounded-full ' + pctBarColor(pct)} style={{ width: Math.min(pct, 100) + '%' }} />
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
-                    {camp.tickets_for_sale ?? '—'}
-                  </td>
+                  <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{camp.tickets_for_sale ?? '—'}</td>
                   <td className="px-4 py-3">
                     <input
                       type="number"
@@ -161,21 +158,15 @@ export function TicketTrackingView() {
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {remaining !== null ? (
-                      <span className={`text-sm font-semibold ${remaining <= 0 ? 'text-red-500' : remaining < 100 ? 'text-orange-500' : 'text-emerald-600'}`}>
-                        {remaining}
-                      </span>
-                    ) : <span className="text-gray-300">—</span>}
+                    {remaining !== null
+                      ? <span className={'text-sm font-semibold ' + remainingColor(remaining)}>{remaining}</span>
+                      : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleSave(camp.id)}
                       disabled={savingId === camp.id}
-                      className={`px-4 py-1.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap ${
-                        savedId === camp.id
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-pink-600 text-white hover:bg-pink-700'
-                      }`}
+                      className={'px-4 py-1.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap ' + (savedId === camp.id ? 'bg-emerald-100 text-emerald-700' : 'bg-pink-600 text-white hover:bg-pink-700')}
                     >
                       {savingId === camp.id ? '...' : savedId === camp.id ? 'נשמר ✓' : 'שמור'}
                     </button>
@@ -187,7 +178,6 @@ export function TicketTrackingView() {
         </table>
       </div>
 
-      {/* ── סטטיסטיקת מכירות ── */}
       {allDates.length > 0 && (
         <div>
           <h3 className="text-base font-bold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
@@ -216,21 +206,19 @@ export function TicketTrackingView() {
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                 {campaigns.map((camp, i) => {
                   const velocity = getVelocity(camp.id)
-                  const campSnaps = snapshots.filter(s => s.campaign_id === camp.id)
-                  const latestSnap = campSnaps.sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date)).pop()
+                  const campSnaps = snapshots.filter(s => s.campaign_id === camp.id).sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
+                  const latestSnap = campSnaps[campSnaps.length - 1]
                   const pctSold = camp.tickets_for_sale && latestSnap
                     ? Math.round(latestSnap.tickets_sold / camp.tickets_for_sale * 100)
                     : null
+                  const rowBg = i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
                   return (
-                    <tr key={camp.id} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'}>
+                    <tr key={camp.id} className={rowBg}>
                       <td className="sticky right-0 z-10 bg-inherit px-4 py-2.5 border-l border-gray-200 dark:border-gray-700">
                         <p className="font-semibold text-gray-900 dark:text-white truncate max-w-[140px] text-sm">{camp.name}</p>
                         {pctSold !== null && (
                           <div className="mt-1 h-1 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${pctSold >= 90 ? 'bg-red-400' : pctSold >= 70 ? 'bg-orange-400' : 'bg-emerald-400'}`}
-                              style={{ width: `${Math.min(pctSold, 100)}%` }}
-                            />
+                            <div className={'h-full rounded-full ' + pctBarColor(pctSold)} style={{ width: Math.min(pctSold, 100) + '%' }} />
                           </div>
                         )}
                       </td>
@@ -239,21 +227,16 @@ export function TicketTrackingView() {
                         const isLatest = date === allDates[allDates.length - 1]
                         return (
                           <td key={date} className="px-3 py-2.5 text-center">
-                            {snap ? (
-                              <span className={`text-sm ${isLatest ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                                {snap.tickets_sold.toLocaleString()}
-                              </span>
-                            ) : (
-                              <span className="text-gray-200 dark:text-gray-600 text-xs select-none">·</span>
-                            )}
+                            {snap
+                              ? <span className={isLatest ? 'font-bold text-gray-900 dark:text-white text-sm' : 'text-gray-500 dark:text-gray-400 text-sm'}>{snap.tickets_sold.toLocaleString()}</span>
+                              : <span className="text-gray-200 dark:text-gray-600 text-xs select-none">·</span>}
                           </td>
                         )
                       })}
                       <td className="px-3 py-2.5 text-center">
                         {velocity
                           ? <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">{velocity}</span>
-                          : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                        }
+                          : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
                       </td>
                     </tr>
                   )
@@ -261,7 +244,7 @@ export function TicketTrackingView() {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-gray-400 text-right">כל לחיצה על "שמור" מתועדת כנקודת זמן בטבלה</p>
+          <p className="mt-2 text-xs text-gray-400 text-right">כל לחיצה על שמור מתועדת כנקודת זמן בטבלה</p>
         </div>
       )}
 
