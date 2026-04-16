@@ -10,6 +10,7 @@ export type User = {
   name: string
   role: "manager" | "employee"
   pin: string
+  email?: string
 }
 
 export type Task = {
