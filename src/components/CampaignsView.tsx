@@ -226,7 +226,7 @@ export function CampaignsView() {
       const { data } = await supabase.from('campaigns').select('*')
       if (data) setCampaigns(data)
       setShowNewModal(false); setSelectedArtist('')
-      setSelectedOffice('')
+      setSelectedOffice(''); setSelectedContactId('')
       setOfficeSearch(''); setNewArtistName('')
       setShowDate(''); setArtistSearch(''); setNewArtistMode('select'); setTicketsForSale('')
     } catch (err) {
