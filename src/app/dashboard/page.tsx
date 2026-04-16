@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
+  const [showEmployeePicker, setShowEmployeePicker] = useState(false)
   const [userId, setUserId] = useState("")
   const [userName, setUserName] = useState("")
   const [userRole, setUserRole] = useState("")
