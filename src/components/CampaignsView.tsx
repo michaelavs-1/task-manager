@@ -81,7 +81,7 @@ export function CampaignsView() {
   const [syncError, setSyncError] = useState('')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive' | 'tracking'>('active')
+  const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive' | 'tracking' | 'pixels'>('active')
   const [barbyViewMode, setBarbyViewMode] = useState<'cards' | 'table'>('cards')
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
