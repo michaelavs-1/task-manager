@@ -278,16 +278,13 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Status + KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { val: upcomingEvents.length, label: 'הופעות קרובות', color: 'text-slate-800 dark:text-white', icon: '🎤' },
-                    { val: confirmedEvents.length, label: 'מאושרות', color: 'text-green-600', icon: '✅' },
-                    { val: campaigns.filter(c => c.status === 'פעיל' || c.status === 'חדש').length, label: 'קמפיינים פעילים', color: 'text-purple-600', icon: '📣' },
-                    { val: artistTasks.filter(t => t.status !== 'completed').length, label: 'משימות פתוחות', color: 'text-indigo-600', icon: '📋' },
-                  ].map(({ val, label, color, icon }) => (
+                    { val: upcomingEvents.length, label: 'הופעות קרובות', color: 'text-slate-800 dark:text-white' },
+                    { val: confirmedEvents.length, label: 'מאושרות', color: 'text-green-600' },
+                    { val: campaigns.filter(c => c.status === 'פעיל' || c.status === 'חדש').length, label: 'קמפיינים פעילים', color: 'text-purple-600' },
+                    { val: artistTasks.filter(t => t.status !== 'completed').length, label: 'משימות פתוחות', color: 'text-indigo-600' },
+                  ].map(({ val, label, color }) => (
                     <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 text-right">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-lg">{icon}</span>
-                        <div className={`text-2xl font-bold ${color}`}>{val}</div>
-                      </div>
+                      <div className={`text-2xl font-bold ${color} mb-1`}>{val}</div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
                     </div>
                   ))}
