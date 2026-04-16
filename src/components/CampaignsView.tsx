@@ -213,10 +213,12 @@ export function CampaignsView() {
     if (!showDate) { setCreateError('יש לבחור תאריך מופע'); return }
     setIsCreating(true); setCreateError('')
     try {
+      const selectedContact = barbyContacts.find(c => c.id === selectedContactId)
       const { error } = await supabase.from('campaigns').insert({
         name: artistName + ' - ' + showDate, office: selectedOffice, board: 'barbie', status: 'פעיל',
         group_title: 'לא טופל', launch_date: showDate, requester: artistName,
         tickets_for_sale: ticketsForSale ? parseInt(ticketsForSale) : null,
+        contact_name: selectedContact ? selectedContact.name : null,
         updated_at: new Date().toISOString(),
       })
       if (error) throw error
