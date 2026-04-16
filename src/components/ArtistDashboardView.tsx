@@ -582,10 +582,9 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 function SHead({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{children}</h3>
 }
-function Empty({ icon, msg, sub }: { icon: string; msg: string; sub?: string }) {
+function Empty({ msg, sub }: { icon?: string; msg: string; sub?: string }) {
   return (
     <div className="text-center py-16">
-      <p className="text-4xl mb-3">{icon}</p>
       <p className="text-slate-400 dark:text-slate-500 font-medium">{msg}</p>
       {sub && <p className="text-slate-300 dark:text-slate-600 text-sm mt-1">{sub}</p>}
     </div>
