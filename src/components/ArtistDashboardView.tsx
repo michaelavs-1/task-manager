@@ -315,7 +315,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Critical tasks */}
                 {artistTasks.filter(t => t.status !== 'completed').length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">✅ משימות פתוחות</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">משימות פתוחות</p>
                     <div className="space-y-2">
                       {artistTasks.filter(t => t.status !== 'completed').slice(0, 5).map(task => (
                         <div key={task.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-gray-700 last:border-0">
