@@ -42,7 +42,7 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
     if (!assignedTo || !title.trim()) return
     setSaving(true)
     const proj = projects.find(p => p.id === projectId)
-    await supabase.from("tasks").insert({
+    const { error } = await supabase.from("tasks").insert({
       title: title.trim(),
       description,
       assigned_to: assignedTo,
@@ -53,6 +53,10 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
       status: "pending",
     })
     setSaving(false)
+    if (error) {
+      alert("שגיאה בשמירת המשימה: " + error.message)
+      return
+    }
     onCreated()
   }
 
