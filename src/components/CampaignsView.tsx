@@ -1032,6 +1032,23 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
     return Math.round((launch.getTime() - today.getTime()) / (1000*60*60*24))
   })() : null
 
+  useEffect(() => {
+    if (!expanded) return
+    setMediaLibraryLoading(true)
+    supabase.storage.from('campaigns-media').list(`media-library/${campaign.id}`, { limit: 100 })
+      .then(({ data, error }) => {
+        if (error || !data) { setMediaLibraryLoading(false); return }
+        const files = data
+          .filter(f => f.name !== '.emptyFolderPlaceholder')
+          .map(f => {
+            const { data: urlData } = supabase.storage.from('campaigns-media').getPublicUrl(`media-library/${campaign.id}/${f.name}`)
+            return { name: f.name, url: urlData.publicUrl }
+          })
+        setMediaLibraryFiles(files)
+        setMediaLibraryLoading(false)
+      })
+  }, [expanded, campaign.id])
+
   const handleUpload = async (file: File) => {
     if (!file) return
     setUploading(true); setUploadError('')
