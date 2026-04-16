@@ -77,7 +77,6 @@ export function CampaignsView() {
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
   const [artistSearch, setArtistSearch] = useState('')
-  const [showArtistDropdown, setShowArtistDropdown] = useState(false)
   const [newArtistMode, setNewArtistMode] = useState<'select' | 'create'>('select')
   const [selectedArtist, setSelectedArtist] = useState('')
   const [newArtistName, setNewArtistName] = useState('')
@@ -87,7 +86,6 @@ export function CampaignsView() {
   const [showRosterModal, setShowRosterModal] = useState(false)
   const [newRosterArtist, setNewRosterArtist] = useState('')
   const [rosterSearch, setRosterSearch] = useState('')
-  const [showArtistDropdown, setShowArtistDropdown] = useState(false)
 
   useEffect(() => {
     try {
