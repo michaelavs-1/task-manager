@@ -1046,8 +1046,9 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [localTicketsSold, setLocalTicketsSold] = useState<string>(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const [localTicketsForSale, setLocalTicketsForSale] = useState<number | null>(campaign.tickets_for_sale ?? null)
   const [ticketsForSaleInput, setTicketsForSaleInput] = useState<string>(campaign.tickets_for_sale != null ? String(campaign.tickets_for_sale) : '')
-  const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string}[]>([])
+  const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string; path: string}[]>([])
   const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false)
+  const [showMediaPopup, setShowMediaPopup] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isUpdating = updatingId === campaign.id
   const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
@@ -1067,7 +1068,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   })() : null
 
   useEffect(() => {
-    if (!expanded) return
+    if (!expanded && !showMediaPopup) return
     setMediaLibraryLoading(true)
     supabase.storage.from('campaigns-media').list(`media-library/${campaign.id}`, { limit: 100 })
       .then(({ data, error }) => {
@@ -1076,7 +1077,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           .filter(f => f.name !== '.emptyFolderPlaceholder')
           .map(f => {
             const { data: urlData } = supabase.storage.from('campaigns-media').getPublicUrl(`media-library/${campaign.id}/${f.name}`)
-            return { name: f.name, url: urlData.publicUrl }
+            return { name: f.name, url: urlData.publicUrl, path: `media-library/${campaign.id}/${f.name}` }
           })
         setMediaLibraryFiles(files)
         setMediaLibraryLoading(false)
@@ -1329,13 +1330,79 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
           </div>
 
 
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-            <button onClick={() => onDelete(campaign.id)} className="w-full py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600 flex gap-2">
+            <button onClick={() => setShowMediaPopup(true)} className="flex-1 py-2 rounded-xl text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              מדיה
+            </button>
+            <button onClick={() => onDelete(campaign.id)} className="flex-1 py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               מחק קמפיין
             </button>
           </div>
         </div>
       )}
+
+
+      {/* Media popup */}
+      {showMediaPopup && (() => {
+        const isImg = (u: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(u)
+        const isVid = (u: string) => /\.(mp4|mov|avi|webm)$/i.test(u)
+        const allFiles = [
+          ...(localMediaUrl ? [{ name: 'תמונת קמפיין', url: localMediaUrl, path: '' }] : []),
+          ...mediaLibraryFiles.filter(f => f.url !== localMediaUrl),
+        ]
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowMediaPopup(false)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h2 className="font-bold text-gray-800 dark:text-white text-sm">מדיה — {campaign.name}</h2>
+                <button onClick={() => setShowMediaPopup(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </div>
+              <div className="flex-1 overflow-auto p-6">
+                {mediaLibraryLoading ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
+                ) : allFiles.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">אין קבצי מדיה למופע זה</div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {allFiles.map((file, i) => (
+                      <div key={i} className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col">
+                        {isImg(file.url) ? (
+                          <img src={file.url} alt={file.name} className="w-full h-36 object-cover" />
+                        ) : isVid(file.url) ? (
+                          <video src={file.url} className="w-full h-36 object-cover" controls />
+                        ) : (
+                          <div className="w-full h-36 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-4xl">📄</div>
+                        )}
+                        <div className="p-3 flex items-center gap-2">
+                          <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">{file.name}</span>
+                          <a href={file.url} target="_blank" rel="noreferrer" download
+                            className="flex-shrink-0 p-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
+                            title="הורד קובץ"
+                            onClick={async e => {
+                              e.preventDefault()
+                              try {
+                                const res = await fetch(file.url)
+                                const blob = await res.blob()
+                                const objUrl = URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = objUrl; a.download = file.name
+                                document.body.appendChild(a); a.click()
+                                document.body.removeChild(a); URL.revokeObjectURL(objUrl)
+                              } catch { window.open(file.url, '_blank') }
+                            }}>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
