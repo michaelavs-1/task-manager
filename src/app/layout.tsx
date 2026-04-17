@@ -3,8 +3,13 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/ThemeProvider"
 
 export const metadata: Metadata = {
-  title: "מערכת ניהול משימות",
-  description: "מערכת ניהול משימות משרדית",
+  title: "אלגוריתם הפקות",
+  description: "מערכת ניהול אלגוריתם הפקות",
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
