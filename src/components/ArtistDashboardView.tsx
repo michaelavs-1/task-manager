@@ -80,6 +80,12 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [linkUrl, setLinkUrl] = useState('')
   const [linkCategory, setLinkCategory] = useState(LINK_CATS[0])
   const [savingLink, setSavingLink] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
+  const [newStatus, setNewStatus] = useState('prospect')
+  const [savingNew, setSavingNew] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.from('projects').select('*').order('category').order('name').then(({ data }) => {
@@ -168,6 +174,28 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setSavingLink(false)
   }
 
+  const addArtist = async () => {
+    if (!newName.trim()) return
+    setSavingNew(true)
+    const { data, error } = await supabase.from('projects').insert({ name: newName.trim(), category: newCategory, status: newStatus }).select().single()
+    if (!error && data) {
+      setProjects(prev => [...prev, data as Project].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)))
+      setSelectedArtist(data as Project)
+      setTab('overview')
+    }
+    setNewName(''); setShowAddModal(false); setSavingNew(false)
+  }
+
+  const deleteArtist = async (id: string) => {
+    await supabase.from('projects').delete().eq('id', id)
+    setProjects(prev => prev.filter(p => p.id !== id))
+    if (selectedArtist?.id === id) {
+      const remaining = projects.filter(p => p.id !== id)
+      setSelectedArtist(remaining.find(p => p.category === 'artist') || null)
+    }
+    setDeleteConfirmId(null)
+  }
+
   const artists = projects.filter(p => p.category === 'artist')
   const productions = projects.filter(p => p.category === 'production')
   const hasBoardData = selectedArtist ? !!ARTIST_BOARD_MAP[selectedArtist.name] : false
@@ -183,15 +211,25 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     <div className="flex h-full" dir="rtl">
       <div className="w-52 flex-shrink-0 bg-slate-50 dark:bg-gray-900 border-l border-slate-200 dark:border-gray-700 overflow-y-auto p-3">
         <div className="mb-4">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">אומנים</p>
+          <div className="flex items-center justify-between px-2 mb-2">
+            <button onClick={() => setShowAddModal(true)} className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-xs font-bold transition-colors" title="הוסף אומן/הפקה">+</button>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">אומנים</p>
+          </div>
           {artists.map(a => {
             const st = getArtistStatus(a.status)
             return (
-              <button key={a.id} onClick={() => { setSelectedArtist(a); setTab('overview') }}
-                className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all flex items-center gap-2 ${selectedArtist?.id === a.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedArtist?.id === a.id ? 'bg-white/70' : st.dot}`} />
-                <span className="truncate">{a.name}</span>
-              </button>
+              <div key={a.id} className="relative group mb-0.5">
+                <button onClick={() => { setSelectedArtist(a); setTab('overview') }}
+                  className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${selectedArtist?.id === a.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${selectedArtist?.id === a.id ? 'bg-white/70' : st.dot}`} />
+                  <span className="truncate flex-1">{a.name}</span>
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setDeleteConfirmId(a.id) }}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
+                  title="מחק"
+                >✕</button>
+              </div>
             )
           })}
         </div>
@@ -199,10 +237,17 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
           <div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">הפקות</p>
             {productions.map(p => (
-              <button key={p.id} onClick={() => { setSelectedArtist(p); setTab('tasks') }}
-                className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium mb-0.5 transition-all ${selectedArtist?.id === p.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
-                {p.name}
-              </button>
+              <div key={p.id} className="relative group mb-0.5">
+                <button onClick={() => { setSelectedArtist(p); setTab('tasks') }}
+                  className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedArtist?.id === p.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
+                  {p.name}
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id) }}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
+                  title="מחק"
+                >✕</button>
+              </div>
             ))}
           </div>
         )}
@@ -536,6 +581,61 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
           <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">בחר אומן</div>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmId && (() => {
+        const target = projects.find(p => p.id === deleteConfirmId)
+        return (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setDeleteConfirmId(null)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">מחיקת {target?.category === 'artist' ? 'אומן' : 'הפקה'}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">למחוק את <span className="font-semibold text-slate-800 dark:text-white">{target?.name}</span>? פעולה זו אינה ניתנת לביטול.</p>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">ביטול</button>
+                <button onClick={() => deleteArtist(deleteConfirmId)} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors">מחק</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Add artist/production modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">הוסף אומן / הפקה</h3>
+            <div className="space-y-3">
+              <input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addArtist()}
+                placeholder="שם..."
+                autoFocus
+                className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <select
+                value={newCategory}
+                onChange={e => setNewCategory(e.target.value as 'artist' | 'production')}
+                className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="artist">אומן</option>
+                <option value="production">הפקה</option>
+              </select>
+              <select
+                value={newStatus}
+                onChange={e => setNewStatus(e.target.value)}
+                className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                {ARTIST_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => { setShowAddModal(false); setNewName('') }} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">ביטול</button>
+              <button onClick={addArtist} disabled={savingNew || !newName.trim()} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors">{savingNew ? '...' : 'הוסף'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
