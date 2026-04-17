@@ -886,6 +886,7 @@ function InvoicesTab() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
+  const [filterMonth, setFilterMonth] = useState<string>('')
 
   const load = () => {
     setLoading(true)
@@ -906,14 +907,29 @@ function InvoicesTab() {
   const clients = clientList.map(c => c.name).sort()
   const docTypes = [...new Set(invoices.map(i => i.doc_type).filter(Boolean))].sort()
 
+  // Build sorted month list from invoices
+  const monthMap: Record<string, { key: string; label: string; count: number }> = {}
+  invoices.forEach(inv => {
+    if (!inv.date) return
+    const d = new Date(inv.date)
+    if (isNaN(d.getTime())) return
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
+    if (!monthMap[key]) monthMap[key] = { key, label, count: 0 }
+    monthMap[key].count++
+  })
+  const availableMonths = Object.values(monthMap).sort((a,b) => b.key.localeCompare(a.key))
+
   const filtered = invoices.filter(inv => {
     const q = search.toLowerCase()
     const st = invoiceStatus(inv)
     const remaining = Math.max(0, inv.total - inv.paid)
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
     const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
+    const matchMonth = !filterMonth || (inv.date && inv.date.startsWith(filterMonth))
     return matchSearch
       && matchPayment
+      && matchMonth
       && (!filterClient || inv.client === filterClient)
       && (!filterDocType || inv.doc_type === filterDocType)
       && (!filterStatus || st === filterStatus)
@@ -982,6 +998,28 @@ function InvoicesTab() {
           </button>
         ))}
       </div>
+
+      {/* Month selector */}
+      {availableMonths.length > 0 && (
+        <div className="flex gap-2 flex-shrink-0 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          <button
+            onClick={() => setFilterMonth('')}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+          >
+            כל החודשים
+          </button>
+          {availableMonths.map(m => (
+            <button
+              key={m.key}
+              onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+            >
+              {m.label}
+              <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 flex-shrink-0">
