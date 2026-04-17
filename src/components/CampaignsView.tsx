@@ -17,6 +17,7 @@ type Campaign = {
   board: string; relevant_link: string | null; facebook_link: string | null
   instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string; contact_name?: string | null
  dark_media_link: string | null
+ show_time: string | null
 }
 type Contact = { id: string; name: string; phone: string }
 type ArtistMeta = { defaultOffice?: string; defaultContactId?: string }
@@ -223,6 +224,7 @@ export function CampaignsView() {
         name: artistName + ' - ' + showDate + (showTimeSlot ? ' (' + showTimeSlot + ')' : ''), office: selectedOffice, board: 'barbie', status: 'פעיל',
         group_title: 'לא טופל', launch_date: showDate, requester: artistName,
         notes: showTimeSlot ? 'מופע ' + showTimeSlot : null,
+        show_time: showTimeSlot || null,
         tickets_for_sale: ticketsForSale ? parseInt(ticketsForSale) : null,
         contact_name: selectedContact ? selectedContact.name : null,
         updated_at: new Date().toISOString(),
