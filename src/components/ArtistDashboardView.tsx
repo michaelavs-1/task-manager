@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 
-type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns'
+type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media'
 type Project = {
   id: string; name: string; category: string
   status?: string; genre?: string; audience?: string
@@ -44,6 +44,7 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'meetings',   label: 'פגישות' },
   { id: 'links',      label: 'קישורים' },
   { id: 'financial',  label: 'הצעות מחיר' },
+  { id: 'media',      label: 'מדיה' },
 ]
 
 function fmtNum(v: string | null) { if (!v) return '—'; const n = parseFloat(v); return isNaN(n) ? '—' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
@@ -86,6 +87,9 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [newStatus, setNewStatus] = useState('prospect')
   const [savingNew, setSavingNew] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [mediaFiles, setMediaFiles] = useState<{name: string; url: string; type: string}[]>([])
+  const [loadingMedia, setLoadingMedia] = useState(false)
+  const [uploadingMedia, setUploadingMedia] = useState(false)
 
   useEffect(() => {
     supabase.from('projects').select('*').order('category').order('name').then(({ data }) => {
@@ -132,6 +136,19 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setCampaigns((data as ArtistCampaign[]) || [])
   }, [])
 
+  const loadMedia = useCallback(async (artist: Project) => {
+    setLoadingMedia(true)
+    const { data } = await supabase.storage.from('campaigns-media').list(`artists/${artist.id}`, { limit: 200 })
+    const files = (data || []).filter(f => f.name !== '.emptyFolderPlaceholder').map(f => {
+      const { data: u } = supabase.storage.from('campaigns-media').getPublicUrl(`artists/${artist.id}/${f.name}`)
+      const ext = f.name.split('.').pop()?.toLowerCase() || ''
+      const type = ['mp4','mov','avi','webm'].includes(ext) ? 'video' : 'image'
+      return { name: f.name, url: u.publicUrl, type }
+    })
+    setMediaFiles(files)
+    setLoadingMedia(false)
+  }, [])
+
   const updateArtistStatus = async (artist: Project, newStatus: string) => {
     await supabase.from('projects').update({ status: newStatus }).eq('id', artist.id)
     setProjects(prev => prev.map(p => p.id === artist.id ? { ...p, status: newStatus } : p))
@@ -154,8 +171,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setMetaContactName(selectedArtist.contact_name || '')
     setMetaContactPhone(selectedArtist.contact_phone || '')
     setMetaRevenueTarget(selectedArtist.monthly_revenue_target ? String(selectedArtist.monthly_revenue_target) : '')
-    loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist); loadCampaigns(selectedArtist)
-  }, [selectedArtist, loadEvents, loadMeetings, loadLinks, loadCampaigns])
+    loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist); loadCampaigns(selectedArtist); loadMedia(selectedArtist)
+  }, [selectedArtist, loadEvents, loadMeetings, loadLinks, loadCampaigns, loadMedia])
 
   const saveMeeting = async () => {
     if (!selectedArtist || !meetingTitle.trim() || !meetingContent.trim()) return
@@ -575,6 +592,64 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             )}
             {tab === 'financial' && selectedArtist && (
               <QuotesTab artistName={selectedArtist.name} />
+            )}
+
+            {tab === 'media' && selectedArtist && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{mediaFiles.length} קבצים</p>
+                  <label className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${uploadingMedia ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    {uploadingMedia ? 'מעלה...' : 'העלה קבצים'}
+                    <input type="file" accept="image/*,video/*" multiple className="hidden" disabled={uploadingMedia} onChange={async e => {
+                      if (!e.target.files?.length) return
+                      setUploadingMedia(true)
+                      for (const file of Array.from(e.target.files)) {
+                        const path = `artists/${selectedArtist.id}/${file.name}`
+                        await supabase.storage.from('campaigns-media').upload(path, file, { upsert: true })
+                      }
+                      await loadMedia(selectedArtist)
+                      setUploadingMedia(false)
+                    }} />
+                  </label>
+                </div>
+                {loadingMedia ? (
+                  <div className="flex items-center justify-center py-16"><div className="w-6 h-6 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" /></div>
+                ) : mediaFiles.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400">
+                    <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <p>אין קבצי מדיה</p>
+                    <p className="text-xs mt-1">לחץ על "העלה קבצים" להוספת מדיה</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {mediaFiles.map(f => (
+                      <div key={f.name} className="group relative bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        {f.type === 'video' ? (
+                          <video src={f.url} className="w-full aspect-square object-cover" />
+                        ) : (
+                          <img src={f.url} alt={f.name} className="w-full aspect-square object-cover" />
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(f.url)
+                              const blob = await res.blob()
+                              const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; a.click(); URL.revokeObjectURL(a.href)
+                            }}
+                            className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white transition-colors shadow"
+                          >
+                            הורד
+                          </button>
+                        </div>
+                        <div className="px-2 py-1.5 border-t border-slate-100 dark:border-gray-700">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{f.name}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ) : (
