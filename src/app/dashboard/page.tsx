@@ -25,7 +25,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTabRaw] = useState<Tab>("general")
   const [selectedArtistName, setSelectedArtistName] = useState<string>("")
   const [activeSection, setActiveSectionRaw] = useState<Section>("management")
-  const [activeFinTab, setActiveFinTabRaw] = useState<FinTab>('old_table')
+  const [activeFinTab, setActiveFinTabRaw] = useState<FinTab>('dashboard')
 
   const setActiveTab = (t: Tab) => { setActiveTabRaw(t); localStorage.setItem('dash_tab', t) }
   const setActiveSection = (s: Section) => { setActiveSectionRaw(s); localStorage.setItem('dash_section', s) }
@@ -322,6 +322,9 @@ export default function Dashboard() {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {activeSection === "financial" ? ([
+            { tab: 'dashboard' as FinTab, label: 'דשבורד', icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            )},
             { tab: 'old_table' as FinTab, label: 'ראשית', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 3h18v18H3z" /></svg>
             )},
@@ -333,9 +336,6 @@ export default function Dashboard() {
             )},
             { tab: 'suppliers' as FinTab, label: 'ספקים', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-            )},
-            { tab: 'dashboard' as FinTab, label: 'דשבורד', icon: (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             )},
           ] as { tab: FinTab; label: string; icon: React.ReactNode }[]).map(({ tab, label, icon }) => {
             const isActive = activeFinTab === tab
