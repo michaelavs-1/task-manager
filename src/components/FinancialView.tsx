@@ -869,6 +869,128 @@ function ClientModal({ initial, onSave, onClose, saving }: {
   )
 }
 
+// ── Charts ───────────────────────────────────────────────────────────────────
+function DonutChart({ paid, remaining, size = 120 }: { paid: number; remaining: number; size?: number }) {
+  const total = paid + remaining
+  if (total === 0) return <div className="w-[120px] h-[120px] rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">אין נתונים</div>
+  const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.24
+  const paidPct = paid / total
+  const paidAngle = paidPct * 360
+
+  function arc(startDeg: number, endDeg: number, outerR: number, innerR: number) {
+    if (Math.abs(endDeg - startDeg) >= 359.99) endDeg = startDeg + 359.98
+    const toRad = (d: number) => ((d - 90) * Math.PI) / 180
+    const x1 = cx + outerR * Math.cos(toRad(startDeg)), y1 = cy + outerR * Math.sin(toRad(startDeg))
+    const x2 = cx + outerR * Math.cos(toRad(endDeg)),   y2 = cy + outerR * Math.sin(toRad(endDeg))
+    const x3 = cx + innerR * Math.cos(toRad(endDeg)),   y3 = cy + innerR * Math.sin(toRad(endDeg))
+    const x4 = cx + innerR * Math.cos(toRad(startDeg)), y4 = cy + innerR * Math.sin(toRad(startDeg))
+    const large = endDeg - startDeg > 180 ? 1 : 0
+    return `M${x1},${y1} A${outerR},${outerR} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${innerR},${innerR} 0 ${large} 0 ${x4},${y4} Z`
+  }
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {remaining > 0 && <path d={arc(paidAngle, 360, r, inner)} fill="#fca5a5" />}
+      {paid > 0      && <path d={arc(0, paidAngle, r, inner)} fill="#34d399" />}
+      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={size * 0.13} fontWeight="bold" fill="#1f2937">
+        {Math.round(paidPct * 100)}%
+      </text>
+      <text x={cx} y={cy + size * 0.12} textAnchor="middle" fontSize={size * 0.09} fill="#6b7280">שולם</text>
+    </svg>
+  )
+}
+
+function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: number) => string }) {
+  const realClients = clients.filter(c => !['סה"כ','סה״כ','סהכ'].includes(c.name.trim()))
+  const totalAll      = realClients.reduce((s, c) => s + c.totalAmount, 0)
+  const totalPaid     = realClients.reduce((s, c) => s + c.paidAmount, 0)
+  const totalRemaining = Math.max(0, totalAll - totalPaid)
+  const topClients    = [...realClients].sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 6)
+  const maxAmount     = topClients[0]?.totalAmount || 1
+  const openCount     = realClients.filter(c => c.totalAmount - c.paidAmount > 0).length
+  const closedCount   = realClients.filter(c => c.totalAmount > 0 && c.totalAmount - c.paidAmount <= 0).length
+
+  return (
+    <div className="grid grid-cols-3 gap-4 flex-shrink-0">
+
+      {/* Donut — שולם vs יתרה */}
+      <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 flex gap-4 items-center shadow-sm">
+        <DonutChart paid={totalPaid} remaining={totalRemaining} size={110} />
+        <div className="flex-1 space-y-2">
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">שולם</div>
+            <div className="text-sm font-bold text-emerald-600">{fmt(totalPaid)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">יתרה לתשלום</div>
+            <div className="text-sm font-bold text-red-500">{fmt(totalRemaining)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">סה״כ</div>
+            <div className="text-sm font-bold text-gray-700">{fmt(totalAll)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top clients bar chart */}
+      <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">לקוחות מובילים</div>
+        <div className="space-y-2">
+          {topClients.map(c => {
+            const paidPct  = c.totalAmount > 0 ? (c.paidAmount / c.totalAmount) * 100 : 0
+            const totalPct = (c.totalAmount / maxAmount) * 100
+            return (
+              <div key={c.id}>
+                <div className="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                  <span className="truncate max-w-[140px]">{c.name}</span>
+                  <span className="font-mono text-gray-700">{fmt(c.totalAmount)}</span>
+                </div>
+                <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full relative" style={{ width: `${totalPct}%`, background: '#e5e7eb' }}>
+                    <div className="absolute inset-y-0 right-0 rounded-full bg-emerald-400 transition-all" style={{ width: `${paidPct}%` }} />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex gap-3 mt-3 text-[10px] text-gray-400">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />שולם</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200 inline-block" />סה״כ</span>
+        </div>
+      </div>
+
+      {/* Status breakdown donut + stats */}
+      <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">סטטוס לקוחות</div>
+        <div className="flex gap-4 items-center mb-4">
+          <DonutChart paid={closedCount} remaining={openCount} size={90} />
+          <div className="space-y-2 flex-1">
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />סגורים</span>
+              <span className="font-bold text-emerald-600">{closedCount}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-300 inline-block" />פתוחים</span>
+              <span className="font-bold text-red-500">{openCount}</span>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-1.5 border-t border-gray-100 pt-3">
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>ממוצע לחשבונית</span>
+            <span className="font-semibold text-gray-700">{realClients.reduce((s,c)=>s+c.invoiceCount,0) > 0 ? fmt(totalAll / realClients.reduce((s,c)=>s+c.invoiceCount,0)) : '—'}</span>
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>לקוחות פעילים</span>
+            <span className="font-semibold text-gray-700">{realClients.filter(c=>c.invoiceCount>0).length}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── LedgerDrawer ─────────────────────────────────────────────────────────────
 function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   client: ClientRecord
@@ -1144,6 +1266,9 @@ function ClientsTab() {
           הוספת לקוח
         </button>
       </div>
+
+      {/* Charts snapshot */}
+      {clients.length > 0 && <ClientsSnapshot clients={clients} fmt={fmt} />}
 
       {/* Search + view toggle */}
       <div className="flex items-center gap-3 flex-shrink-0">
