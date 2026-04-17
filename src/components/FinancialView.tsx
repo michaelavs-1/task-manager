@@ -614,11 +614,12 @@ function InvoicesTab() {
               <th className="px-4 py-3 text-right font-semibold">יתרה</th>
               <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
               <th className="px-4 py-3 text-center font-semibold">פעולות</th>
+              <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={11} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+              <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
             ) : filtered.map((inv, i) => {
               const st = invoiceStatus(inv)
               const remaining = Math.max(0, inv.total - inv.paid)
@@ -676,6 +677,7 @@ function InvoicesTab() {
                       </button>
                     </div>
                   </td>
+                  <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
                 </tr>
               )
             })}
