@@ -1122,25 +1122,73 @@ function InvoicesTab() {
         ))}
       </div>
 
-      {/* Month selector */}
+      {/* Month selector – grouped by year */}
       {availableMonths.length > 0 && (
-        <div className="flex gap-2 flex-shrink-0 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-          <button
-            onClick={() => setFilterMonth('')}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
-          >
-            כל החודשים
-          </button>
-          {availableMonths.map(m => (
+        <div className="space-y-2 flex-shrink-0">
+          <div>
             <button
-              key={m.key}
-              onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+              onClick={() => setFilterMonth('')}
+              className={`px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
             >
-              {m.label}
-              <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+              כל החודשים
             </button>
-          ))}
+          </div>
+          {(['2026', '2025'] as const).map(year => {
+            const yearMonths = year === '2026'
+              ? Array.from({ length: 12 }, (_, i) => {
+                  const key = `${year}-${String(i + 1).padStart(2, '0')}`
+                  const found = availableMonths.find(m => m.key === key)
+                  return { key, label: `${MONTH_NAMES_HE[i]} ${year}`, count: found?.count || 0 }
+                })
+              : availableMonths.filter(m => m.key.startsWith(year))
+            if (yearMonths.length === 0) return null
+            return (
+              <div key={year}>
+                <div className="text-xs font-bold text-gray-400 mb-1.5 mr-1">{year}</div>
+                {year === '2026' ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="flex flex-col gap-1.5">
+                      {yearMonths.slice(0, 6).map(m => (
+                        <button
+                          key={m.key}
+                          onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
+                          className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : m.count > 0 ? 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600' : 'bg-gray-50 text-gray-300 border-gray-100'}`}
+                        >
+                          <span>{m.label}</span>
+                          <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {yearMonths.slice(6, 12).map(m => (
+                        <button
+                          key={m.key}
+                          onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
+                          className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : m.count > 0 ? 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600' : 'bg-gray-50 text-gray-300 border-gray-100'}`}
+                        >
+                          <span>{m.label}</span>
+                          <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {yearMonths.map(m => (
+                      <button
+                        key={m.key}
+                        onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+                      >
+                        {m.label}
+                        <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -2616,6 +2664,9 @@ function ExpensesTab() {
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [supplierSearch, setSupplierSearch] = useState('')
+  const [showSupplierDrop, setShowSupplierDrop] = useState(false)
 
   const fmt = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
   const fmtDec = (n: number) => n ? `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'
@@ -2623,13 +2674,15 @@ function ExpensesTab() {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [expRes, projRes] = await Promise.all([
+      const [expRes, projRes, supRes] = await Promise.all([
         fetch('/api/expenses').then(r => r.json()),
         fetch('/api/projects').then(r => r.json()),
+        fetch('/api/monday-suppliers').then(r => r.json()),
       ])
       const list: Expense[] = expRes.expenses || []
       setExpenses(list)
       setProjects(projRes.projects || [])
+      setSuppliers(supRes.suppliers || [])
       // auto-open all months
       const months = [...new Set(list.map(e => e.month).filter(Boolean))].sort()
       setOpenMonths(Object.fromEntries(months.map(m => [m, true])))
@@ -2922,21 +2975,60 @@ function ExpensesTab() {
                 <input type="month" value={modal.expense.month} onChange={e => upd('month', e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
               </div>
-              {/* Supplier + Description */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">ספק</label>
-                  <input type="text" value={modal.expense.supplier} onChange={e => upd('supplier', e.target.value)} placeholder="שם ספק"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              {/* Supplier picker */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">ספק</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={showSupplierDrop ? supplierSearch : (modal.expense.supplier || '')}
+                    onChange={e => { setSupplierSearch(e.target.value); setShowSupplierDrop(true) }}
+                    onFocus={() => { setSupplierSearch(''); setShowSupplierDrop(true) }}
+                    onBlur={() => setTimeout(() => setShowSupplierDrop(false), 150)}
+                    placeholder="חפש ספק..."
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  />
+                  {!showSupplierDrop && modal.expense.vat_status && (
+                    <span className={`absolute left-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[modal.expense.vat_status] || 'bg-gray-100 text-gray-600'}`}>
+                      {modal.expense.vat_status}
+                    </span>
+                  )}
+                  {showSupplierDrop && (
+                    <div className="absolute z-50 top-full mt-1 right-0 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+                      {suppliers
+                        .filter(s => !supplierSearch || s.name.toLowerCase().includes(supplierSearch.toLowerCase()))
+                        .map(s => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onMouseDown={() => {
+                              upd('supplier', s.name)
+                              if (s.taxStatus) upd('vat_status', s.taxStatus)
+                              setSupplierSearch('')
+                              setShowSupplierDrop(false)
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+                          >
+                            <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
+                            {s.taxStatus && (
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>
+                            )}
+                          </button>
+                        ))}
+                      {suppliers.filter(s => !supplierSearch || s.name.toLowerCase().includes(supplierSearch.toLowerCase())).length === 0 && (
+                        <div className="px-3 py-2 text-sm text-gray-400">לא נמצאו ספקים</div>
+                      )}
+                    </div>
+                  )}
                 </div>
+              </div>
+              {/* Description + Project */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">תיאור</label>
                   <input type="text" value={modal.expense.description} onChange={e => upd('description', e.target.value)} placeholder="תיאור"
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 </div>
-              </div>
-              {/* Project + VAT status */}
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">פרויקט</label>
                   <select value={modal.expense.project_id || ''} onChange={e => upd('project_id', e.target.value || null)}
@@ -2949,13 +3041,6 @@ function ExpensesTab() {
                         ))}
                       </optgroup>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">סטטוס מע"מ</label>
-                  <select value={modal.expense.vat_status} onChange={e => upd('vat_status', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-                    {['מורשה','פטור','חברה','עמותה'].map(v => <option key={v} value={v}>{v}</option>)}
                   </select>
                 </div>
               </div>
