@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, Fragment } from 'react'
 
-export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects'
+export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses'
 
 const INVOICES_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo/edit?gid=584902190'
 
@@ -614,6 +614,7 @@ interface FinDashInvoice { id: number; invoice_num: string; date: string; before
 interface InvoiceRow {
   id: number
   client_id: number | null
+  project_id: string | null
   issued_by: string
   sent_to: string
   date: string
@@ -634,8 +635,10 @@ const STATUS_STYLE: Record<string, string> = {
   unpaid: 'bg-red-100 text-red-600',
 }
 
+function roundCents(n: number) { return Math.round(n * 100) / 100 }
 function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
-  if (inv.total > 0 && inv.paid >= inv.total) return 'paid'
+  const remaining = roundCents(inv.total - inv.paid)
+  if (inv.total > 0 && remaining <= 0) return 'paid'
   if (inv.paid > 0) return 'partial'
   return 'unpaid'
 }
@@ -689,7 +692,7 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
 }
 
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
-  client_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
+  client_id: null, project_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
   invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, payment_date: '', notes: '',
 }
 
@@ -735,7 +738,7 @@ function isoToIsraeli(iso: string): string {
 
 // ── InvoiceModal ──────────────────────────────────────────────────────────────
 function InvoiceModal({
-  initial, onSave, onClose, saving, clientOptions = [], clientList = [],
+  initial, onSave, onClose, saving, clientOptions = [], clientList = [], projectList = [],
 }: {
   initial: InvoiceForm
   onSave: (data: InvoiceForm) => void
@@ -743,6 +746,7 @@ function InvoiceModal({
   saving: boolean
   clientOptions?: string[]
   clientList?: ClientRecord[]
+  projectList?: { id: string; name: string; category: string }[]
 }) {
   const [form, setForm] = useState<InvoiceForm>(initial)
   const [clientQuery, setClientQuery] = useState(initial.client || '')
@@ -850,6 +854,29 @@ function InvoiceModal({
           </div>
         </div>
 
+        {/* Project assignment */}
+        {projectList.length > 0 && (
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">שיוך לפרויקט</label>
+            <select
+              value={form.project_id || ''}
+              onChange={e => setForm(f => ({ ...f, project_id: e.target.value || null }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value="">— ללא שיוך —</option>
+              {['artist','production'].map(cat => {
+                const items = projectList.filter(p => p.category === cat)
+                if (!items.length) return null
+                return (
+                  <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>
+                    {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </optgroup>
+                )
+              })}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-xs text-gray-400 mb-1">הערות</label>
           <textarea value={form.notes} onChange={set('notes')} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none" />
@@ -877,12 +904,14 @@ function InvoiceModal({
 function InvoicesTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [clientList, setClientList] = useState<ClientRecord[]>([])
+  const [projectList, setProjectList] = useState<{ id: string; name: string; category: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filterClient, setFilterClient] = useState('')
   const [filterDocType, setFilterDocType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterProject, setFilterProject] = useState<string>('')
   const [modalInv, setModalInv] = useState<InvoiceRow | null | 'new'>(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -897,10 +926,12 @@ function InvoicesTab() {
     Promise.all([
       fetch('/api/invoices').then(r => r.json()),
       fetch('/api/clients').then(r => r.json()),
-    ]).then(([invData, cliData]) => {
+      fetch('/api/projects').then(r => r.json()),
+    ]).then(([invData, cliData, projData]) => {
       if (invData.error) setError(invData.error)
       else setInvoices(invData.invoices || [])
       if (!cliData.error) setClientList(cliData.clients || [])
+      if (!projData.error) setProjectList(projData.projects || [])
     })
     .catch(() => setError('שגיאה בטעינת נתונים'))
     .finally(() => setLoading(false))
@@ -927,7 +958,7 @@ function InvoicesTab() {
   const filtered = invoices.filter(inv => {
     const q = search.toLowerCase()
     const st = invoiceStatus(inv)
-    const remaining = Math.max(0, inv.total - inv.paid)
+    const remaining = Math.max(0, roundCents(inv.total - inv.paid))
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
     const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
     const matchMonth = !filterMonth || (inv.date && inv.date.startsWith(filterMonth))
@@ -937,11 +968,12 @@ function InvoicesTab() {
       && (!filterClient || inv.client === filterClient)
       && (!filterDocType || inv.doc_type === filterDocType)
       && (!filterStatus || st === filterStatus)
+      && (!filterProject || inv.project_id === filterProject)
   })
 
   const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
   const totalPaid      = filtered.reduce((s, i) => s + i.paid, 0)
-  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0)
+  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, roundCents(i.total - i.paid)), 0)
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
   async function handleSave(form: InvoiceForm) {
@@ -1000,8 +1032,8 @@ function InvoicesTab() {
       <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
         {([
           { key: 'all', label: 'הכל', count: invoices.length },
-          { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, inv.total - inv.paid) > 0).length },
-          { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, inv.total - inv.paid) === 0).length },
+          { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
+          { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
         ] as const).map(({ key, label, count }) => (
           <button
             key={key}
@@ -1063,6 +1095,12 @@ function InvoicesTab() {
           <option value="">כל הסטטוסים</option>
           <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
         </select>
+        {projectList.length > 0 && (
+          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
+            <option value="">כל הפרויקטים</option>
+            {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
+          </select>
+        )}
       </div>
 
       {/* Table — flat or grouped by month */}
@@ -1075,6 +1113,7 @@ function InvoicesTab() {
                 <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
                 <th className="px-4 py-3 text-right font-semibold">מס'</th>
                 <th className="px-4 py-3 text-right font-semibold">לקוח</th>
+                <th className="px-4 py-3 text-right font-semibold">פרויקט</th>
                 <th className="px-4 py-3 text-right font-semibold">תאריך</th>
                 <th className="px-4 py-3 text-right font-semibold">סוג</th>
                 <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
@@ -1091,7 +1130,7 @@ function InvoicesTab() {
                 <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
               ) : filtered.map((inv, i) => {
                 const st = invoiceStatus(inv)
-                const remaining = Math.max(0, inv.total - inv.paid)
+                const remaining = Math.max(0, roundCents(inv.total - inv.paid))
                 return (
                   <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                     <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
@@ -1111,6 +1150,19 @@ function InvoicesTab() {
                         <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך לקוח'}</span>
                         <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {inv.project_id ? (
+                        <button
+                          onClick={() => setModalInv(inv)}
+                          className="text-indigo-600 font-medium hover:text-indigo-800 truncate max-w-[120px] block"
+                          title={projectList.find(p => p.id === inv.project_id)?.name || ''}
+                        >
+                          {projectList.find(p => p.id === inv.project_id)?.name || '—'}
+                        </button>
+                      ) : (
+                        <button onClick={() => setModalInv(inv)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="שייך לפרויקט">+ שייך</button>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
@@ -1137,7 +1189,7 @@ function InvoicesTab() {
             {filtered.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
-                  <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                  <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                   <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                   <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
@@ -1191,7 +1243,7 @@ function InvoicesTab() {
                     const mTotal = group.rows.reduce((s,i) => s+i.total, 0)
                     const mPaid  = group.rows.reduce((s,i) => s+i.paid,  0)
                     const mRem   = Math.max(0, mTotal - mPaid)
-                    const mOpen  = group.rows.filter(i => Math.max(0,i.total-i.paid) > 0).length
+                    const mOpen  = group.rows.filter(i => Math.max(0, roundCents(i.total-i.paid)) > 0).length
 
                     return (
                       <Fragment key={group.key}>
@@ -1223,7 +1275,7 @@ function InvoicesTab() {
                         {/* Invoice rows for this month */}
                         {!isCollapsed && group.rows.map((inv, i) => {
                           const st = invoiceStatus(inv)
-                          const remaining = Math.max(0, inv.total - inv.paid)
+                          const remaining = Math.max(0, roundCents(inv.total - inv.paid))
                           return (
                             <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                               <td className="px-3 py-2.5 text-center text-gray-300 text-xs font-mono">{i + 1}</td>
@@ -1271,7 +1323,7 @@ function InvoicesTab() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
-                    <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                    <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                     <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
                     <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
                     <td className="px-4 py-3 text-emerald-600 text-xs">{fmt(totalPaid)}</td>
@@ -1291,6 +1343,7 @@ function InvoicesTab() {
           initial={modalInv === 'new' ? EMPTY_FORM : { ...modalInv }}
           clientOptions={clients}
           clientList={clientList}
+          projectList={projectList}
           onSave={handleSave}
           onClose={() => setModalInv(null)}
           saving={saving}
@@ -1525,7 +1578,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   const [filter, setFilter] = useState<'all' | 'paid' | 'open'>('all')
 
   const displayed = invoices.filter(inv => {
-    const remaining = Math.max(0, inv.total - inv.paid)
+    const remaining = Math.max(0, roundCents(inv.total - inv.paid))
     if (filter === 'paid') return remaining === 0
     if (filter === 'open') return remaining > 0
     return true
@@ -1535,8 +1588,8 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   const totalPaid  = invoices.reduce((s, i) => s + i.paid,  0)
   const totalOpen  = Math.max(0, totalAll - totalPaid)
 
-  const openCount  = invoices.filter(i => Math.max(0, i.total - i.paid) > 0).length
-  const paidCount  = invoices.filter(i => Math.max(0, i.total - i.paid) === 0).length
+  const openCount  = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
+  const paidCount  = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -1614,7 +1667,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
               </thead>
               <tbody>
                 {displayed.map((inv, i) => {
-                  const remaining = Math.max(0, inv.total - inv.paid)
+                  const remaining = Math.max(0, roundCents(inv.total - inv.paid))
                   const isPaid = remaining === 0
                   return (
                     <tr key={inv.id} className={`border-b border-gray-100 transition-colors ${isPaid ? 'hover:bg-emerald-50/30' : 'hover:bg-red-50/30'} ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
@@ -1647,7 +1700,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
                   <td className="px-3 py-2.5 text-gray-600">{fmt(displayed.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-3 py-2.5 text-gray-800">{fmt(displayed.reduce((s, i) => s + i.total, 0))}</td>
                   <td className="px-3 py-2.5 text-emerald-600">{fmt(displayed.reduce((s, i) => s + i.paid, 0))}</td>
-                  <td className="px-3 py-2.5 text-red-500">{fmt(displayed.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0))}</td>
+                  <td className="px-3 py-2.5 text-red-500">{fmt(displayed.reduce((s, i) => s + Math.max(0, roundCents(i.total - i.paid)), 0))}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -1937,7 +1990,7 @@ function ClientsTab() {
                   const isLoading = loadingId === c.id
 
                   const dispInvs = clientInvs.filter(inv => {
-                    const r = Math.max(0, inv.total - inv.paid)
+                    const r = Math.max(0, roundCents(inv.total - inv.paid))
                     if (expandedFilter === 'paid') return r === 0
                     if (expandedFilter === 'open') return r > 0
                     return true
@@ -1945,8 +1998,8 @@ function ClientsTab() {
                   const ledTotal = clientInvs.reduce((s, i) => s + i.total, 0)
                   const ledPaid  = clientInvs.reduce((s, i) => s + i.paid,  0)
                   const ledOpen  = Math.max(0, ledTotal - ledPaid)
-                  const openCount = clientInvs.filter(i => Math.max(0, i.total - i.paid) > 0).length
-                  const paidCount = clientInvs.filter(i => Math.max(0, i.total - i.paid) === 0).length
+                  const openCount = clientInvs.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
+                  const paidCount = clientInvs.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
                   return (
                     <Fragment key={c.id}>
@@ -2051,7 +2104,7 @@ function ClientsTab() {
                                     </thead>
                                     <tbody>
                                       {dispInvs.map((inv, idx) => {
-                                        const rem = Math.max(0, inv.total - inv.paid)
+                                        const rem = Math.max(0, roundCents(inv.total - inv.paid))
                                         const isPaid = rem === 0
                                         return (
                                           <tr key={inv.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`} onClick={e => e.stopPropagation()}>
@@ -2082,7 +2135,7 @@ function ClientsTab() {
                                         <td className="px-3 py-2 text-gray-600">{fmt(dispInvs.reduce((s,i) => s+i.before_vat,0))}</td>
                                         <td className="px-3 py-2 text-gray-800">{fmt(dispInvs.reduce((s,i) => s+i.total,0))}</td>
                                         <td className="px-3 py-2 text-emerald-600">{fmt(dispInvs.reduce((s,i) => s+i.paid,0))}</td>
-                                        <td className="px-3 py-2 text-red-500">{fmt(dispInvs.reduce((s,i) => s+Math.max(0,i.total-i.paid),0))}</td>
+                                        <td className="px-3 py-2 text-red-500">{fmt(dispInvs.reduce((s,i) => s+Math.max(0, roundCents(i.total-i.paid)),0))}</td>
                                         <td />
                                       </tr>
                                     </tfoot>
@@ -2191,7 +2244,7 @@ function FinProjectsTab() {
       .catch(() => {})
   }, [])
 
-  // When project selected — fetch matching invoices
+  // When project selected — fetch matching invoices (project_id FK first, then fuzzy name fallback)
   useEffect(() => {
     if (!sel) return
     const project = projects.find(p => p.id === sel)
@@ -2204,8 +2257,11 @@ function FinProjectsTab() {
         const all: InvoiceRow[] = d.invoices || []
         const q = project.name.toLowerCase()
         const matched = all.filter(inv =>
-          inv.client?.toLowerCase().includes(q) ||
-          q.includes(inv.client?.toLowerCase() || '__nomatch__')
+          inv.project_id === sel ||
+          (!inv.project_id && (
+            inv.client?.toLowerCase().includes(q) ||
+            q.includes(inv.client?.toLowerCase() || '__nomatch__')
+          ))
         )
         setInvoices(matched)
       })
@@ -2218,7 +2274,7 @@ function FinProjectsTab() {
   const productions = projects.filter(p => p.category === 'production')
 
   const displayed = invoices.filter(inv => {
-    const rem = Math.max(0, inv.total - inv.paid)
+    const rem = Math.max(0, roundCents(inv.total - inv.paid))
     if (ledgerFilter === 'open') return rem > 0
     if (ledgerFilter === 'paid') return rem === 0
     return true
@@ -2227,8 +2283,8 @@ function FinProjectsTab() {
   const totalRev  = invoices.reduce((s, i) => s + i.total, 0)
   const totalPaid = invoices.reduce((s, i) => s + i.paid,  0)
   const totalRem  = Math.max(0, totalRev - totalPaid)
-  const openCount = invoices.filter(i => Math.max(0, i.total - i.paid) > 0).length
-  const paidCount = invoices.filter(i => Math.max(0, i.total - i.paid) === 0).length
+  const openCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
+  const paidCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
   function ProjectList({ label, category, items }: { label: string; category: string; items: Project[] }) {
     const isOpen = expanded[category] !== false
@@ -2353,7 +2409,7 @@ function FinProjectsTab() {
                   </thead>
                   <tbody>
                     {displayed.map((inv, i) => {
-                      const rem = Math.max(0, inv.total - inv.paid)
+                      const rem = Math.max(0, roundCents(inv.total - inv.paid))
                       const isPaid = rem === 0
                       const status = isPaid ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
                       const statusStyle = {
@@ -2384,7 +2440,7 @@ function FinProjectsTab() {
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{fmtP(displayed.reduce((s,i) => s+i.before_vat,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(displayed.reduce((s,i) => s+Math.max(0,i.total-i.paid),0))}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(displayed.reduce((s,i) => s+Math.max(0, roundCents(i.total-i.paid)),0))}</td>
                       <td />
                     </tr>
                   </tfoot>
@@ -2411,6 +2467,16 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
       {activeTab === 'dashboard' && <FinancialDashboard />}
 
       {activeTab === 'projects' && <FinProjectsTab />}
+
+      {activeTab === 'expenses' && (
+        <div className='flex-1 flex items-center justify-center'>
+          <div className='text-center text-gray-400'>
+            <svg className='w-12 h-12 mx-auto mb-3 text-gray-300' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' /></svg>
+            <p className='text-sm font-semibold text-gray-500'>הוצאות ותשלומים</p>
+            <p className='text-xs text-gray-400 mt-1'>בקרוב...</p>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">

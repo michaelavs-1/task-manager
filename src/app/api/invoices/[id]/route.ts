@@ -25,6 +25,8 @@ export async function PATCH(
   }
   // client_id is a nullable FK — handle separately so null is preserved
   if ('client_id' in body) updates['client_id'] = body.client_id === null ? null : Number(body.client_id)
+  // project_id is a nullable UUID FK
+  if ('project_id' in body) updates['project_id'] = body.project_id || null
 
   const { data, error } = await supabase
     .from('invoices')

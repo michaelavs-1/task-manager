@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       total:       Number(body.total)       || 0,
       paid:        Number(body.paid)        || 0,
       notes:       body.notes       ?? '',
+      project_id:  body.project_id  ?? null,
     })
     .select()
     .single()
