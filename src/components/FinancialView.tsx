@@ -420,7 +420,7 @@ function InvoiceModal({
             <label className="block text-xs text-gray-400 mb-1">סוג מסמך</label>
             <select value={form.doc_type} onChange={set('doc_type')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="">— בחר —</option>
-              {['מס','חשבון עסקה','קבלה','חשבונית מס קבלה','הזמנה'].map(t => <option key={t} value={t}>{t}</option>)}
+              {['חשבונית מס','חשבון עסקה','קבלה','חשבונית מס קבלה','הזמנה'].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
