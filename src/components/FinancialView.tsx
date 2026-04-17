@@ -715,10 +715,10 @@ function InvoicesTab() {
                     ) : null}
                     <button
                       onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)}
-                      className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`}
+                      className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`}
                       title="לחץ לשיוך לקוח"
                     >
-                      <span className="truncate">{inv.client || '⚠ לא משוייך לקוח'}</span>
+                      <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך לקוח'}</span>
                       <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
                   </td>

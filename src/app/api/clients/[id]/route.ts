@@ -20,9 +20,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   // Nullify client_id on all linked invoices before deleting
+  // Nullify client_id (FK) and clear client name so orphaned invoices show as unlinked
   const { error: unlinkErr } = await supabase
     .from('invoices')
-    .update({ client_id: null })
+    .update({ client_id: null, client: '' })
     .eq('client_id', params.id)
   if (unlinkErr) return NextResponse.json({ error: unlinkErr.message }, { status: 500 })
 
