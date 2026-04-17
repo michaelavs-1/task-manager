@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 type TicketSnapshot = {
@@ -25,6 +25,7 @@ export function TicketTrackingView() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [snapshotDate, setSnapshotDate] = useState(new Date().toISOString().split('T')[0])
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => { loadData() }, [])
 
@@ -185,11 +186,21 @@ export function TicketTrackingView() {
                   </td>
                   <td className="px-4 py-3">
                     <input
+                      ref={el => { inputRefs.current[camp.id] = el }}
                       type="number"
                       min="0"
                       value={updateInputs[camp.id] ?? ''}
                       onChange={e => setUpdateInputs(prev => ({ ...prev, [camp.id]: e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Enter') handleSave(camp.id) }}
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          await handleSave(camp.id)
+                          const nextCamp = upcomingCampaigns[i + 1]
+                          if (nextCamp) {
+                            inputRefs.current[nextCamp.id]?.focus()
+                          }
+                        }
+                      }}
                       placeholder="הזן מספר"
                       className="w-28 px-2 py-1.5 text-sm border border-pink-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white text-center"
                     />
@@ -201,7 +212,7 @@ export function TicketTrackingView() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {daysToShow !== null
-                      ? <span className={'text-sm ' + daysColor}>{daysToShow === 0 ? 'היום!' : daysToShow + ' י\''}</span>
+                      ? <span className={'text-sm ' + daysColor}>{daysToShow === 0 ? 'היום!' : daysToShow === 1 ? 'מחר' : daysToShow + ' י''}</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3">
