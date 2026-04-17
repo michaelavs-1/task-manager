@@ -9,6 +9,8 @@ type Meeting = {
   duration: number
   transcript?: string
   summary?: string
+  audio_url?: string
+  project?: string
 }
 
 const SETTINGS_PATH = '_config/settings.json'
@@ -29,6 +31,9 @@ export function MeetingsView() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [showTitleInput, setShowTitleInput] = useState(false)
   const [meetingTitle, setMeetingTitle] = useState('')
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
+  const [meetingProject, setMeetingProject] = useState('')
+  const [artists, setArtists] = useState<string[]>([])
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -43,11 +48,24 @@ export function MeetingsView() {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [expandedMeeting, setExpandedMeeting] = useState<string | null>(null)
   const [currentMeeting, setCurrentMeeting] = useState<Meeting | null>(null)
+  const [audioUrls, setAudioUrls] = useState<Record<string, string>>({})
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [projectFilter, setProjectFilter] = useState('')
+  const audioRefsRef = useRef<Record<string, HTMLAudioElement>>({})
+
 
   useEffect(() => {
     loadSettings()
     loadMeetings()
+    loadArtists()
   }, [])
+
+  function loadArtists() {
+    try {
+      const s = localStorage.getItem('barby_artists_bank_v1')
+      if (s) setArtists(JSON.parse(s))
+    } catch {}
+  }
 
   async function loadSettings() {
     try {
@@ -120,12 +138,27 @@ export function MeetingsView() {
 
   function saveMeetingWithTitle() {
     if (!meetingTitle.trim() || !audioBlob) return
-    const m: Meeting = { id: Date.now().toString(), title: meetingTitle.trim(), date: new Date().toISOString(), duration: recordingSeconds }
+    setShowProjectPicker(true)
+  }
+
+  function saveMeetingWithProject() {
+    if (!meetingTitle.trim() || !audioBlob) return
+    const m: Meeting = {
+      id: Date.now().toString(),
+      title: meetingTitle.trim(),
+      date: new Date().toISOString(),
+      duration: recordingSeconds,
+      project: meetingProject || undefined
+    }
+    const url = URL.createObjectURL(audioBlob)
+    setAudioUrls(prev => ({...prev, [m.id]: url}))
     const updated = [m, ...meetings]
     saveMeetingsList(updated)
     setCurrentMeeting(m)
     setMeetingTitle('')
+    setMeetingProject('')
     setShowTitleInput(false)
+    setShowProjectPicker(false)
   }
 
   async function summarizeMeeting(meeting: Meeting, blob?: Blob) {
@@ -261,7 +294,7 @@ export function MeetingsView() {
             </div>
 
             {/* Title input */}
-            {showTitleInput && (
+            {showTitleInput && !showProjectPicker && (
               <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   ✓ הקלטה הסתיימה ({fmt(recordingSeconds)}). תן שם לפגישה:
@@ -274,7 +307,30 @@ export function MeetingsView() {
                     className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white" />
                   <button onClick={saveMeetingWithTitle} disabled={!meetingTitle.trim()}
                     className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-                    שמור
+                    הבא
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Project picker */}
+            {showProjectPicker && (
+              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  איזה אומן?
+                </p>
+                <div className="space-y-3">
+                  <select value={meetingProject}
+                    onChange={e => setMeetingProject(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white">
+                    <option value="">ללא שיוך</option>
+                    {artists.map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                  <button onClick={saveMeetingWithProject}
+                    className="w-full px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">
+                    שמור פגישה
                   </button>
                 </div>
               </div>
@@ -337,8 +393,22 @@ export function MeetingsView() {
 
       {/* LIST TAB */}
       {subTab === 'list' && (
-        <div className="space-y-3">
-          {meetings.length === 0 ? (
+        <div className="space-y-4">
+          {/* Filter dropdown */}
+          {meetings.length > 0 && (
+            <div className="flex gap-2">
+              <select value={projectFilter}
+                onChange={e => setProjectFilter(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white bg-white dark:bg-gray-800">
+                <option value="">הכל</option>
+                {Array.from(new Set(meetings.filter(m => m.project).map(m => m.project))).sort().map(p => (
+                  <option key={p} value={p || ''}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="space-y-3">
+          {meetings.filter(m => !projectFilter || m.project === projectFilter).length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -346,12 +416,15 @@ export function MeetingsView() {
               <p className="text-sm">אין פגישות שמורות</p>
               <button onClick={() => setSubTab('live')} className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 font-medium">התחל הקלטה ←</button>
             </div>
-          ) : meetings.map(m => (
+          ) : meetings.filter(m => !projectFilter || m.project === projectFilter).map(m => (
             <div key={m.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
               <button onClick={() => setExpandedMeeting(expandedMeeting === m.id ? null : m.id)}
                 className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900 dark:text-white text-sm">{m.title}</p>
+                <div className="text-right flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{m.title}</p>
+                    {m.project && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{m.project}</span>}
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">{fmtDate(m.date)} · {fmt(m.duration)}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -362,13 +435,39 @@ export function MeetingsView() {
                 </div>
               </button>
               {expandedMeeting === m.id && (
-                <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4 bg-gray-50 dark:bg-gray-700/30">
+                <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-4 bg-gray-50 dark:bg-gray-700/30 space-y-4">
+                  {audioUrls[m.id] && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setPlayingId(playingId === m.id ? null : m.id)}
+                        className="p-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex-shrink-0"
+                      >
+                        {playingId === m.id ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                        )}
+                      </button>
+                      <div className="flex-1">
+                        <audio
+                          ref={(el) => { if (el) audioRefsRef.current[m.id] = el }}
+                          src={audioUrls[m.id]}
+                          onPlay={() => setPlayingId(m.id)}
+                          onPause={() => setPlayingId(null)}
+                          className="w-full"
+                          controls
+                        />
+                      </div>
+                    </div>
+                  )}
                   {m.summary ? (
                     <>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">סיכום</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{m.summary}</p>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">סיכום</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{m.summary}</p>
+                      </div>
                       {m.transcript && (
-                        <details className="mt-3">
+                        <details>
                           <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 select-none">הצג תמלול</summary>
                           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap leading-relaxed">{m.transcript}</p>
                         </details>
@@ -381,6 +480,7 @@ export function MeetingsView() {
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
     </div>

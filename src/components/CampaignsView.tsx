@@ -23,8 +23,8 @@ type ArtistMeta = { defaultOffice?: string; defaultContactId?: string }
 type BoardKey = 'universal' | 'barbie' | 'general'
 
 const BOARDS: { key: BoardKey; label: string }[] = [
-  { key: 'universal', label: 'קידומים יוניברסל' },
   { key: 'barbie', label: 'קידומים בארבי' },
+  { key: 'universal', label: 'קידומים יוניברסל' },
   { key: 'general', label: 'שיווק אומנים כללי' },
 ]
 const GROUP_BORDER: Record<string, string> = {
@@ -77,7 +77,7 @@ function filterCampaigns(campaigns: Campaign[], board: BoardKey): Campaign[] {
 
 export function CampaignsView() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [selectedBoard, setSelectedBoard] = useState<BoardKey>('universal')
+  const [selectedBoard, setSelectedBoard] = useState<BoardKey>('barbie')
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -388,7 +388,7 @@ export function CampaignsView() {
       </div>
 
       {selectedBoard === 'barbie' && (
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="mb-6 space-y-3">
           <div className="flex gap-2 flex-wrap">
             {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
               <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'pixels'|'media')}
@@ -402,21 +402,28 @@ export function CampaignsView() {
               </button>
             ))}
           </div>
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => setBarbyViewMode('cards')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${barbyViewMode==='cards' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-              תצוגת דשבורד
-            </button>
-            <button
-              onClick={() => setBarbyViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${barbyViewMode==='table' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 6v12M6 6h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>
-              תצוגת טבלה
-            </button>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setBarbyViewMode('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${barbyViewMode==='cards' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                תצוגת דשבורד
+              </button>
+              <button
+                onClick={() => setBarbyViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${barbyViewMode==='table' ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 6v12M6 6h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z" /></svg>
+                תצוגת טבלה
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="חפש קמפיין..."
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
+            />
           </div>
         </div>
       )}
@@ -1509,23 +1516,40 @@ function PixelsView() {
   const [pixels, setPixels] = useState<{id: string; name: string; pixel_id: string; platform: string; notes: string | null}[]>([])
   const [loading, setLoading] = useState(true)
   const [artistName, setArtistName] = useState('')
+  const [artistSearch, setArtistSearch] = useState('')
+  const [showArtistDrop, setShowArtistDrop] = useState(false)
+  const [rosterArtists, setRosterArtists] = useState<string[]>([])
   const [pixelValue, setPixelValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [pixelSearch, setPixelSearch] = useState('')
 
   useEffect(() => {
     supabase.from('pixels').select('*').order('name').then(({ data }) => {
       setPixels((data as any[]) || [])
       setLoading(false)
     })
+    try {
+      const stored = localStorage.getItem('barby_artists_bank_v1')
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored)
+        setRosterArtists(parsed.length > 0 ? parsed : BARBY_ARTISTS_INITIAL)
+      } else {
+        setRosterArtists(BARBY_ARTISTS_INITIAL)
+      }
+    } catch { setRosterArtists(BARBY_ARTISTS_INITIAL) }
   }, [])
 
+  const filteredRoster = rosterArtists.filter(a => !artistSearch || a.toLowerCase().includes(artistSearch.toLowerCase())).sort((a, b) => a.localeCompare(b, 'he'))
+
   const save = async () => {
-    if (!artistName.trim() || !pixelValue.trim()) return
+    const nameToSave = artistName.trim() || artistSearch.trim()
+    if (!nameToSave || !pixelValue.trim()) return
     setSaving(true)
-    const { data, error } = await supabase.from('pixels').insert({ name: artistName.trim(), pixel_id: pixelValue.trim(), platform: 'Meta', notes: null }).select()
+    const { data, error } = await supabase.from('pixels').insert({ name: nameToSave, pixel_id: pixelValue.trim(), platform: 'Meta', notes: null }).select()
     if (!error && data) setPixels(prev => [...prev, (data as any[])[0]])
     setArtistName('')
+    setArtistSearch('')
     setPixelValue('')
     setSaving(false)
   }
@@ -1548,12 +1572,27 @@ function PixelsView() {
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">הוסף פיקסל חדש</p>
         <div className="flex gap-3 flex-wrap">
-          <input
-            value={artistName}
-            onChange={e => setArtistName(e.target.value)}
-            placeholder="שם האומן..."
-            className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300"
-          />
+          <div className="relative flex-1 min-w-[160px]">
+            <input
+              value={artistName || artistSearch}
+              onChange={e => { setArtistSearch(e.target.value); setArtistName(''); setShowArtistDrop(true) }}
+              onFocus={() => setShowArtistDrop(true)}
+              onBlur={() => setTimeout(() => setShowArtistDrop(false), 150)}
+              placeholder="שם האומן..."
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+            {showArtistDrop && filteredRoster.length > 0 && (
+              <div className="absolute z-50 right-0 left-0 mt-1 max-h-48 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg">
+                {filteredRoster.map(a => (
+                  <button key={a} type="button"
+                    onMouseDown={() => { setArtistName(a); setArtistSearch(''); setShowArtistDrop(false) }}
+                    className="w-full text-right px-3 py-2 text-sm hover:bg-pink-50 dark:hover:bg-pink-900/20 text-gray-800 dark:text-white transition-colors">
+                    {a}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             value={pixelValue}
             onChange={e => setPixelValue(e.target.value)}
@@ -1563,7 +1602,7 @@ function PixelsView() {
           />
           <button
             onClick={save}
-            disabled={saving || !artistName.trim() || !pixelValue.trim()}
+            disabled={saving || (!artistName.trim() && !artistSearch.trim()) || !pixelValue.trim()}
             className="px-5 py-2 rounded-xl text-sm font-semibold bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50 transition-colors whitespace-nowrap"
           >
             {saving ? 'שומר...' : '+ הוסף'}
@@ -1577,6 +1616,25 @@ function PixelsView() {
           <p className="text-gray-300 text-sm mt-1">הזן שם אומן ופיקסל למעלה</p>
         </div>
       ) : (
+        <div>
+          {/* Search bar */}
+          <div className="relative mb-3">
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={pixelSearch}
+              onChange={e => setPixelSearch(e.target.value)}
+              placeholder="חיפוש לפי שם אומן..."
+              className="w-full pr-9 pl-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-300 shadow-sm"
+            />
+            {pixelSearch && (
+              <button onClick={() => setPixelSearch('')} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
+          </div>
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
           <table className="w-full text-sm" dir="rtl">
             <thead>
@@ -1588,7 +1646,7 @@ function PixelsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-              {pixels.map(p => (
+              {pixels.filter(p => !pixelSearch || p.name.toLowerCase().includes(pixelSearch.toLowerCase())).map(p => (
                 <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-700/40 transition-colors">
                   <td className="px-4 py-3 font-semibold text-gray-800 dark:text-white">{p.name}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{p.pixel_id}</td>
@@ -1614,6 +1672,7 @@ function PixelsView() {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
       )}
     </div>

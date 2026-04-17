@@ -21,7 +21,7 @@ export function TicketTrackingView() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])
   const [snapshots, setSnapshots] = useState<TicketSnapshot[]>([])
   const [loading, setLoading] = useState(true)
-  const [inputValues, setInputValues] = useState<Record<string, string>>({})
+  const [updateInputs, setUpdateInputs] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [snapshotDate, setSnapshotDate] = useState(new Date().toISOString().split('T')[0])
@@ -45,9 +45,6 @@ export function TicketTrackingView() {
           tickets_for_sale: c.tickets_for_sale,
           tickets_sold: c.tickets_sold,
         })))
-        const initial: Record<string, string> = {}
-        campsRes.data.forEach((c: any) => { initial[c.id] = c.tickets_sold != null ? String(c.tickets_sold) : '' })
-        setInputValues(initial)
       }
       if (snapsRes.data) setSnapshots(snapsRes.data)
     } catch (err) {
@@ -58,7 +55,7 @@ export function TicketTrackingView() {
   }
 
   const handleSave = async (campaignId: string) => {
-    const val = parseInt(inputValues[campaignId] ?? '')
+    const val = parseInt(updateInputs[campaignId] ?? '')
     if (isNaN(val)) return
     setSavingId(campaignId)
     const today = snapshotDate
@@ -72,6 +69,7 @@ export function TicketTrackingView() {
       await supabase.from('ticket_snapshots').insert({ campaign_id: campaignId, snapshot_date: today, tickets_sold: val })
     }
     await loadData()
+    setUpdateInputs(prev => ({ ...prev, [campaignId]: '' }))
     setSavingId(null)
     setSavedId(campaignId)
     setTimeout(() => setSavedId(null), 2000)
@@ -112,6 +110,15 @@ export function TicketTrackingView() {
   const remainingColor = (r: number) =>
     r <= 0 ? 'text-red-500' : r < 100 ? 'text-orange-500' : 'text-emerald-600'
 
+  // Filter: only show shows that haven't passed yet
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const upcomingCampaigns = campaigns.filter(camp => {
+    if (!camp.launch_date) return true
+    const showDate = new Date(camp.launch_date + 'T00:00:00')
+    return showDate >= today
+  })
+
   if (loading) return (
     <div className="p-8 text-center text-gray-400">
       <div className="inline-block w-6 h-6 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin" />
@@ -142,22 +149,22 @@ export function TicketTrackingView() {
               <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">תאריך מופע</th>
               <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">שם המופע</th>
               <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים למכירה</th>
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים מכורים עדכני</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">כרטיסים מכורים כעת</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-pink-500 uppercase tracking-wider whitespace-nowrap">עדכון כרטיסים נוכחי</th>
               <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">נותרו</th>
               <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">ימים למופע</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-            {campaigns.map((camp, i) => {
-              const soldVal = parseInt(inputValues[camp.id] ?? '')
-              const sold = isNaN(soldVal) ? (camp.tickets_sold ?? 0) : soldVal
+            {upcomingCampaigns.map((camp, i) => {
+              const sold = camp.tickets_sold ?? 0
               const remaining = camp.tickets_for_sale != null ? camp.tickets_for_sale - sold : null
               const pct = camp.tickets_for_sale ? Math.round(sold / camp.tickets_for_sale * 100) : null
               const daysToShow = camp.launch_date
                 ? Math.ceil((new Date(camp.launch_date + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0)) / 86400000)
                 : null
-              const daysColor = daysToShow === null ? '' : daysToShow < 0 ? 'text-gray-400' : daysToShow === 0 ? 'text-green-600 font-black' : daysToShow <= 7 ? 'text-red-500 font-bold' : daysToShow <= 30 ? 'text-orange-500 font-semibold' : 'text-indigo-500 font-medium'
+              const daysColor = daysToShow === null ? '' : daysToShow === 0 ? 'text-green-600 font-black' : daysToShow <= 7 ? 'text-red-500 font-bold' : daysToShow <= 30 ? 'text-orange-500 font-semibold' : 'text-indigo-500 font-medium'
               const rowBg = i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800'
               return (
                 <tr key={camp.id} className={rowBg}>
@@ -171,15 +178,20 @@ export function TicketTrackingView() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{camp.tickets_for_sale ?? '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-white">
+                      {camp.tickets_sold != null ? camp.tickets_sold.toLocaleString() : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <input
                       type="number"
                       min="0"
-                      value={inputValues[camp.id] ?? ''}
-                      onChange={e => setInputValues(prev => ({ ...prev, [camp.id]: e.target.value }))}
+                      value={updateInputs[camp.id] ?? ''}
+                      onChange={e => setUpdateInputs(prev => ({ ...prev, [camp.id]: e.target.value }))}
                       onKeyDown={e => { if (e.key === 'Enter') handleSave(camp.id) }}
                       placeholder="הזן מספר"
-                      className="w-28 px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white text-center"
+                      className="w-28 px-2 py-1.5 text-sm border border-pink-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white text-center"
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -189,13 +201,13 @@ export function TicketTrackingView() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {daysToShow !== null
-                      ? <span className={'text-sm ' + daysColor}>{daysToShow < 0 ? 'עבר' : daysToShow === 0 ? 'היום!' : daysToShow + ' י\''}</span>
+                      ? <span className={'text-sm ' + daysColor}>{daysToShow === 0 ? 'היום!' : daysToShow + ' י\''}</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleSave(camp.id)}
-                      disabled={savingId === camp.id}
+                      disabled={savingId === camp.id || !updateInputs[camp.id]}
                       className={'px-4 py-1.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap ' + (savedId === camp.id ? 'bg-emerald-100 text-emerald-700' : 'bg-pink-600 text-white hover:bg-pink-700')}
                     >
                       {savingId === camp.id ? '...' : savedId === camp.id ? 'נשמר ✓' : 'שמור'}
@@ -234,7 +246,7 @@ export function TicketTrackingView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                {campaigns.map((camp, i) => {
+                {upcomingCampaigns.map((camp, i) => {
                   const velocity = getVelocity(camp.id)
                   const campSnaps = snapshots.filter(s => s.campaign_id === camp.id).sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
                   const latestSnap = campSnaps[campSnaps.length - 1]

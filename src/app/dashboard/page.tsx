@@ -249,27 +249,27 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }} dir="rtl">
       {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-slate-800 to-slate-900 text-white flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-gradient-to-b from-[#0f1117] to-[#1a1d2e] text-white flex flex-col flex-shrink-0 border-r border-white/5">
         {/* Header */}
-        <div className="px-6 py-6 border-b border-slate-700/50">
+        <div className="px-6 py-6 border-b border-white/10">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
-            <h1 className="text-lg font-bold text-white">אלגוריתם הפקות</h1>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">אלגוריתם הפקות</h1>
           </div>
-          <p className="text-xs text-slate-400">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
+          <p className="text-xs text-white/60">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
           {/* Section switcher */}
-          <div className="flex mt-4 bg-slate-700/40 rounded-xl p-1 gap-1">
+          <div className="flex mt-4 bg-white/5 rounded-xl p-1 gap-1">
             <button
               onClick={() => setActiveSection("management")}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "management" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"}`}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "management" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/90"}`}
             >
               ניהול
             </button>
             <button
               onClick={() => setActiveSection("financial")}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "financial" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"}`}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "financial" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/90"}`}
             >
               פיננסי
             </button>
@@ -281,9 +281,9 @@ export default function Dashboard() {
           {activeSection === "financial" ? (
             <button
               onClick={() => {}}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-slate-700/50 text-white"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-white/10 text-white"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               סקירה כללית
@@ -292,40 +292,42 @@ export default function Dashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all before:absolute before:left-0 before:h-full before:w-0.5 before:bg-indigo-400 before:scale-y-0 group-hover:before:scale-y-100 before:transition-transform ${
                 activeTab === tab
-                  ? "bg-white bg-opacity-20 text-white"
-                  : "text-indigo-100 hover:bg-white hover:bg-opacity-10"
+                  ? "bg-white/10 text-white"
+                  : "text-white/50 hover:text-white/90"
               }`}
             >
+              <div className={activeTab === tab ? "text-indigo-400" : "text-white/50 group-hover:text-indigo-400 transition-colors"}>
+                {icon}
+              </div>
               <span>{label}</span>
-              {icon}
             </button>
           ))}
         </nav>
 
         {/* Bottom Actions */}
-        <div className="px-3 py-4 border-t border-slate-700/50 space-y-3">
+        <div className="px-3 py-4 border-t border-white/10 space-y-3">
           {userRole === "manager" && activeTab === "tasks" && (
             <button
               onClick={() => setShowNewTask(true)}
-              className="w-full bg-white text-indigo-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition-colors"
+              className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
             >
               + משימה חדשה
             </button>
           )}
 
           {/* Theme Toggle */}
-          <div className="bg-white bg-opacity-10 rounded-xl p-3">
-            <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
+          <div className="bg-white/5 rounded-xl p-3">
+            <p className="text-xs text-white/60 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setTheme('light')}
                 title="בהיר"
                 className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'light'
-                    ? 'bg-white text-indigo-700'
-                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                 }`}
               >
                 בהיר
@@ -335,8 +337,8 @@ export default function Dashboard() {
                 title="בינוני"
                 className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'middle'
-                    ? 'bg-white text-indigo-700'
-                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                 }`}
               >
                 בינוני
@@ -346,8 +348,8 @@ export default function Dashboard() {
                 title="כהה"
                 className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   theme === 'dark'
-                    ? 'bg-white text-indigo-700'
-                    : 'bg-white bg-opacity-10 text-indigo-100 hover:bg-opacity-20'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                 }`}
               >
                 כהה
@@ -358,7 +360,7 @@ export default function Dashboard() {
           {/* Logout */}
           <button
             onClick={logout}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-indigo-100 hover:bg-white hover:bg-opacity-10 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
             <span>יציאה</span>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

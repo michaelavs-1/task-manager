@@ -1,28 +1,111 @@
 'use client'
+import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseConfig } from '../lib/supabase'
 
 type Campaign = { id: string; name: string; requester: string | null; launch_date: string | null }
-type MediaItem = { name: string; id: string; updated_at: string; metadata?: { mimetype?: string; size?: number } }
+type UploadItem = { id: string; name: string; progress: number; status: 'uploading' | 'done' | 'error' }
 
 const BUCKET = 'campaigns-media'
 const ML_PREFIX = 'media-library'
 
+function uploadFileXHR(
+  file: File,
+  path: string,
+  onProgress: (pct: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else reject(new Error('העלאה נכשלה: ' + xhr.status))
+    }
+    xhr.onerror = () => reject(new Error('שגיאת רשת'))
+    xhr.open('POST', `${supabaseConfig.url}/storage/v1/object/${BUCKET}/${path}`)
+    xhr.setRequestHeader('Authorization', `Bearer ${supabaseConfig.anonKey}`)
+    xhr.setRequestHeader('apikey', supabaseConfig.anonKey)
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+    xhr.setRequestHeader('x-upsert', 'false')
+    xhr.send(file)
+  })
+}
+
+function ArtistAccordion({ artists, onSelect }: { artists: string[]; onSelect: (a: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const filtered = artists.filter(a => !search || a.toLowerCase().includes(search.toLowerCase()))
+
+  function handleOpen() {
+    setOpen(true)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-600 rounded-xl overflow-hidden">
+      {/* Accordion header */}
+      <button
+        type="button"
+        onClick={() => open ? setOpen(false) : handleOpen()}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 transition-colors text-right"
+      >
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">בחר אומן</span>
+        <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Accordion body */}
+      {open && (
+        <div className="border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700">
+          <div className="p-2 border-b border-gray-100 dark:border-gray-600">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="חיפוש אומן..."
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-600">
+            {filtered.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-gray-400">אין תוצאות</p>
+            ) : filtered.map(artist => (
+              <button
+                key={artist}
+                type="button"
+                onClick={() => { setSearch(''); setOpen(false); onSelect(artist) }}
+                className="w-full text-right px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+              >
+                {artist}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MediaLibraryView() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
-  const [artistSearch, setArtistSearch] = useState('')
   const [selectedArtist, setSelectedArtist] = useState('')
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [galleryItems, setGalleryItems] = useState<{ campaignId: string; artistName: string; campaignName: string; url: string; name: string; isImage: boolean }[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [filterArtist, setFilterArtist] = useState('')
   const [dropboxToken, setDropboxToken] = useState('')
-  const [dropboxStatus, setDropboxStatus] = useState<'idle' | 'uploading' | 'ok' | 'err'>('idle')
+  const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
+  const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const today = new Date()
@@ -31,9 +114,8 @@ export function MediaLibraryView() {
   const heMonths = ['\u05D9\u05E0\u05D5\u05D0\u05E8', '\u05E4\u05D1\u05E8\u05D5\u05D0\u05E8', '\u05DE\u05E8\u05E5', '\u05D0\u05E4\u05E8\u05D9\u05DC', '\u05DE\u05D0\u05D9', '\u05D9\u05D5\u05E0\u05D9', '\u05D9\u05D5\u05DC\u05D9', '\u05D0\u05D5\u05D2\u05D5\u05E1\u05D8', '\u05E1\u05E4\u05D8\u05DE\u05D1\u05E8', '\u05D0\u05D5\u05E7\u05D8\u05D5\u05D1\u05E8', '\u05E0\u05D5\u05D1\u05DE\u05D1\u05E8', '\u05D3\u05E6\u05DE\u05D1\u05E8']
 
   useEffect(() => {
-    loadCampaigns()
-    loadGallery()
-    // Load Dropbox token from localStorage
+    setMounted(true)
+    loadCampaigns().then(camps => loadGallery(camps))
     try {
       const t = localStorage.getItem('dropbox_token_v1')
       if (t) setDropboxToken(t)
@@ -49,18 +131,21 @@ export function MediaLibraryView() {
     if (data) {
       const future = (data as Campaign[]).filter(c => {
         if (!c.launch_date) return false
-        const d = new Date(c.launch_date)
-        d.setHours(0, 0, 0, 0)
+        const d = new Date(c.launch_date); d.setHours(0, 0, 0, 0)
         return d >= today
       })
       setCampaigns(future)
+      setLoading(false)
+      return future
     }
     setLoading(false)
+    return [] as Campaign[]
   }
 
-  async function loadGallery() {
+  async function loadGallery(campaignsList?: Campaign[]) {
     setGalleryLoading(true)
     try {
+      const campData = campaignsList || campaigns
       const { data: folders } = await supabase.storage.from(BUCKET).list(ML_PREFIX)
       if (!folders) { setGalleryLoading(false); return }
       const items: typeof galleryItems = []
@@ -68,28 +153,23 @@ export function MediaLibraryView() {
         const campaignId = folder.name
         const { data: files } = await supabase.storage.from(BUCKET).list(ML_PREFIX + '/' + campaignId)
         if (!files) continue
-        const camp = campaigns.find(c => c.id === campaignId)
+        const camp = campData.find(c => c.id === campaignId)
         const artistName = camp?.requester || camp?.name || campaignId
         const campaignName = camp?.name || campaignId
         for (const file of files) {
+          if (file.name === '.emptyFolderPlaceholder') continue
           const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(ML_PREFIX + '/' + campaignId + '/' + file.name)
           const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
           items.push({ campaignId, artistName, campaignName, url: urlData.publicUrl, name: file.name, isImage })
         }
       }
       setGalleryItems(items)
-    } catch (e) {
-      console.error('gallery load error', e)
-    }
+    } catch (e) { console.error('gallery load error', e) }
     setGalleryLoading(false)
   }
 
-  // Artists list = unique requester values from campaigns
   const artistsFromCampaigns = Array.from(new Set(campaigns.map(c => c.requester || c.name).filter(Boolean))).sort()
-  const filteredArtists = artistsFromCampaigns.filter(a => !artistSearch || a.toLowerCase().includes(artistSearch.toLowerCase()))
-
-  // Campaigns for selected artist
-  const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c.name) === selectedArtist) : []
+const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c.name) === selectedArtist) : []
 
   function formatDate(d: string | null) {
     if (!d) return ''
@@ -100,13 +180,12 @@ export function MediaLibraryView() {
   }
 
   async function uploadToDropbox(file: File, safeName: string) {
-    if (!dropboxToken) return
+    if (!dropboxToken || !selectedCampaign) return
     try {
-      setDropboxStatus('uploading')
       const artistSlug = selectedArtist.replace(/[/\\:*?"<>|]/g, '_').trim()
-      const showSlug = (selectedCampaign?.launch_date || selectedCampaign?.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
+      const showSlug = (selectedCampaign.launch_date || selectedCampaign.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
       const dbxPath = '/' + artistSlug + '/' + showSlug + '/' + safeName
-      const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      await fetch('https://content.dropboxapi.com/2/files/upload', {
         method: 'POST',
         headers: {
           Authorization: 'Bearer ' + dropboxToken,
@@ -115,31 +194,64 @@ export function MediaLibraryView() {
         },
         body: file
       })
-      if (r.ok) setDropboxStatus('ok')
-      else { console.error('Dropbox upload failed', await r.text()); setDropboxStatus('err') }
-    } catch (e) {
-      console.error('Dropbox upload error', e)
-      setDropboxStatus('err')
-    }
+    } catch (e) { console.error('Dropbox upload error', e) }
   }
 
   async function handleFiles(files: FileList | null) {
     if (!files || !selectedCampaign) return
-    setUploading(true); setUploadError(''); setDropboxStatus('idle')
-    try {
-      for (const file of Array.from(files)) {
-        const safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-        const path = ML_PREFIX + '/' + selectedCampaign.id + '/' + safeName
-        const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
-        if (error) throw error
-        // Also upload to Dropbox in parallel (non-blocking)
-        uploadToDropbox(file, safeName)
+    setUploadError('')
+    const camp = selectedCampaign
+
+    // Build queue entries for all files
+    const newItems: UploadItem[] = Array.from(files).map(f => ({
+      id: Math.random().toString(36).slice(2),
+      name: f.name,
+      progress: 0,
+      status: 'uploading' as const
+    }))
+    setUploadQueue(prev => [...prev, ...newItems])
+
+    // Reset wizard immediately so user can continue
+    setStep(1); setSelectedArtist(''); setSelectedCampaign(null)
+
+    // Upload all files in parallel
+    await Promise.all(Array.from(files).map(async (file, idx) => {
+      const itemId = newItems[idx].id
+      const safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = ML_PREFIX + '/' + camp.id + '/' + safeName
+      try {
+        await uploadFileXHR(file, path, (pct) => {
+          setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: pct } : u))
+        })
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, status: 'done' } : u))
+        // Upload to Dropbox in background (non-blocking)
+        if (dropboxToken) {
+          const artistSlug = (camp as any).requester?.replace(/[/\\:*?"<>|]/g, '_') || 'artist'
+          const showSlug = (camp.launch_date || camp.name).replace(/[/\\:*?"<>|]/g, '_')
+          const dbxPath = '/' + artistSlug + '/' + showSlug + '/' + safeName
+          fetch('https://content.dropboxapi.com/2/files/upload', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + dropboxToken,
+              'Dropbox-API-Arg': JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }),
+              'Content-Type': 'application/octet-stream'
+            },
+            body: file
+          }).catch(e => console.error('Dropbox error', e))
+        }
+      } catch (err) {
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, status: 'error' } : u))
+        setUploadError(err instanceof Error ? err.message : '\u05E9\u05D2\u05D9\u05D0\u05EA \u05D4\u05E2\u05DC\u05D0\u05D4')
       }
-      await loadGallery()
-      setStep(1); setSelectedArtist(''); setSelectedCampaign(null); setArtistSearch('')
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : '\u05E9\u05D2\u05D9\u05D0\u05EA \u05D4\u05E2\u05DC\u05D0\u05D4')
-    } finally { setUploading(false) }
+    }))
+
+    // Refresh gallery after all done
+    loadGallery()
+
+    // Auto-clear done items after 4 seconds
+    setTimeout(() => {
+      setUploadQueue(prev => prev.filter(u => u.status !== 'done'))
+    }, 4000)
   }
 
   async function deleteItem(campaignId: string, fileName: string) {
@@ -148,9 +260,11 @@ export function MediaLibraryView() {
     setGalleryItems(prev => prev.filter(i => !(i.campaignId === campaignId && i.name === fileName)))
   }
 
-  // Gallery filtered by artist
   const displayedGallery = filterArtist ? galleryItems.filter(i => i.artistName === filterArtist) : galleryItems
   const galleryArtists = Array.from(new Set(galleryItems.map(i => i.artistName)))
+
+  const activeUploads = uploadQueue.filter(u => u.status === 'uploading').length
+  const totalUploads = uploadQueue.length
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8" dir="rtl">
@@ -173,26 +287,16 @@ export function MediaLibraryView() {
           </div>
         </div>
 
-        {/* Step 1: Select artist */}
+        {/* Step 1: Select artist — accordion with search */}
         {step === 1 && (
           <div>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">\u05D0\u05D9\u05D6\u05D4 \u05D0\u05D5\u05DE\u05DF?</p>
             {loading ? (
-              <p className="text-sm text-gray-400">\u05D8\u05D5\u05E2\u05DF \u05E7\u05DE\u05E4\u05D9\u05D9\u05E0\u05D9\u05DD...</p>
+              <p className="text-sm text-gray-400">טוען...</p>
             ) : (
-              <>
-                <input type="text" placeholder="\u05D7\u05D9\u05E4\u05D5\u05E9 \u05D0\u05D5\u05DE\u05DF..." value={artistSearch} onChange={e => setArtistSearch(e.target.value)}
-                  className="w-full mb-3 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white" />
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                  {filteredArtists.length === 0 && <p className="text-sm text-gray-400">\u05D0\u05D9\u05DF \u05DE\u05D5\u05E4\u05E2\u05D9\u05DD \u05E4\u05E2\u05D9\u05DC\u05D9\u05DD \u05E2\u05DD \u05EA\u05D0\u05E8\u05D9\u05DA \u05E2\u05EA\u05D9\u05D3\u05D9</p>}
-                  {filteredArtists.map(artist => (
-                    <button key={artist} onClick={() => { setSelectedArtist(artist); setStep(2) }}
-                      className="px-3 py-1.5 rounded-xl text-sm font-semibold border border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors">
-                      {artist}
-                    </button>
-                  ))}
-                </div>
-              </>
+              <ArtistAccordion
+                artists={artistsFromCampaigns}
+                onSelect={(artist) => { setSelectedArtist(artist); setStep(2) }}
+              />
             )}
           </div>
         )}
@@ -206,7 +310,7 @@ export function MediaLibraryView() {
             </div>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">\u05D0\u05D9\u05D6\u05D4 \u05DE\u05D5\u05E4\u05E2?</p>
             {artistCampaigns.length === 0 ? (
-              <p className="text-sm text-gray-400">\u05D0\u05D9\u05DF \u05DE\u05D5\u05E4\u05E2\u05D9\u05DD \u05E2\u05EA\u05D9\u05D3\u05D9\u05D9\u05DD \u05E2\u05D1\u05D5\u05E8 \u05D0\u05D5\u05DE\u05DF \u05D6\u05D4</p>
+              <p className="text-sm text-gray-400">\u05D0\u05D9\u05DF \u05DE\u05D5\u05E4\u05E2\u05D9\u05DD \u05E2\u05EA\u05D9\u05D3\u05D9\u05D9\u05DD</p>
             ) : (
               <div className="space-y-2">
                 {artistCampaigns.map(camp => (
@@ -235,28 +339,16 @@ export function MediaLibraryView() {
               onDragLeave={() => setDragging(false)}
               onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
               onClick={() => fileInputRef.current?.click()}
-              className={'cursor-pointer rounded-2xl border-2 border-dashed transition-colors p-8 text-center ' + (dragging ? 'border-pink-400 bg-pink-50 dark:bg-pink-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-pink-300 hover:bg-pink-50/50 dark:hover:bg-gray-750')}
+              className={'cursor-pointer rounded-2xl border-2 border-dashed transition-colors p-8 text-center ' + (dragging ? 'border-pink-400 bg-pink-50 dark:bg-pink-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-pink-300 hover:bg-pink-50/50')}
             >
-              {uploading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm text-gray-500">\u05DE\u05E2\u05DC\u05D4...</p>
-                </div>
-              ) : (
-                <>
-                  <svg className="w-10 h-10 mx-auto mb-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">\u05D2\u05E8\u05D5\u05E8 \u05E7\u05D1\u05E6\u05D9\u05DD \u05DC\u05DB\u05D0\u05DF \u05D0\u05D5 \u05DC\u05D7\u05E5 \u05DC\u05D1\u05D7\u05D9\u05E8\u05D4</p>
-                  <p className="text-xs text-gray-400 mt-1">JPG, PNG, MP4, MOV \u05D5\u05E2\u05D5\u05D3</p>
-                </>
-              )}
+              <svg className="w-10 h-10 mx-auto mb-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">\u05D2\u05E8\u05D5\u05E8 \u05E7\u05D1\u05E6\u05D9\u05DD \u05DC\u05DB\u05D0\u05DF \u05D0\u05D5 \u05DC\u05D7\u05E5 \u05DC\u05D1\u05D7\u05D9\u05E8\u05D4</p>
+              <p className="text-xs text-gray-400 mt-1">JPG, PNG, MP4, MOV \u05D5\u05E2\u05D5\u05D3 — \u05D0\u05E4\u05E9\u05E8 \u05DC\u05D1\u05D7\u05D5\u05E8 \u05DE\u05E1\u05E4\u05E8 \u05E7\u05D1\u05E6\u05D9\u05DD \u05D1\u05D1\u05EA \u05D0\u05D7\u05EA</p>
             </div>
             <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => handleFiles(e.target.files)} />
             {uploadError && <p className="mt-2 text-sm text-red-500">{uploadError}</p>}
-            {dropboxStatus === 'uploading' && <p className="mt-2 text-xs text-blue-500 flex items-center gap-1"><span className="inline-block w-3 h-3 border-2 border-blue-300 border-t-blue-500 rounded-full animate-spin" />\u05DE\u05E2\u05DC\u05D4 \u05DC-Dropbox...</p>}
-            {dropboxStatus === 'ok' && <p className="mt-2 text-xs text-emerald-500">\u2713 \u05E0\u05E9\u05DE\u05E8 \u05D1-Dropbox</p>}
-            {dropboxStatus === 'err' && <p className="mt-2 text-xs text-orange-500">\u26A0 Dropbox \u05DC\u05D0 \u05D6\u05DE\u05D9\u05DF (\u05E0\u05E9\u05DE\u05E8 \u05D1-Supabase \u05D1\u05DC\u05D1\u05D3)</p>}
             {dropboxToken && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox \u05DE\u05D7\u05D5\u05D1\u05E8</p>}
           </div>
         )}
@@ -294,7 +386,6 @@ export function MediaLibraryView() {
             <p className="text-sm">\u05D0\u05D9\u05DF \u05DE\u05D3\u05D9\u05D4 \u05E2\u05D3\u05D9\u05D9\u05DF</p>
           </div>
         ) : (
-          // Group by artist
           (() => {
             const byArtist: Record<string, typeof displayedGallery> = {}
             displayedGallery.forEach(i => {
@@ -337,6 +428,39 @@ export function MediaLibraryView() {
           })()
         )}
       </div>
+
+      {/* Floating upload progress bar — rendered via portal so it shows even when tab is hidden */}
+      {mounted && uploadQueue.length > 0 && typeof document !== 'undefined' && createPortal(
+        <div className="fixed bottom-5 left-5 z-[9999] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-72">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-gray-800 dark:text-white">
+              {activeUploads > 0 ? `\u05DE\u05E2\u05DC\u05D4... (${activeUploads}/${totalUploads})` : `\u05D4\u05E2\u05DC\u05D0\u05D4 \u05D4\u05E1\u05EA\u05D9\u05D9\u05DE\u05D4 \u2713`}
+            </p>
+            {activeUploads === 0 && (
+              <button onClick={() => setUploadQueue([])} className="text-gray-400 hover:text-gray-600 text-lg leading-none">\u00D7</button>
+            )}
+          </div>
+          <div className="space-y-2.5 max-h-48 overflow-y-auto">
+            {uploadQueue.map(item => (
+              <div key={item.id}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 ml-2 max-w-[180px]">{item.name}</span>
+                  <span className={`text-xs font-bold flex-shrink-0 ${item.status === 'done' ? 'text-emerald-500' : item.status === 'error' ? 'text-red-500' : 'text-pink-600'}`}>
+                    {item.status === 'done' ? '\u2713' : item.status === 'error' ? '\u2717' : item.progress + '%'}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${item.status === 'done' ? 'bg-emerald-500' : item.status === 'error' ? 'bg-red-500' : 'bg-pink-500'}`}
+                    style={{ width: item.progress + '%' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
