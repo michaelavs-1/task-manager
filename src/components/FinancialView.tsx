@@ -28,10 +28,10 @@ interface Supplier {
 }
 
 const TAX_STATUS_STYLE: Record<string, string> = {
-  מורשה: 'bg-emerald-100 text-emerald-700',
-  פטור: 'bg-lime-100 text-lime-700',
-  חברה: 'bg-teal-100 text-teal-700',
-  עמותה: 'bg-sky-100 text-sky-700',
+  ×××¨×©×: 'bg-emerald-100 text-emerald-700',
+  ×¤×××¨: 'bg-lime-100 text-lime-700',
+  ×××¨×: 'bg-teal-100 text-teal-700',
+  ×¢×××ª×: 'bg-sky-100 text-sky-700',
 }
 
 function SuppliersTab() {
@@ -51,7 +51,7 @@ function SuppliersTab() {
         if (d.error) setError(d.error)
         else setSuppliers(d.suppliers || [])
       })
-      .catch(() => setError('שגיאה בטעינת ספקים'))
+      .catch(() => setError('×©×××× ×××¢×× ×ª ×¡×¤×§××'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -76,7 +76,7 @@ function SuppliersTab() {
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-gray-400 text-sm">טוען ספקים מ-Monday.com...</div>
+      <div className="text-gray-400 text-sm">×××¢× ×¡×¤×§×× ×-Monday.com...</div>
     </div>
   )
 
@@ -94,7 +94,7 @@ function SuppliersTab() {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="חפש ספק, מייל, טלפון, ת.ז..."
+          placeholder="××¤×© ×¡×¤×§, ××××, ×××¤××, ×ª.×..."
           className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
         />
         <select
@@ -102,7 +102,7 @@ function SuppliersTab() {
           onChange={e => setFilterRole(e.target.value)}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none"
         >
-          <option value="">כל התפקידים</option>
+          <option value="">×× ××ª×¤×§××××</option>
           {roles.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <select
@@ -110,7 +110,7 @@ function SuppliersTab() {
           onChange={e => setFilterDept(e.target.value)}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none"
         >
-          <option value="">כל המחלקות</option>
+          <option value="">×× ×××××§××ª</option>
           {depts.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         <select
@@ -118,10 +118,10 @@ function SuppliersTab() {
           onChange={e => setFilterStatus(e.target.value)}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none"
         >
-          <option value="">כל הסטטוסים</option>
+          <option value="">×× ××¡××××¡××</option>
           {statuses.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <span className="text-sm text-gray-400 whitespace-nowrap">{filtered.length} / {suppliers.length} ספקים</span>
+        <span className="text-sm text-gray-400 whitespace-nowrap">{filtered.length} / {suppliers.length} ×¡×¤×§××</span>
       </div>
 
       {/* Table */}
@@ -129,22 +129,22 @@ function SuppliersTab() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-right font-semibold">שם ספק</th>
-              <th className="px-4 py-3 text-right font-semibold">ת.ז / ח.פ</th>
-              <th className="px-4 py-3 text-right font-semibold">סטטוס מס</th>
-              <th className="px-4 py-3 text-right font-semibold">תפקיד</th>
-              <th className="px-4 py-3 text-right font-semibold">מחלקה</th>
-              <th className="px-4 py-3 text-right font-semibold">טלפון</th>
-              <th className="px-4 py-3 text-right font-semibold">אימייל</th>
-              <th className="px-4 py-3 text-right font-semibold">בנק</th>
-              <th className="px-4 py-3 text-right font-semibold">חשבון</th>
-              <th className="px-4 py-3 text-center font-semibold">מסמכים</th>
+              <th className="px-4 py-3 text-right font-semibold">×©× ×¡×¤×§</th>
+              <th className="px-4 py-3 text-right font-semibold">×ª.× / ×.×¤</th>
+              <th className="px-4 py-3 text-right font-semibold">×¡××××¡ ××¡</th>
+              <th className="px-4 py-3 text-right font-semibold">×ª×¤×§××</th>
+              <th className="px-4 py-3 text-right font-semibold">××××§×</th>
+              <th className="px-4 py-3 text-right font-semibold">×××¤××</th>
+              <th className="px-4 py-3 text-right font-semibold">××××××</th>
+              <th className="px-4 py-3 text-right font-semibold">×× ×§</th>
+              <th className="px-4 py-3 text-right font-semibold">××©×××</th>
+              <th className="px-4 py-3 text-center font-semibold">××¡××××</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-12 text-gray-400">לא נמצאו ספקים</td>
+                <td colSpan={10} className="text-center py-12 text-gray-400">×× × ××¦×× ×¡×¤×§××</td>
               </tr>
             ) : filtered.map((s, i) => (
               <tr
@@ -158,38 +158,38 @@ function SuppliersTab() {
                     <div className="text-xs text-gray-400">{s.firstName} {s.lastName}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.idNumber || '—'}</td>
+                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.idNumber || 'â'}</td>
                 <td className="px-4 py-3">
                   {s.taxStatus ? (
                     <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>
                       {s.taxStatus}
                     </span>
-                  ) : '—'}
+                  ) : 'â'}
                 </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{s.role || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{s.department || '—'}</td>
+                <td className="px-4 py-3 text-gray-600 text-xs">{s.role || 'â'}</td>
+                <td className="px-4 py-3 text-gray-600 text-xs">{s.department || 'â'}</td>
                 <td className="px-4 py-3 text-gray-600 text-xs font-mono">
                   {s.phone ? (
                     <a href={`tel:${s.phone}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600">
                       {s.phone}
                     </a>
-                  ) : '—'}
+                  ) : 'â'}
                 </td>
                 <td className="px-4 py-3 text-gray-600 text-xs">
                   {s.email ? (
                     <a href={`mailto:${s.email}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600 truncate block max-w-[180px]">
                       {s.email}
                     </a>
-                  ) : '—'}
+                  ) : 'â'}
                 </td>
                 <td className="px-4 py-3 text-gray-500 text-xs max-w-[140px] truncate">
-                  {s.bank ? s.bank.replace(/^\d+ — /, '') : '—'}
+                  {s.bank ? s.bank.replace(/^\d+ â /, '') : 'â'}
                 </td>
-                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.accountNumber || '—'}</td>
+                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.accountNumber || 'â'}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-1 justify-center">
-                    <span title="אישור ניהול ספרים" className={`w-2 h-2 rounded-full ${s.hasBooksCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-                    <span title="אישור ניהול חשבון" className={`w-2 h-2 rounded-full ${s.hasAccountCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+                    <span title="×××©××¨ × ×××× ×¡×¤×¨××" className={`w-2 h-2 rounded-full ${s.hasBooksCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+                    <span title="×××©××¨ × ×××× ××©×××" className={`w-2 h-2 rounded-full ${s.hasAccountCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
                   </div>
                 </td>
               </tr>
@@ -222,26 +222,26 @@ function SuppliersTab() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <Detail label="ת.ז / ח.פ" value={selected.idNumber} />
-              <Detail label="תפקיד" value={selected.role} />
-              <Detail label="מחלקה" value={selected.department} />
-              <Detail label="טלפון" value={selected.phone} href={`tel:${selected.phone}`} />
-              <Detail label="אימייל" value={selected.email} href={`mailto:${selected.email}`} />
-              <Detail label="מוטב" value={selected.beneficiary} />
-              <Detail label="בנק" value={selected.bank?.replace(/^\d+ — /, '')} />
-              <Detail label="סניף" value={selected.branch} />
-              <Detail label="מספר חשבון" value={selected.accountNumber} mono />
-              {selected.daily && <Detail label="יומית" value={selected.daily + ' ₪'} />}
+              <Detail label="×ª.× / ×.×¤" value={selected.idNumber} />
+              <Detail label="×ª×¤×§××" value={selected.role} />
+              <Detail label="××××§×" value={selected.department} />
+              <Detail label="×××¤××" value={selected.phone} href={`tel:${selected.phone}`} />
+              <Detail label="××××××" value={selected.email} href={`mailto:${selected.email}`} />
+              <Detail label="××××" value={selected.beneficiary} />
+              <Detail label="×× ×§" value={selected.bank?.replace(/^\d+ â /, '')} />
+              <Detail label="×¡× ××£" value={selected.branch} />
+              <Detail label="××¡×¤×¨ ××©×××" value={selected.accountNumber} mono />
+              {selected.daily && <Detail label="×××××ª" value={selected.daily + ' âª'} />}
             </div>
 
             <div className="flex gap-4 pt-2 border-t border-gray-100">
               <div className={`flex items-center gap-1.5 text-xs ${selected.hasBooksCert ? 'text-emerald-600' : 'text-gray-400'}`}>
                 <span className={`w-2 h-2 rounded-full ${selected.hasBooksCert ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                אישור ניהול ספרים
+                ×××©××¨ × ×××× ×¡×¤×¨××
               </div>
               <div className={`flex items-center gap-1.5 text-xs ${selected.hasAccountCert ? 'text-emerald-600' : 'text-gray-400'}`}>
                 <span className={`w-2 h-2 rounded-full ${selected.hasAccountCert ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                אישור ניהול חשבון
+                ×××©××¨ × ×××× ××©×××
               </div>
             </div>
 
@@ -253,7 +253,7 @@ function SuppliersTab() {
               onClick={() => setSelected(null)}
               className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
             >
-              סגור
+              ×¡×××¨
             </button>
           </div>
         </div>
@@ -262,11 +262,11 @@ function SuppliersTab() {
   )
 }
 
-// ── Financial Dashboard ───────────────────────────────────────────────────────
-const MONTH_NAMES_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+// ââ Financial Dashboard âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const MONTH_NAMES_HE = ['×× ×××¨','×¤××¨×××¨','××¨×¥','××¤×¨××','×××','××× ×','××××','×××××¡×','×¡×¤××××¨','×××§××××¨','× ×××××¨','××¦×××¨']
 
 function fmt(n: number) {
-  return '₪' + Math.round(n).toLocaleString('he-IL')
+  return 'âª' + Math.round(n).toLocaleString('he-IL')
 }
 
 function FinancialDashboard() {
@@ -282,17 +282,17 @@ function FinancialDashboard() {
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>טוען נתונים...</div>
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>×××¢× × ×ª×× ××...</div>
     </div>
   )
 
-  // ── KPIs ──
+  // ââ KPIs ââ
   const totalRevenue = invoices.reduce((s, i) => s + (i.total || 0), 0)
   const totalPaid    = invoices.reduce((s, i) => s + (i.paid  || 0), 0)
   const totalRemain  = totalRevenue - totalPaid
   const openCount    = invoices.filter(i => (i.total - i.paid) > 0).length
 
-  // ── Monthly breakdown ──
+  // ââ Monthly breakdown ââ
   type MonthData = { label: string; sortKey: string; revenue: number; paid: number; count: number }
   const monthMap: Record<string, MonthData> = {}
   invoices.forEach(inv => {
@@ -307,20 +307,20 @@ function FinancialDashboard() {
   })
   const months = Object.values(monthMap).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12)
 
-  // ── Top clients ──
+  // ââ Top clients ââ
   const clientMap: Record<string, { name: string; revenue: number; paid: number }> = {}
   invoices.forEach(inv => {
-    const name = inv.client || 'לא מוגדר'
+    const name = inv.client || '×× ×××××¨'
     if (!clientMap[name]) clientMap[name] = { name, revenue: 0, paid: 0 }
     clientMap[name].revenue += inv.total || 0
     clientMap[name].paid    += inv.paid  || 0
   })
   const topClients = Object.values(clientMap).sort((a,b) => b.revenue - a.revenue).slice(0, 8)
 
-  // ── Bar chart helpers ──
+  // ââ Bar chart helpers ââ
   const maxRev = Math.max(...months.map(m => m.revenue), 1)
 
-  // ── Donut helper ──
+  // ââ Donut helper ââ
   function DonutArc({ pct, color, r = 44, stroke = 10 }: { pct: number; color: string; r?: number; stroke?: number }) {
     const circ = 2 * Math.PI * r
     const dash = pct * circ
@@ -341,13 +341,13 @@ function FinancialDashboard() {
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6" dir="rtl">
 
-      {/* ── KPI Cards ── */}
+      {/* ââ KPI Cards ââ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'סה"כ הכנסות', value: fmt(totalRevenue), icon: '💰', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-          { label: 'שולם', value: fmt(totalPaid), icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-          { label: 'נותר לגבייה', value: fmt(totalRemain), icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-          { label: 'חשבוניות פתוחות', value: String(openCount), icon: '📄', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          { label: '×¡×"× ××× ×¡××ª', value: fmt(totalRevenue), icon: 'ð°', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: '×©×××', value: fmt(totalPaid), icon: 'â', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+          { label: '× ××ª×¨ ××××××', value: fmt(totalRemain), icon: 'â³', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+          { label: '××©××× ×××ª ×¤×ª××××ª', value: String(openCount), icon: 'ð', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
         ].map(card => (
           <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <div className="flex items-center justify-between">
@@ -361,14 +361,14 @@ function FinancialDashboard() {
         ))}
       </div>
 
-      {/* ── Charts row ── */}
+      {/* ââ Charts row ââ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Bar chart - monthly revenue */}
         <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>הכנסות לפי חודש</h3>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>××× ×¡××ª ××¤× ××××©</h3>
           {months.length === 0 ? (
-            <div className="text-sm text-center py-8" style={{ color: 'var(--text-secondary)' }}>אין נתונים</div>
+            <div className="text-sm text-center py-8" style={{ color: 'var(--text-secondary)' }}>××× × ×ª×× ××</div>
           ) : (
             <div className="flex items-end gap-2 h-40 overflow-x-auto">
               {months.map(m => {
@@ -393,46 +393,46 @@ function FinancialDashboard() {
             </div>
           )}
           <div className="flex gap-4 mt-3">
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.4)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>שולם</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.4)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>××× ×¡××ª</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>×©×××</span></div>
           </div>
         </div>
 
         {/* Donut - paid vs remaining */}
         <div className="rounded-2xl p-5 flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-          <h3 className="text-sm font-semibold self-start" style={{ color: 'var(--text-primary)' }}>סטטוס גבייה</h3>
+          <h3 className="text-sm font-semibold self-start" style={{ color: 'var(--text-primary)' }}>×¡××××¡ ×××××</h3>
           <svg viewBox="0 0 112 112" className="w-28 h-28">
             <DonutArc pct={1}         color="rgba(239,68,68,0.15)"  r={44} stroke={12} />
             <DonutArc pct={paidPct}   color="#10b981"                r={44} stroke={12} />
             <text x="56" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="#10b981">{Math.round(paidPct * 100)}%</text>
-            <text x="56" y="66" textAnchor="middle" fontSize="8" fill="var(--text-secondary)">שולם</text>
+            <text x="56" y="66" textAnchor="middle" fontSize="8" fill="var(--text-secondary)">×©×××</text>
           </svg>
           <div className="w-full space-y-2">
             <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--text-secondary)' }}>שולם</span>
+              <span style={{ color: 'var(--text-secondary)' }}>×©×××</span>
               <span className="font-semibold" style={{ color: '#10b981' }}>{fmt(totalPaid)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--text-secondary)' }}>נותר</span>
+              <span style={{ color: 'var(--text-secondary)' }}>× ××ª×¨</span>
               <span className="font-semibold" style={{ color: '#ef4444' }}>{fmt(totalRemain)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Bottom row ── */}
+      {/* ââ Bottom row ââ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Monthly table */}
         <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>פירוט חודשי</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>×¤××¨×× ××××©×</h3>
           </div>
           <div className="overflow-auto max-h-72">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)' }}>
-                  {['חודש','הכנסות','שולם','נותר','חשבוניות'].map(h => (
+                  {['××××©','××× ×¡××ª','×©×××','× ××ª×¨','××©××× ×××ª'].map(h => (
                     <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
@@ -458,13 +458,13 @@ function FinancialDashboard() {
         {/* Top clients */}
         <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>לקוחות מובילים</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>××§××××ª ×××××××</h3>
           </div>
           <div className="overflow-auto max-h-72">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)' }}>
-                  {['לקוח','הכנסות','שולם','נותר'].map(h => (
+                  {['××§××','××× ×¡××ª','×©×××','× ××ª×¨'].map(h => (
                     <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
@@ -494,7 +494,7 @@ function FinancialDashboard() {
 
       </div>
 
-      {/* ── Monthly Accordion ── */}
+      {/* ââ Monthly Accordion ââ */}
       <MonthlyAccordion invoices={invoices} />
 
     </div>
@@ -521,7 +521,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold px-1" style={{ color: 'var(--text-primary)' }}>חשבוניות לפי חודש</h3>
+      <h3 className="text-sm font-semibold px-1" style={{ color: 'var(--text-primary)' }}>××©××× ×××ª ××¤× ××××©</h3>
       {months.map(([key, { label, invoices: invs }]) => {
         const totalRev  = invs.reduce((s,i) => s + (i.total     || 0), 0)
         const totalVat  = invs.reduce((s,i) => s + ((i.total - i.before_vat) || 0), 0)
@@ -537,28 +537,28 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
               className="w-full flex items-center gap-4 px-5 py-4 text-right transition-colors hover:bg-black/5"
             >
               {/* Arrow */}
-              <span className="flex-shrink-0 text-xs transition-transform duration-200" style={{ color: 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+              <span className="flex-shrink-0 text-xs transition-transform duration-200" style={{ color: 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>â¶</span>
 
               {/* Month label */}
               <span className="font-semibold text-sm w-36 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>{label}</span>
-              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{invs.length} חשבוניות</span>
+              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{invs.length} ××©××× ×××ª</span>
 
               {/* Summary pills */}
               <div className="flex-1 flex gap-3 justify-end flex-wrap">
                 <div className="flex flex-col items-end">
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>סה"כ</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>×¡×"×</span>
                   <span className="text-xs font-bold" style={{ color: '#6366f1' }}>{fmt(totalRev)}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>מע"מ</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>××¢"×</span>
                   <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{fmt(totalVat)}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>שולם</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>×©×××</span>
                   <span className="text-xs font-bold" style={{ color: '#10b981' }}>{fmt(totalPaid)}</span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>נותר</span>
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>× ××ª×¨</span>
                   <span className="text-xs font-bold" style={{ color: totalRem > 0 ? '#f59e0b' : '#10b981' }}>{fmt(totalRem)}</span>
                 </div>
               </div>
@@ -570,7 +570,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ background: 'var(--bg-secondary)' }}>
-                      {['מס׳','לקוח','סוג','לפני מע"מ','סה"כ','שולם','נותר','סטטוס'].map(h => (
+                      {['××¡×³','××§××','×¡××','××¤× × ××¢"×','×¡×"×','×©×××','× ××ª×¨','×¡××××¡'].map(h => (
                         <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
@@ -579,13 +579,13 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
                     {invs.map((inv, i) => {
                       const rem = (inv.total || 0) - (inv.paid || 0)
                       const status = rem <= 0 ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
-                      const statusLabel = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }[status]
+                      const statusLabel = { paid: '×©×××', partial: '×××§×', unpaid: '×××ª××' }[status]
                       const statusStyle = { paid: { bg: '#d1fae5', color: '#065f46' }, partial: { bg: '#fef3c7', color: '#92400e' }, unpaid: { bg: '#fee2e2', color: '#991b1b' } }[status]
                       return (
                         <tr key={inv.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
                           <td className="px-4 py-2.5 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num}</td>
-                          <td className="px-4 py-2.5 text-xs max-w-[160px] truncate" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs max-w-[160px] truncate" style={{ color: 'var(--text-primary)' }}>{inv.client || 'â'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || 'â'}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmt(inv.before_vat)}</td>
                           <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(inv.total)}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(inv.paid)}</td>
@@ -610,7 +610,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
 // Helper type for dashboard (subset of InvoiceRow)
 interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; client: string; doc_type: string }
 
-// ── Shared types + helpers ────────────────────────────────────────────────────
+// ââ Shared types + helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 interface InvoiceRow {
   id: number
   client_id: number | null
@@ -628,7 +628,7 @@ interface InvoiceRow {
   notes: string
 }
 
-const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }
+const STATUS_LABEL: Record<string, string> = { paid: '×©×××', partial: '×××§×', unpaid: '×××ª××' }
 const STATUS_STYLE: Record<string, string> = {
   paid: 'bg-emerald-100 text-emerald-700',
   partial: 'bg-amber-100 text-amber-700',
@@ -643,7 +643,7 @@ function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
   return 'unpaid'
 }
 
-// ── ClientPicker — searchable dropdown for inline client reassignment ──
+// ââ ClientPicker â searchable dropdown for inline client reassignment ââ
 function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
   clientList: ClientRecord[]
   currentClientId: number | null
@@ -661,11 +661,11 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
         autoFocus
         value={q}
         onChange={e => setQ(e.target.value)}
-        placeholder="חפש לקוח..."
+        placeholder="××¤×© ××§××..."
         className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
       />
       <ul className="max-h-52 overflow-y-auto space-y-0.5">
-        {matches.length === 0 && <li className="text-xs text-gray-400 text-center py-3">לא נמצאו תוצאות</li>}
+        {matches.length === 0 && <li className="text-xs text-gray-400 text-center py-3">×× × ××¦×× ×ª××¦×××ª</li>}
         {matches.map(c => (
           <li
             key={c.id}
@@ -683,16 +683,16 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
           className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-colors"
           style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
         >
-          שמור
+          ×©×××¨
         </button>
-        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">×××××</button>
       </div>
     </div>
   )
 }
 
 
-// ── ProjectPicker — inline project assignment dropdown ──
+// ââ ProjectPicker â inline project assignment dropdown ââ
 function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
   projectList: { id: string; name: string; category: string }[]
   currentProjectId: string | null
@@ -710,29 +710,29 @@ function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
         autoFocus
         value={q}
         onChange={e => setQ(e.target.value)}
-        placeholder="חפש פרויקט..."
+        placeholder="××¤×© ×¤×¨×××§×..."
         className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
       />
       <ul className="max-h-56 overflow-y-auto space-y-0.5">
         <li
           onClick={() => setChosen(null)}
           className={`px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors italic ${chosen === null ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-400'}`}
-        >ללא שיוך</li>
-        {artists.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">אומנים</li>}
+        >××× ×©×××</li>
+        {artists.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">×××× ××</li>}
         {artists.map(p => (
           <li key={p.id} onClick={() => setChosen(p.id)}
             className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen === p.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
             {p.name}
           </li>
         ))}
-        {productions.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">הפקות</li>}
+        {productions.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">××¤×§××ª</li>}
         {productions.map(p => (
           <li key={p.id} onClick={() => setChosen(p.id)}
             className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen === p.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
             {p.name}
           </li>
         ))}
-        {filtered.length === 0 && <li className="text-xs text-gray-400 text-center py-3">לא נמצאו תוצאות</li>}
+        {filtered.length === 0 && <li className="text-xs text-gray-400 text-center py-3">×× × ××¦×× ×ª××¦×××ª</li>}
       </ul>
       <div className="flex gap-2 pt-1 border-t border-gray-100">
         <button
@@ -742,8 +742,8 @@ function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
           }}
           className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white transition-colors"
           style={{ background: "linear-gradient(135deg, #6366f1, #7c3aed)" }}
-        >שמור</button>
-        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+        >×©×××¨</button>
+        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">×××××</button>
       </div>
     </div>
   )
@@ -755,7 +755,7 @@ const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
 
 type InvoiceForm = Omit<InvoiceRow, 'id'>
 
-// ── ModalField — defined OUTSIDE InvoiceModal so it never remounts on re-render ──
+// ââ ModalField â defined OUTSIDE InvoiceModal so it never remounts on re-render ââ
 function ModalField({ label, value, onChange, type = 'text', placeholder = '' }: {
   label: string
   value: string | number
@@ -777,7 +777,7 @@ function ModalField({ label, value, onChange, type = 'text', placeholder = '' }:
   )
 }
 
-// Date helpers: "D.M.YY" ↔ "YYYY-MM-DD"
+// Date helpers: "D.M.YY" â "YYYY-MM-DD"
 function israeliToISO(d: string): string {
   if (!d) return ''
   const parts = d.split('.')
@@ -793,7 +793,7 @@ function isoToIsraeli(iso: string): string {
   return `${parseInt(day)}.${parseInt(month)}.${year.slice(2)}`
 }
 
-// ── InvoiceModal ──────────────────────────────────────────────────────────────
+// ââ InvoiceModal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function InvoiceModal({
   initial, onSave, onClose, saving, clientOptions = [], clientList = [], projectList = [],
 }: {
@@ -821,12 +821,12 @@ function InvoiceModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-gray-900">{(initial as InvoiceRow).id ? 'עריכת חשבונית' : 'חשבונית חדשה'}</h2>
+        <h2 className="text-lg font-bold text-gray-900">{(initial as InvoiceRow).id ? '×¢×¨×××ª ××©××× ××ª' : '××©××× ××ª ×××©×'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
           {/* Client autocomplete */}
           <div className="relative">
-            <label className="block text-xs text-gray-400 mb-1">לקוח *</label>
+            <label className="block text-xs text-gray-400 mb-1">××§×× *</label>
             <input
               type="text"
               value={clientQuery}
@@ -837,7 +837,7 @@ function InvoiceModal({
               }}
               onFocus={() => setClientOpen(true)}
               onBlur={() => setTimeout(() => setClientOpen(false), 150)}
-              placeholder="הקלד או בחר לקוח..."
+              placeholder="××§×× ×× ×××¨ ××§××..."
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
             />
             {clientOpen && filteredClients.length > 0 && (
@@ -860,11 +860,11 @@ function InvoiceModal({
             )}
           </div>
 
-          <ModalField label="מס' חשבונית" value={form.invoice_num} onChange={set('invoice_num')} placeholder="20001" />
+          <ModalField label="××¡' ××©××× ××ª" value={form.invoice_num} onChange={set('invoice_num')} placeholder="20001" />
 
           {/* Date picker */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">תאריך</label>
+            <label className="block text-xs text-gray-400 mb-1">×ª××¨××</label>
             <input
               type="date"
               value={israeliToISO(form.date)}
@@ -874,34 +874,34 @@ function InvoiceModal({
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">סוג מסמך</label>
+            <label className="block text-xs text-gray-400 mb-1">×¡×× ××¡××</label>
             <select value={form.doc_type} onChange={set('doc_type')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="">— בחר —</option>
-              {['חשבונית מס','חשבון עסקה','קבלה','חשבונית מס קבלה','הזמנה'].map(t => <option key={t} value={t}>{t}</option>)}
+              <option value="">â ×××¨ â</option>
+              {['××©××× ××ª ××¡','××©××× ×¢×¡×§×','×§×××','××©××× ××ª ××¡ ×§×××','×××× ×'].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
-          {/* issued_by — employee select */}
+          {/* issued_by â employee select */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">מי הוציא</label>
+            <label className="block text-xs text-gray-400 mb-1">×× ×××¦××</label>
             <select value={form.issued_by} onChange={set('issued_by')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="">— בחר —</option>
-              {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
+              <option value="">â ×××¨ â</option>
+              {['×××××','××','××¢××'].map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          {/* sent_to — employee select */}
+          {/* sent_to â employee select */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">מי שלח ללקוח</label>
+            <label className="block text-xs text-gray-400 mb-1">×× ×©×× ×××§××</label>
             <select value={form.sent_to} onChange={set('sent_to')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="">— בחר —</option>
-              {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
+              <option value="">â ×××¨ â</option>
+              {['×××××','××','××¢××'].map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          <ModalField label='סכום לפני מע"מ ₪' value={form.before_vat} onChange={set('before_vat')} type="number" />
+          <ModalField label='×¡××× ××¤× × ××¢"× âª' value={form.before_vat} onChange={set('before_vat')} type="number" />
 
           {/* payment_date picker */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">תאריך תשלום</label>
+            <label className="block text-xs text-gray-400 mb-1">×ª××¨×× ×ª×©×××</label>
             <input
               type="date"
               value={israeliToISO(form.payment_date)}
@@ -914,18 +914,18 @@ function InvoiceModal({
         {/* Project assignment */}
         {projectList.length > 0 && (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">שיוך לפרויקט</label>
+            <label className="block text-xs text-gray-400 mb-1">×©××× ××¤×¨×××§×</label>
             <select
               value={form.project_id || ''}
               onChange={e => setForm(f => ({ ...f, project_id: e.target.value || null }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
             >
-              <option value="">— ללא שיוך —</option>
+              <option value="">â ××× ×©××× â</option>
               {['artist','production'].map(cat => {
                 const items = projectList.filter(p => p.category === cat)
                 if (!items.length) return null
                 return (
-                  <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>
+                  <optgroup key={cat} label={cat === 'artist' ? '×××× ××' : '××¤×§××ª'}>
                     {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </optgroup>
                 )
@@ -935,7 +935,7 @@ function InvoiceModal({
         )}
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">הערות</label>
+          <label className="block text-xs text-gray-400 mb-1">××¢×¨××ª</label>
           <textarea value={form.notes} onChange={set('notes')} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none" />
         </div>
 
@@ -946,10 +946,10 @@ function InvoiceModal({
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
           >
-            {saving ? 'שומר...' : 'שמור'}
+            {saving ? '×©×××¨...' : '×©×××¨'}
           </button>
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors">
-            ביטול
+            ×××××
           </button>
         </div>
       </div>
@@ -957,7 +957,7 @@ function InvoiceModal({
   )
 }
 
-// ── InvoicesTab ───────────────────────────────────────────────────────────────
+// ââ InvoicesTab âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function InvoicesTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [clientList, setClientList] = useState<ClientRecord[]>([])
@@ -991,7 +991,7 @@ function InvoicesTab() {
       if (!cliData.error) setClientList(cliData.clients || [])
       if (!projData.error) setProjectList(projData.projects || [])
     })
-    .catch(() => setError('שגיאה בטעינת נתונים'))
+    .catch(() => setError('×©×××× ×××¢×× ×ª × ×ª×× ××'))
     .finally(() => setLoading(false))
   }
 
@@ -1032,7 +1032,7 @@ function InvoicesTab() {
   const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
   const totalPaid      = filtered.reduce((s, i) => s + i.paid, 0)
   const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, roundCents(i.total - i.paid)), 0)
-  const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+  const fmt = (n: number) => n ? `âª${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : 'â'
 
   async function handleSave(form: InvoiceForm) {
     setSaving(true)
@@ -1055,7 +1055,7 @@ function InvoicesTab() {
     setDeleteId(null)
   }
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
+  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">×××¢× ××©××× ×××ª...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
   return (
@@ -1063,8 +1063,8 @@ function InvoicesTab() {
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h2 className="text-base font-bold text-gray-800">חשבוניות</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{invoices.length} חשבוניות סה"כ</p>
+          <h2 className="text-base font-bold text-gray-800">××©××× ×××ª</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{invoices.length} ××©××× ×××ª ×¡×"×</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Group by month toggle */}
@@ -1073,7 +1073,7 @@ function InvoicesTab() {
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${groupByMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            לפי חודש
+            ××¤× ××××©
           </button>
           <button
             onClick={() => setModalInv('new')}
@@ -1081,7 +1081,7 @@ function InvoicesTab() {
             style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            הזנת חשבונית חדשה
+            ××× ×ª ××©××× ××ª ×××©×
           </button>
         </div>
       </div>
@@ -1089,9 +1089,9 @@ function InvoicesTab() {
       {/* Open / Closed tabs */}
       <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
         {([
-          { key: 'all', label: 'הכל', count: invoices.length },
-          { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
-          { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
+          { key: 'all', label: '×××', count: invoices.length },
+          { key: 'open', label: '×¤×ª××××ª', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
+          { key: 'closed', label: '×¡×××¨××ª', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
         ] as const).map(({ key, label, count }) => (
           <button
             key={key}
@@ -1110,7 +1110,7 @@ function InvoicesTab() {
             onClick={() => setFilterMonth('')}
             className={`flex-shrink-0 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
           >
-            כל החודשים
+            ×× ×××××©××
           </button>
           {availableMonths.map(m => (
             <button
@@ -1128,10 +1128,10 @@ function InvoicesTab() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 flex-shrink-0">
         {[
-          { label: 'חשבוניות מוצגות', value: filtered.length, color: '#6366f1' },
-          { label: 'סה"כ לתשלום', value: fmt(totalAmount), color: '#3b82f6' },
-          { label: 'שולם', value: fmt(totalPaid), color: '#10b981' },
-          { label: 'יתרה לגביה', value: fmt(totalRemaining), color: '#ef4444' },
+          { label: '××©××× ×××ª ×××¦×××ª', value: filtered.length, color: '#6366f1' },
+          { label: '×¡×"× ××ª×©×××', value: fmt(totalAmount), color: '#3b82f6' },
+          { label: '×©×××', value: fmt(totalPaid), color: '#10b981' },
+          { label: '××ª×¨× ×××××', value: fmt(totalRemaining), color: '#ef4444' },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
             <div className="text-xl font-bold" style={{ color }}>{value}</div>
@@ -1142,57 +1142,57 @@ function InvoicesTab() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 flex-shrink-0">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="חפש לקוח, מס' חשבונית, מי הוציא..." className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="××¤×© ××§××, ××¡' ××©××× ××ª, ×× ×××¦××..." className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
         <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל הלקוחות</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="">×× ×××§××××ª</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={filterDocType} onChange={e => setFilterDocType(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל סוגי המסמך</option>{docTypes.map(d => <option key={d} value={d}>{d}</option>)}
+          <option value="">×× ×¡××× ×××¡××</option>{docTypes.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל הסטטוסים</option>
-          <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
+          <option value="">×× ××¡××××¡××</option>
+          <option value="paid">×©×××</option><option value="partial">×××§×</option><option value="unpaid">×××ª××</option>
         </select>
         {projectList.length > 0 && (
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-            <option value="">כל הפרויקטים</option>
-            {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
+            <option value="">×× ××¤×¨×××§×××</option>
+            {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? '×××× ××' : '××¤×§××ª'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
           </select>
         )}
       </div>
 
-      {/* Table — flat or grouped by month */}
+      {/* Table â flat or grouped by month */}
       <div className="flex-1 overflow-auto rounded-2xl border border-gray-200 bg-white min-h-0">
         {!groupByMonth ? (
-          /* ── Flat list ── */
+          /* ââ Flat list ââ */
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
                 <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
-                <th className="px-4 py-3 text-right font-semibold">מס'</th>
-                <th className="px-4 py-3 text-right font-semibold">לקוח</th>
-                <th className="px-4 py-3 text-right font-semibold">פרויקט</th>
-                <th className="px-4 py-3 text-right font-semibold">תאריך</th>
-                <th className="px-4 py-3 text-right font-semibold">סוג</th>
-                <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
-                <th className="px-4 py-3 text-right font-semibold">לפני מע"מ</th>
-                <th className="px-4 py-3 text-right font-semibold">סה"כ</th>
-                <th className="px-4 py-3 text-right font-semibold">שולם</th>
-                <th className="px-4 py-3 text-right font-semibold">יתרה</th>
-                <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
-                <th className="px-4 py-3 text-center font-semibold">פעולות</th>
+                <th className="px-4 py-3 text-right font-semibold">××¡'</th>
+                <th className="px-4 py-3 text-right font-semibold">××§××</th>
+                <th className="px-4 py-3 text-right font-semibold">×¤×¨×××§×</th>
+                <th className="px-4 py-3 text-right font-semibold">×ª××¨××</th>
+                <th className="px-4 py-3 text-right font-semibold">×¡××</th>
+                <th className="px-4 py-3 text-right font-semibold">×× ×××¦××</th>
+                <th className="px-4 py-3 text-right font-semibold">××¤× × ××¢"×</th>
+                <th className="px-4 py-3 text-right font-semibold">×¡×"×</th>
+                <th className="px-4 py-3 text-right font-semibold">×©×××</th>
+                <th className="px-4 py-3 text-right font-semibold">××ª×¨×</th>
+                <th className="px-4 py-3 text-center font-semibold">×¡××××¡</th>
+                <th className="px-4 py-3 text-center font-semibold">×¤×¢××××ª</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+                <tr><td colSpan={12} className="text-center py-12 text-gray-400">×× × ××¦×× ××©××× ×××ª</td></tr>
               ) : filtered.map((inv, i) => {
                 const st = invoiceStatus(inv)
                 const remaining = Math.max(0, roundCents(inv.total - inv.paid))
                 return (
                   <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                     <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || 'â'}</td>
                     <td className="px-4 py-3 max-w-[200px] relative">
                       {reassignId === inv.id ? (
                         <ClientPicker clientList={clientList} currentClientId={inv.client_id}
@@ -1204,8 +1204,8 @@ function InvoicesTab() {
                           onClose={() => setReassignId(null)}
                         />
                       ) : null}
-                      <button onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)} className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`} title="לחץ לשיוך לקוח">
-                        <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך לקוח'}</span>
+                      <button onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)} className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`} title="×××¥ ××©××× ××§××">
+                        <span className="truncate">{inv.client_id ? (inv.client || 'â') : 'â  ×× ××©×××× ××§××'}</span>
                         <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
                     </td>
@@ -1228,26 +1228,26 @@ function InvoicesTab() {
                           className="text-indigo-600 font-medium hover:text-indigo-800 truncate max-w-[120px] block"
                           title={projectList.find(p => p.id === inv.project_id)?.name || ''}
                         >
-                          {projectList.find(p => p.id === inv.project_id)?.name || '—'}
+                          {projectList.find(p => p.id === inv.project_id)?.name || 'â'}
                         </button>
                       ) : (
-                        <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="שייך לפרויקט">+ שייך</button>
+                        <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="×©××× ××¤×¨×××§×">+ ×©×××</button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || 'â'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || 'â'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || 'â'}</td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
                     <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
-                    <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">â</span>}</td>
                     <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-center">
-                        <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
+                        <button onClick={() => setModalInv(inv)} title="×¢×¨×××" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
+                        <button onClick={() => setDeleteId(inv.id)} title="××××§×" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </div>
@@ -1259,7 +1259,7 @@ function InvoicesTab() {
             {filtered.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
-                  <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                  <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">×¡×"× ({filtered.length})</td>
                   <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                   <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
@@ -1270,7 +1270,7 @@ function InvoicesTab() {
             )}
           </table>
         ) : (
-          /* ── Grouped by month ── */
+          /* ââ Grouped by month ââ */
           (() => {
             // Build month groups from filtered
             const mGroups: Record<string, { key: string; label: string; rows: InvoiceRow[] }> = {}
@@ -1283,7 +1283,7 @@ function InvoicesTab() {
               if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
               mGroups[key].rows.push(inv)
             })
-            const groups = Object.values(mGroups).sort((a,b) => b.key.localeCompare(a.key))
+            const groups = Object.values(mGroups).sort((a,b) => a.key.localeCompare(b.key))
             const COLS = 13
             const TH = 'px-4 py-3 text-right font-semibold'
 
@@ -1292,23 +1292,23 @@ function InvoicesTab() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
                     <th className="px-3 py-3 w-8" />
-                    <th className={TH}>מס'</th>
-                    <th className={TH}>לקוח</th>
-                    <th className={TH}>פרויקט</th>
-                    <th className={TH}>תאריך</th>
-                    <th className={TH}>סוג</th>
-                    <th className={TH}>מי הוציא</th>
-                    <th className={TH}>לפני מע"מ</th>
-                    <th className={TH}>סה"כ</th>
-                    <th className={TH}>שולם</th>
-                    <th className={TH}>יתרה</th>
-                    <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
-                    <th className="px-4 py-3 text-center font-semibold">פעולות</th>
+                    <th className={TH}>××¡'</th>
+                    <th className={TH}>××§××</th>
+                    <th className={TH}>×¤×¨×××§×</th>
+                    <th className={TH}>×ª××¨××</th>
+                    <th className={TH}>×¡××</th>
+                    <th className={TH}>×× ×××¦××</th>
+                    <th className={TH}>××¤× × ××¢"×</th>
+                    <th className={TH}>×¡×"×</th>
+                    <th className={TH}>×©×××</th>
+                    <th className={TH}>××ª×¨×</th>
+                    <th className="px-4 py-3 text-center font-semibold">×¡××××¡</th>
+                    <th className="px-4 py-3 text-center font-semibold">×¤×¢××××ª</th>
                   </tr>
                 </thead>
                 <tbody>
                   {groups.length === 0 ? (
-                    <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+                    <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">×× × ××¦×× ××©××× ×××ª</td></tr>
                   ) : groups.map(group => {
                     const isCollapsed = collapsedMonths.has(group.key)
                     const mTotal = group.rows.reduce((s,i) => s+i.total, 0)
@@ -1329,17 +1329,17 @@ function InvoicesTab() {
                           })}
                         >
                           <td className="px-3 py-3 text-center">
-                            <span className="text-indigo-400 text-xs transition-transform inline-block" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>▶</span>
+                            <span className="text-indigo-400 text-xs transition-transform inline-block" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>â¶</span>
                           </td>
                           <td colSpan={2} className="px-4 py-3">
                             <span className="font-bold text-indigo-700 text-sm">{group.label}</span>
-                            <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
-                            {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
+                            <span className="mr-2 text-xs text-indigo-400">({group.rows.length} ××©××× ×××ª)</span>
+                            {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} ×¤×ª××××ª</span>}
                           </td>
                           <td colSpan={5} />
                           <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
                           <td className="px-4 py-3 text-xs font-bold text-emerald-600">{fmt(mPaid)}</td>
-                          <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : '✓'}</td>
+                          <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : 'â'}</td>
                           <td colSpan={2} />
                         </tr>
 
@@ -1350,7 +1350,7 @@ function InvoicesTab() {
                           return (
                             <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                               <td className="px-3 py-2.5 text-center text-gray-300 text-xs font-mono">{i + 1}</td>
-                              <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                              <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{inv.invoice_num || 'â'}</td>
                               <td className="px-4 py-2.5 max-w-[180px] relative">
                                 {reassignId === inv.id ? (
                                   <ClientPicker clientList={clientList} currentClientId={inv.client_id}
@@ -1363,7 +1363,7 @@ function InvoicesTab() {
                                   />
                                 ) : null}
                                 <button onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)} className={`text-right w-full truncate hover:text-indigo-600 group flex items-center gap-1 text-xs ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500'}`}>
-                                  <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך'}</span>
+                                  <span className="truncate">{inv.client_id ? (inv.client || 'â') : 'â  ×× ××©××××'}</span>
                                   <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                 </button>
                               </td>
@@ -1385,18 +1385,18 @@ function InvoicesTab() {
                                     onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)}
                                     className="text-indigo-600 font-medium hover:text-indigo-800 truncate max-w-[120px] block text-xs"
                                     title={projectList.find(p => p.id === inv.project_id)?.name || ''}
-                                  >{projectList.find(p => p.id === inv.project_id)?.name || '—'}</button>
+                                  >{projectList.find(p => p.id === inv.project_id)?.name || 'â'}</button>
                                 ) : (
-                                  <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs">+ שייך</button>
+                                  <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs">+ ×©×××</button>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || 'â'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || 'â'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || 'â'}</td>
                               <td className="px-4 py-2.5 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                               <td className="px-4 py-2.5 font-semibold text-gray-800 text-xs">{fmt(inv.total)}</td>
                               <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
-                              <td className="px-4 py-2.5 text-xs">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                              <td className="px-4 py-2.5 text-xs">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">â</span>}</td>
                               <td className="px-4 py-2.5 text-center"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1 justify-center">
@@ -1417,7 +1417,7 @@ function InvoicesTab() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
-                    <td colSpan={8} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                    <td colSpan={8} className="px-4 py-3 text-xs text-gray-500 uppercase">×¡×"× ({filtered.length})</td>
                     <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
                     <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
                     <td className="px-4 py-3 text-emerald-600 text-xs">{fmt(totalPaid)}</td>
@@ -1451,11 +1451,11 @@ function InvoicesTab() {
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
             </div>
-            <p className="font-semibold text-gray-800">למחוק את החשבונית?</p>
-            <p className="text-sm text-gray-500">פעולה זו אינה ניתנת לביטול</p>
+            <p className="font-semibold text-gray-800">×××××§ ××ª ×××©××× ××ª?</p>
+            <p className="text-sm text-gray-500">×¤×¢××× ×× ××× × × ××ª× ×ª ××××××</p>
             <div className="flex gap-2">
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">מחק</button>
-              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">×××§</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">×××××</button>
             </div>
           </div>
         </div>
@@ -1464,7 +1464,7 @@ function InvoicesTab() {
   )
 }
 
-// ── Client types ──────────────────────────────────────────────────────────────
+// ââ Client types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 interface ClientRecord {
   id: number
   name: string
@@ -1479,7 +1479,7 @@ interface ClientRecord {
 }
 
 const EMPTY_CLIENT: Omit<ClientRecord, 'id' | 'invoiceCount' | 'totalAmount' | 'paidAmount'> = {
-  name: '', tax_id: '', tax_status: 'מורשה', contact_name: '', contact_email: '', notes: ''
+  name: '', tax_id: '', tax_status: '×××¨×©×', contact_name: '', contact_email: '', notes: ''
 }
 
 function ClientModal({ initial, onSave, onClose, saving }: {
@@ -1495,35 +1495,35 @@ function ClientModal({ initial, onSave, onClose, saving }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
-        <h2 className="text-lg font-bold text-gray-900">{(initial as ClientRecord).id ? 'עריכת לקוח' : 'לקוח חדש'}</h2>
+        <h2 className="text-lg font-bold text-gray-900">{(initial as ClientRecord).id ? '×¢×¨×××ª ××§××' : '××§×× ×××©'}</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">שם לקוח *</label>
-            <input value={form.name} onChange={s('name')} placeholder="שם החברה / אדם" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <label className="block text-xs text-gray-400 mb-1">×©× ××§×× *</label>
+            <input value={form.name} onChange={s('name')} placeholder="×©× ××××¨× / ×××" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">ח.פ / ע.מ / ע.פ</label>
-              <input value={form.tax_id} onChange={s('tax_id')} placeholder="מספר עוסק" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              <label className="block text-xs text-gray-400 mb-1">×.×¤ / ×¢.× / ×¢.×¤</label>
+              <input value={form.tax_id} onChange={s('tax_id')} placeholder="××¡×¤×¨ ×¢××¡×§" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">סטטוס ברשויות</label>
+              <label className="block text-xs text-gray-400 mb-1">×¡××××¡ ××¨×©××××ª</label>
               <select value={form.tax_status} onChange={s('tax_status')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="מורשה">מורשה</option>
-                <option value="פטור">פטור</option>
+                <option value="×××¨×©×">×××¨×©×</option>
+                <option value="×¤×××¨">×¤×××¨</option>
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">איש קשר הנה&quot;ח</label>
-            <input value={form.contact_name} onChange={s('contact_name')} placeholder="שם איש הקשר" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <label className="block text-xs text-gray-400 mb-1">×××© ×§×©×¨ ×× ×&quot;×</label>
+            <input value={form.contact_name} onChange={s('contact_name')} placeholder="×©× ×××© ××§×©×¨" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Email הנהלת חשבונות</label>
+            <label className="block text-xs text-gray-400 mb-1">Email ×× ×××ª ××©××× ××ª</label>
             <input type="email" value={form.contact_email} onChange={s('contact_email')} placeholder="accounting@company.com" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" dir="ltr" />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">הערות</label>
+            <label className="block text-xs text-gray-400 mb-1">××¢×¨××ª</label>
             <textarea value={form.notes} onChange={s('notes')} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
           </div>
         </div>
@@ -1531,19 +1531,19 @@ function ClientModal({ initial, onSave, onClose, saving }: {
           <button onClick={() => onSave(form)} disabled={saving || !form.name}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>
-            {saving ? 'שומר...' : 'שמור'}
+            {saving ? '×©×××¨...' : '×©×××¨'}
           </button>
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50">×××××</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── Charts ───────────────────────────────────────────────────────────────────
+// ââ Charts âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function DonutChart({ paid, remaining, size = 120 }: { paid: number; remaining: number; size?: number }) {
   const total = paid + remaining
-  if (total === 0) return <div className="w-[120px] h-[120px] rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">אין נתונים</div>
+  if (total === 0) return <div className="w-[120px] h-[120px] rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">××× × ×ª×× ××</div>
   const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.24
   const paidPct = paid / total
   const paidAngle = paidPct * 360
@@ -1566,7 +1566,7 @@ function DonutChart({ paid, remaining, size = 120 }: { paid: number; remaining: 
       <text x={cx} y={cy - 5} textAnchor="middle" fontSize={size * 0.13} fontWeight="bold" fill="#1f2937">
         {Math.round(paidPct * 100)}%
       </text>
-      <text x={cx} y={cy + size * 0.12} textAnchor="middle" fontSize={size * 0.09} fill="#6b7280">שולם</text>
+      <text x={cx} y={cy + size * 0.12} textAnchor="middle" fontSize={size * 0.09} fill="#6b7280">×©×××</text>
     </svg>
   )
 }
@@ -1583,20 +1583,20 @@ function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: n
   return (
     <div className="grid grid-cols-3 gap-4 flex-shrink-0">
 
-      {/* Donut — שולם vs יתרה */}
+      {/* Donut â ×©××× vs ××ª×¨× */}
       <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 flex gap-4 items-center shadow-sm">
         <DonutChart paid={totalPaid} remaining={totalRemaining} size={110} />
         <div className="flex-1 space-y-2">
           <div>
-            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">שולם</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">×©×××</div>
             <div className="text-sm font-bold text-emerald-600">{fmt(totalPaid)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">יתרה לתשלום</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">××ª×¨× ××ª×©×××</div>
             <div className="text-sm font-bold text-red-500">{fmt(totalRemaining)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">סה״כ</div>
+            <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">×¡××´×</div>
             <div className="text-sm font-bold text-gray-700">{fmt(totalAll)}</div>
           </div>
         </div>
@@ -1604,7 +1604,7 @@ function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: n
 
       {/* Top clients bar chart */}
       <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">לקוחות מובילים</div>
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">××§××××ª ×××××××</div>
         <div className="space-y-2">
           {topClients.map(c => {
             const paidPct  = c.totalAmount > 0 ? (c.paidAmount / c.totalAmount) * 100 : 0
@@ -1625,34 +1625,34 @@ function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: n
           })}
         </div>
         <div className="flex gap-3 mt-3 text-[10px] text-gray-400">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />שולם</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200 inline-block" />סה״כ</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />×©×××</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200 inline-block" />×¡××´×</span>
         </div>
       </div>
 
       {/* Status breakdown donut + stats */}
       <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">סטטוס לקוחות</div>
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">×¡××××¡ ××§××××ª</div>
         <div className="flex gap-4 items-center mb-4">
           <DonutChart paid={closedCount} remaining={openCount} size={90} />
           <div className="space-y-2 flex-1">
             <div className="flex justify-between text-xs">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />סגורים</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />×¡×××¨××</span>
               <span className="font-bold text-emerald-600">{closedCount}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-300 inline-block" />פתוחים</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-300 inline-block" />×¤×ª××××</span>
               <span className="font-bold text-red-500">{openCount}</span>
             </div>
           </div>
         </div>
         <div className="space-y-1.5 border-t border-gray-100 pt-3">
           <div className="flex justify-between text-xs text-gray-500">
-            <span>ממוצע לחשבונית</span>
-            <span className="font-semibold text-gray-700">{clients.reduce((s,c)=>s+c.invoiceCount,0) > 0 ? fmt(totalAll / clients.reduce((s,c)=>s+c.invoiceCount,0)) : '—'}</span>
+            <span>××××¦×¢ ×××©××× ××ª</span>
+            <span className="font-semibold text-gray-700">{clients.reduce((s,c)=>s+c.invoiceCount,0) > 0 ? fmt(totalAll / clients.reduce((s,c)=>s+c.invoiceCount,0)) : 'â'}</span>
           </div>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>לקוחות פעילים</span>
+            <span>××§××××ª ×¤×¢××××</span>
             <span className="font-semibold text-gray-700">{clients.filter(c=>c.invoiceCount>0).length}</span>
           </div>
         </div>
@@ -1661,7 +1661,7 @@ function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: n
   )
 }
 
-// ── LedgerDrawer ─────────────────────────────────────────────────────────────
+// ââ LedgerDrawer âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   client: ClientRecord
   invoices: InvoiceRow[]
@@ -1693,7 +1693,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="font-bold text-gray-900 text-lg">{client.name}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">כרטסת לקוח — {invoices.length} חשבוניות</p>
+            <p className="text-xs text-gray-400 mt-0.5">××¨××¡×ª ××§×× â {invoices.length} ××©××× ×××ª</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1704,17 +1704,17 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
         <div className="px-6 py-4 grid grid-cols-3 gap-3 flex-shrink-0 border-b border-gray-100">
           <div className="rounded-xl bg-gray-50 px-4 py-3 text-center">
             <div className="text-lg font-bold text-gray-800">{fmt(totalAll)}</div>
-            <div className="text-xs text-gray-400 mt-0.5">סה״כ חשבוניות</div>
+            <div className="text-xs text-gray-400 mt-0.5">×¡××´× ××©××× ×××ª</div>
           </div>
           <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center">
             <div className="text-lg font-bold text-emerald-600">{fmt(totalPaid)}</div>
-            <div className="text-xs text-emerald-500 mt-0.5">שולם</div>
+            <div className="text-xs text-emerald-500 mt-0.5">×©×××</div>
           </div>
           <div className={`rounded-xl px-4 py-3 text-center ${totalOpen > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
             <div className={`text-lg font-bold ${totalOpen > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-              {totalOpen > 0 ? fmt(totalOpen) : '✓ שולם הכל'}
+              {totalOpen > 0 ? fmt(totalOpen) : 'â ×©××× ×××'}
             </div>
-            <div className={`text-xs mt-0.5 ${totalOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>יתרה לתשלום</div>
+            <div className={`text-xs mt-0.5 ${totalOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>××ª×¨× ××ª×©×××</div>
           </div>
         </div>
 
@@ -1722,9 +1722,9 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
         <div className="px-6 py-3 flex gap-1 flex-shrink-0">
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
             {([
-              { key: 'all',  label: 'הכל',    count: invoices.length },
-              { key: 'open', label: 'פתוחות', count: openCount },
-              { key: 'paid', label: 'שולם',   count: paidCount },
+              { key: 'all',  label: '×××',    count: invoices.length },
+              { key: 'open', label: '×¤×ª××××ª', count: openCount },
+              { key: 'paid', label: '×©×××',   count: paidCount },
             ] as const).map(({ key, label, count }) => (
               <button
                 key={key}
@@ -1741,22 +1741,22 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
         {/* Table */}
         <div className="flex-1 overflow-auto px-6 pb-6">
           {loading ? (
-            <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
+            <div className="text-center py-12 text-gray-400 text-sm">×××¢×...</div>
           ) : displayed.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 text-sm">אין חשבוניות להצגה</div>
+            <div className="text-center py-12 text-gray-400 text-sm">××× ××©××× ×××ª ×××¦××</div>
           ) : (
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0">
                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
-                  <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">מי הוציא</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">לפני מע״מ</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">סה״כ</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">שולם</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">יתרה</th>
-                  <th className="px-3 py-2.5 text-center font-semibold">סטטוס</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">××¡×³</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">×ª××¨××</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">×¡××</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">×× ×××¦××</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">××¤× × ××¢×´×</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">×¡××´×</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">×©×××</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">××ª×¨×</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">×¡××××¡</th>
                 </tr>
               </thead>
               <tbody>
@@ -1765,24 +1765,24 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
                   const isPaid = remaining === 0
                   return (
                     <tr key={inv.id} className={`border-b border-gray-100 transition-colors ${isPaid ? 'hover:bg-emerald-50/30' : 'hover:bg-red-50/30'} ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                      <td className="px-3 py-2.5 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-600 text-xs">{inv.issued_by || '—'}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-gray-400">{inv.invoice_num || 'â'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || 'â'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs">{inv.doc_type || 'â'}</td>
+                      <td className="px-3 py-2.5 text-gray-600 text-xs">{inv.issued_by || 'â'}</td>
                       <td className="px-3 py-2.5 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
                       <td className="px-3 py-2.5 font-semibold text-gray-800">{fmt(inv.total)}</td>
                       <td className="px-3 py-2.5 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
                       <td className="px-3 py-2.5">
                         {remaining > 0
                           ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
-                          : <span className="text-gray-300 text-xs">—</span>}
+                          : <span className="text-gray-300 text-xs">â</span>}
                       </td>
                       <td className="px-3 py-2.5 text-center">
                         {isPaid
-                          ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">שולם</span>
+                          ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">×©×××</span>
                           : inv.paid > 0
-                            ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">חלקי</span>
-                            : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">ממתין</span>}
+                            ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">×××§×</span>
+                            : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">×××ª××</span>}
                       </td>
                     </tr>
                   )
@@ -1790,7 +1790,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold text-sm">
-                  <td colSpan={4} className="px-3 py-2.5 text-xs text-gray-500 uppercase">סה״כ ({displayed.length})</td>
+                  <td colSpan={4} className="px-3 py-2.5 text-xs text-gray-500 uppercase">×¡××´× ({displayed.length})</td>
                   <td className="px-3 py-2.5 text-gray-600">{fmt(displayed.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-3 py-2.5 text-gray-800">{fmt(displayed.reduce((s, i) => s + i.total, 0))}</td>
                   <td className="px-3 py-2.5 text-emerald-600">{fmt(displayed.reduce((s, i) => s + i.paid, 0))}</td>
@@ -1828,7 +1828,7 @@ function ClientsTab() {
     fetch('/api/clients')
       .then(r => r.json())
       .then(d => { if (d.error) setError(d.error); else setClients(d.clients || []) })
-      .catch(() => setError('שגיאה בטעינת לקוחות'))
+      .catch(() => setError('×©×××× ×××¢×× ×ª ××§××××ª'))
       .finally(() => setLoading(false))
   }
 
@@ -1864,7 +1864,7 @@ function ClientsTab() {
             c.id === updated.id ? { ...c, ...updated } : c
           ))
         } else {
-          // New client — add with zero stats
+          // New client â add with zero stats
           const fresh = json as ClientRecord
           setClients(prev => [...prev, { ...fresh, invoiceCount: 0, totalAmount: 0, paidAmount: 0 }])
         }
@@ -1879,9 +1879,9 @@ function ClientsTab() {
     setDeleteClientId(null)
   }
 
-  const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+  const fmt = (n: number) => n ? `âª${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : 'â'
 
-  const PINNED_BOTTOM = ['סה"כ', 'סהכ', 'total', 'סה״כ']
+  const PINNED_BOTTOM = ['×¡×"×', '×¡××', 'total', '×¡××´×']
   const isPinned = (name: string) => PINNED_BOTTOM.some(p => name.trim() === p)
 
   const filtered = clients
@@ -1908,13 +1908,13 @@ function ClientsTab() {
   }
   const SortIcon = ({ col }: { col: typeof sortKey }) => (
     <span className={`mr-1 text-[10px] ${sortKey === col ? 'text-indigo-500' : 'text-gray-300'}`}>
-      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+      {sortKey === col ? (sortDir === 'asc' ? 'â' : 'â') : 'â'}
     </span>
   )
   const totalInvoices = clients.reduce((s, c) => s + c.invoiceCount, 0)
   const totalAmount   = clients.reduce((s, c) => s + c.totalAmount, 0)
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען לקוחות...</div></div>
+  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">×××¢× ××§××××ª...</div></div>
   if (error)   return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
   return (
@@ -1923,9 +1923,9 @@ function ClientsTab() {
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex gap-4">
           {[
-            { label: 'לקוחות', value: clients.length, color: '#6366f1' },
-            { label: 'חשבוניות', value: totalInvoices, color: '#3b82f6' },
-            { label: 'סה״כ', value: fmt(totalAmount), color: '#10b981' },
+            { label: '××§××××ª', value: clients.length, color: '#6366f1' },
+            { label: '××©××× ×××ª', value: totalInvoices, color: '#3b82f6' },
+            { label: '×¡××´×', value: fmt(totalAmount), color: '#10b981' },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-2xl border border-gray-200 bg-white px-5 py-3 shadow-sm flex items-center gap-3">
               <span className="text-xl font-bold" style={{ color }}>{value}</span>
@@ -1939,11 +1939,11 @@ function ClientsTab() {
           style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          הוספת לקוח
+          ×××¡×¤×ª ××§××
         </button>
       </div>
 
-      {/* Charts snapshot — collapsible */}
+      {/* Charts snapshot â collapsible */}
       {clients.length > 0 && (
         <div className="flex-shrink-0">
           <button
@@ -1960,8 +1960,8 @@ function ClientsTab() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
-            תמונת מצב
-            <span className="text-gray-300 group-hover:text-indigo-300 font-normal">{showCharts ? 'סגור' : 'פתח'}</span>
+            ×ª××× ×ª ××¦×
+            <span className="text-gray-300 group-hover:text-indigo-300 font-normal">{showCharts ? '×¡×××¨' : '×¤×ª×'}</span>
           </button>
           {showCharts && (
             <div className="mt-3">
@@ -1974,10 +1974,10 @@ function ClientsTab() {
       {/* Search + view toggle */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="חפש לקוח..." className="flex-1 max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+          placeholder="××¤×© ××§××..." className="flex-1 max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
         <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white">
           {/* Cards toggle */}
-          <button onClick={() => setView('cards')} title="תצוגת כרטיסים"
+          <button onClick={() => setView('cards')} title="×ª×¦×××ª ××¨×××¡××"
             className={`px-3 py-2 transition-colors ${view === 'cards' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <rect x="2" y="2" width="7" height="7" rx="1.5" /><rect x="11" y="2" width="7" height="7" rx="1.5" />
@@ -1985,7 +1985,7 @@ function ClientsTab() {
             </svg>
           </button>
           {/* Table toggle */}
-          <button onClick={() => setView('table')} title="תצוגת טבלה"
+          <button onClick={() => setView('table')} title="×ª×¦×××ª ××××"
             className={`px-3 py-2 border-r border-gray-200 transition-colors ${view === 'table' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 6h18M3 14h18M3 18h18" />
@@ -1997,10 +1997,10 @@ function ClientsTab() {
       {/* Content */}
       <div className="flex-1 overflow-auto min-h-0">
         {view === 'cards' ? (
-          /* ── Cards grid ── */
+          /* ââ Cards grid ââ */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
             {filtered.length === 0 ? (
-              <div className="col-span-3 text-center py-16 text-gray-400">לא נמצאו לקוחות</div>
+              <div className="col-span-3 text-center py-16 text-gray-400">×× × ××¦×× ××§××××ª</div>
             ) : filtered.map(c => {
               const remaining = c.totalAmount - c.paidAmount
               return (
@@ -2009,11 +2009,11 @@ function ClientsTab() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{c.name}</h3>
-                        {c.tax_id && <p className="text-xs text-gray-400 mt-0.5">ח.פ: {c.tax_id}</p>}
+                        {c.tax_id && <p className="text-xs text-gray-400 mt-0.5">×.×¤: {c.tax_id}</p>}
                       </div>
                       <div className="flex gap-1 mr-2 flex-shrink-0">
                         {c.tax_status && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === '×××¨×©×' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                             {c.tax_status}
                           </span>
                         )}
@@ -2021,7 +2021,7 @@ function ClientsTab() {
                     </div>
                     {(c.contact_name || c.contact_email) && (
                       <div className="mt-2 space-y-0.5">
-                        {c.contact_name && <p className="text-xs text-gray-500">👤 {c.contact_name}</p>}
+                        {c.contact_name && <p className="text-xs text-gray-500">ð¤ {c.contact_name}</p>}
                         {c.contact_email && <p className="text-xs text-gray-400" dir="ltr">{c.contact_email}</p>}
                       </div>
                     )}
@@ -2029,26 +2029,26 @@ function ClientsTab() {
                   <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center border-t border-gray-100">
                     <div>
                       <div className="text-sm font-bold text-indigo-600">{c.invoiceCount}</div>
-                      <div className="text-[10px] text-gray-400">חשבוניות</div>
+                      <div className="text-[10px] text-gray-400">××©××× ×××ª</div>
                     </div>
                     <div>
                       <div className="text-sm font-bold text-gray-800">{fmt(c.totalAmount)}</div>
-                      <div className="text-[10px] text-gray-400">סה״כ</div>
+                      <div className="text-[10px] text-gray-400">×¡××´×</div>
                     </div>
                     <div>
                       <div className="text-sm font-bold text-emerald-600">{fmt(c.paidAmount)}</div>
-                      <div className="text-[10px] text-gray-400">שולם</div>
+                      <div className="text-[10px] text-gray-400">×©×××</div>
                     </div>
                     <div>
                       <div className={`text-sm font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                        {remaining > 0 ? fmt(remaining) : '✓'}
+                        {remaining > 0 ? fmt(remaining) : 'â'}
                       </div>
-                      <div className="text-[10px] text-gray-400">יתרה</div>
+                      <div className="text-[10px] text-gray-400">××ª×¨×</div>
                     </div>
                   </div>
                   <div className="px-5 pb-4 flex gap-2">
-                    <button onClick={() => toggleExpand(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
-                    <button onClick={() => setModalClient(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">עריכה</button>
+                    <button onClick={() => toggleExpand(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">××¨××¡×ª</button>
+                    <button onClick={() => setModalClient(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">×¢×¨×××</button>
                     <button onClick={() => setDeleteClientId(c.id)} className="py-1.5 px-2.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
@@ -2058,25 +2058,25 @@ function ClientsTab() {
             })}
           </div>
         ) : (
-          /* ── Table view ── */
+          /* ââ Table view ââ */
           <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
-                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('name')}>שם לקוח <SortIcon col="name" /></th>
-                  <th className="px-5 py-3 text-right font-semibold">ח.פ</th>
-                  <th className="px-5 py-3 text-right font-semibold">סטטוס</th>
-                  <th className="px-5 py-3 text-right font-semibold">איש קשר</th>
-                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('invoiceCount')}>חשבוניות <SortIcon col="invoiceCount" /></th>
-                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('totalAmount')}>סה״כ חשבוניות <SortIcon col="totalAmount" /></th>
-                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('paidAmount')}>שולם <SortIcon col="paidAmount" /></th>
-                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('remaining')}>יתרה לתשלום <SortIcon col="remaining" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('name')}>×©× ××§×× <SortIcon col="name" /></th>
+                  <th className="px-5 py-3 text-right font-semibold">×.×¤</th>
+                  <th className="px-5 py-3 text-right font-semibold">×¡××××¡</th>
+                  <th className="px-5 py-3 text-right font-semibold">×××© ×§×©×¨</th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('invoiceCount')}>××©××× ×××ª <SortIcon col="invoiceCount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('totalAmount')}>×¡××´× ××©××× ×××ª <SortIcon col="totalAmount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('paidAmount')}>×©××× <SortIcon col="paidAmount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('remaining')}>××ª×¨× ××ª×©××× <SortIcon col="remaining" /></th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td></tr>
+                  <tr><td colSpan={9} className="text-center py-12 text-gray-400">×× × ××¦×× ××§××××ª</td></tr>
                 ) : filtered.map((c, i) => {
                   const remaining = c.totalAmount - c.paidAmount
                   const isExpanded = expandedId === c.id
@@ -2097,25 +2097,25 @@ function ClientsTab() {
 
                   return (
                     <Fragment key={c.id}>
-                      {/* ── Client row ── */}
+                      {/* ââ Client row ââ */}
                       <tr
                         onClick={() => toggleExpand(c)}
                         className={`border-b border-gray-100 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50' : i % 2 === 0 ? 'bg-white hover:bg-indigo-50/50' : 'bg-gray-50/40 hover:bg-indigo-50/50'}`}
                       >
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-400 text-xs transition-transform duration-200 inline-block" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                            <span className="text-gray-400 text-xs transition-transform duration-200 inline-block" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>â¶</span>
                             <span className="font-semibold text-gray-900">{c.name}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-gray-400 text-xs font-mono">{c.tax_id || '—'}</td>
+                        <td className="px-5 py-3 text-gray-400 text-xs font-mono">{c.tax_id || 'â'}</td>
                         <td className="px-5 py-3">
                           {c.tax_status ? (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.tax_status}</span>
-                          ) : '—'}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === '×××¨×©×' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.tax_status}</span>
+                          ) : 'â'}
                         </td>
                         <td className="px-5 py-3 text-gray-600 text-xs">
-                          <div>{c.contact_name || '—'}</div>
+                          <div>{c.contact_name || 'â'}</div>
                           {c.contact_email && <div className="text-gray-400" dir="ltr">{c.contact_email}</div>}
                         </td>
                         <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{c.invoiceCount}</td>
@@ -2124,11 +2124,11 @@ function ClientsTab() {
                         <td className="px-5 py-3">
                           {remaining > 0
                             ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
-                            : <span className="text-emerald-500 text-xs font-semibold">✓ שולם</span>}
+                            : <span className="text-emerald-500 text-xs font-semibold">â ×©×××</span>}
                         </td>
                         <td className="px-5 py-3" onClick={e => e.stopPropagation()}>
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => setModalClient(c)} className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">עריכה</button>
+                            <button onClick={() => setModalClient(c)} className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">×¢×¨×××</button>
                             <button onClick={() => setDeleteClientId(c.id)} className="text-xs px-2 py-1 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
@@ -2136,7 +2136,7 @@ function ClientsTab() {
                         </td>
                       </tr>
 
-                      {/* ── Inline ledger (accordion) ── */}
+                      {/* ââ Inline ledger (accordion) ââ */}
                       {isExpanded && (
                         <tr>
                           <td colSpan={9} className="p-0 border-b border-indigo-100">
@@ -2146,24 +2146,24 @@ function ClientsTab() {
                               <div className="grid grid-cols-3 gap-3">
                                 <div className="rounded-xl bg-white border border-gray-100 px-4 py-3 text-center shadow-sm">
                                   <div className="text-base font-bold text-gray-800">{fmt(ledTotal)}</div>
-                                  <div className="text-xs text-gray-400 mt-0.5">סה״כ חשבוניות</div>
+                                  <div className="text-xs text-gray-400 mt-0.5">×¡××´× ××©××× ×××ª</div>
                                 </div>
                                 <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-center shadow-sm">
                                   <div className="text-base font-bold text-emerald-600">{fmt(ledPaid)}</div>
-                                  <div className="text-xs text-emerald-500 mt-0.5">שולם</div>
+                                  <div className="text-xs text-emerald-500 mt-0.5">×©×××</div>
                                 </div>
                                 <div className={`rounded-xl border px-4 py-3 text-center shadow-sm ${ledOpen > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                                  <div className={`text-base font-bold ${ledOpen > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{ledOpen > 0 ? fmt(ledOpen) : '✓ שולם הכל'}</div>
-                                  <div className={`text-xs mt-0.5 ${ledOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>יתרה לתשלום</div>
+                                  <div className={`text-base font-bold ${ledOpen > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{ledOpen > 0 ? fmt(ledOpen) : 'â ×©××× ×××'}</div>
+                                  <div className={`text-xs mt-0.5 ${ledOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>××ª×¨× ××ª×©×××</div>
                                 </div>
                               </div>
 
                               {/* Filter tabs */}
                               <div className="flex gap-1 bg-white rounded-xl p-1 w-fit border border-gray-100 shadow-sm">
                                 {([
-                                  { key: 'all',  label: 'הכל',    count: clientInvs.length },
-                                  { key: 'open', label: 'פתוחות', count: openCount },
-                                  { key: 'paid', label: 'שולם',   count: paidCount },
+                                  { key: 'all',  label: '×××',    count: clientInvs.length },
+                                  { key: 'open', label: '×¤×ª××××ª', count: openCount },
+                                  { key: 'paid', label: '×©×××',   count: paidCount },
                                 ] as const).map(({ key, label, count }) => (
                                   <button
                                     key={key}
@@ -2177,23 +2177,23 @@ function ClientsTab() {
 
                               {/* Invoices table */}
                               {isLoading ? (
-                                <div className="text-center py-6 text-gray-400 text-sm">טוען חשבוניות...</div>
+                                <div className="text-center py-6 text-gray-400 text-sm">×××¢× ××©××× ×××ª...</div>
                               ) : dispInvs.length === 0 ? (
-                                <div className="text-center py-6 text-gray-400 text-sm">אין חשבוניות להצגה</div>
+                                <div className="text-center py-6 text-gray-400 text-sm">××× ××©××× ×××ª ×××¦××</div>
                               ) : (
                                 <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
                                   <table className="w-full text-sm border-collapse">
                                     <thead>
                                       <tr className="bg-white border-b border-gray-100 text-gray-500 text-xs">
-                                        <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">מי הוציא</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">לפני מע״מ</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">סה״כ</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">שולם</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">יתרה</th>
-                                        <th className="px-3 py-2.5 text-center font-semibold">סטטוס</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">××¡×³</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">×ª××¨××</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">×¡××</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">×× ×××¦××</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">××¤× × ××¢×´×</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">×¡××´×</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">×©×××</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">××ª×¨×</th>
+                                        <th className="px-3 py-2.5 text-center font-semibold">×¡××××¡</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -2202,22 +2202,22 @@ function ClientsTab() {
                                         const isPaid = rem === 0
                                         return (
                                           <tr key={inv.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`} onClick={e => e.stopPropagation()}>
-                                            <td className="px-3 py-2 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
-                                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                                            <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                                            <td className="px-3 py-2 text-gray-600 text-xs">{inv.issued_by || '—'}</td>
+                                            <td className="px-3 py-2 font-mono text-xs text-gray-400">{inv.invoice_num || 'â'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{inv.date || 'â'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || 'â'}</td>
+                                            <td className="px-3 py-2 text-gray-600 text-xs">{inv.issued_by || 'â'}</td>
                                             <td className="px-3 py-2 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
                                             <td className="px-3 py-2 font-semibold text-gray-800">{fmt(inv.total)}</td>
                                             <td className="px-3 py-2 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
                                             <td className="px-3 py-2">
-                                              {rem > 0 ? <span className="text-red-500 font-semibold">{fmt(rem)}</span> : <span className="text-gray-300 text-xs">—</span>}
+                                              {rem > 0 ? <span className="text-red-500 font-semibold">{fmt(rem)}</span> : <span className="text-gray-300 text-xs">â</span>}
                                             </td>
                                             <td className="px-3 py-2 text-center">
                                               {isPaid
-                                                ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">שולם</span>
+                                                ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">×©×××</span>
                                                 : inv.paid > 0
-                                                  ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">חלקי</span>
-                                                  : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">ממתין</span>}
+                                                  ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">×××§×</span>
+                                                  : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">×××ª××</span>}
                                             </td>
                                           </tr>
                                         )
@@ -2225,7 +2225,7 @@ function ClientsTab() {
                                     </tbody>
                                     <tfoot>
                                       <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold text-sm">
-                                        <td colSpan={4} className="px-3 py-2 text-xs text-gray-500 uppercase">סה״כ ({dispInvs.length})</td>
+                                        <td colSpan={4} className="px-3 py-2 text-xs text-gray-500 uppercase">×¡××´× ({dispInvs.length})</td>
                                         <td className="px-3 py-2 text-gray-600">{fmt(dispInvs.reduce((s,i) => s+i.before_vat,0))}</td>
                                         <td className="px-3 py-2 text-gray-800">{fmt(dispInvs.reduce((s,i) => s+i.total,0))}</td>
                                         <td className="px-3 py-2 text-emerald-600">{fmt(dispInvs.reduce((s,i) => s+i.paid,0))}</td>
@@ -2247,7 +2247,7 @@ function ClientsTab() {
               {filtered.length > 0 && (
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
-                    <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">סה״כ ({filtered.length})</td>
+                    <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">×¡××´× ({filtered.length})</td>
                     <td className="px-5 py-3 text-indigo-600 text-center">{filtered.reduce((s, c) => s + c.invoiceCount, 0)}</td>
                     <td className="px-5 py-3 text-gray-800">{fmt(filtered.reduce((s, c) => s + c.totalAmount, 0))}</td>
                     <td className="px-5 py-3 text-emerald-600">{fmt(filtered.reduce((s, c) => s + c.paidAmount, 0))}</td>
@@ -2268,11 +2268,11 @@ function ClientsTab() {
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
             </div>
-            <p className="font-semibold text-gray-800">למחוק את הלקוח?</p>
-            <p className="text-sm text-gray-500">הלקוח יימחק. החשבוניות המשויכות אליו יישארו.</p>
+            <p className="font-semibold text-gray-800">×××××§ ××ª ×××§××?</p>
+            <p className="text-sm text-gray-500">×××§×× ×××××§. ×××©××× ×××ª ×××©×××××ª ×××× ×××©××¨×.</p>
             <div className="flex gap-2">
-              <button onClick={() => handleDeleteClient(deleteClientId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">מחק</button>
-              <button onClick={() => setDeleteClientId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
+              <button onClick={() => handleDeleteClient(deleteClientId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">×××§</button>
+              <button onClick={() => setDeleteClientId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">×××××</button>
             </div>
           </div>
         </div>
@@ -2313,7 +2313,7 @@ function Detail({ label, value, href, mono }: { label: string; value?: string; h
   )
 }
 
-// ── FinProjectsTab ────────────────────────────────────────────────────────────
+// ââ FinProjectsTab ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 interface Project { id: string; name: string; category: string }
 
 function FinProjectsTab() {
@@ -2323,7 +2323,7 @@ function FinProjectsTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
-  const fmtP = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
+  const fmtP = (n: number) => n ? `âª${Math.round(n).toLocaleString('he-IL')}` : 'â'
 
   // Load projects from Supabase
   useEffect(() => {
@@ -2338,7 +2338,7 @@ function FinProjectsTab() {
       .catch(() => {})
   }, [])
 
-  // When project selected — fetch matching invoices (project_id FK first, then fuzzy name fallback)
+  // When project selected â fetch matching invoices (project_id FK first, then fuzzy name fallback)
   useEffect(() => {
     if (!sel) return
     const project = projects.find(p => p.id === sel)
@@ -2425,39 +2425,39 @@ function FinProjectsTab() {
   return (
     <div className="flex h-full" dir="rtl" style={{ background: 'var(--bg-secondary)' }}>
 
-      {/* ── Left sidebar ── */}
+      {/* ââ Left sidebar ââ */}
       <aside className="w-60 flex-shrink-0 overflow-y-auto p-4 space-y-3" style={{ background: 'linear-gradient(160deg, #0c0e1c 0%, #111827 60%)', borderLeft: '1px solid rgba(99,102,241,0.1)' }}>
         <div className="px-1 pb-2">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>פרויקטים</p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>×¤×¨×××§×××</p>
         </div>
-        <ProjectList label="אומנים" category="artist" items={artists} />
-        <ProjectList label="הפקות" category="production" items={productions} />
+        <ProjectList label="×××× ××" category="artist" items={artists} />
+        <ProjectList label="××¤×§××ª" category="production" items={productions} />
       </aside>
 
-      {/* ── Right panel ── */}
+      {/* ââ Right panel ââ */}
       <div className="flex-1 overflow-auto p-6 space-y-5">
         {!current ? (
-          <div className="flex items-center justify-center h-full text-gray-400 text-sm">בחר פרויקט מהרשימה</div>
+          <div className="flex items-center justify-center h-full text-gray-400 text-sm">×××¨ ×¤×¨×××§× ×××¨×©×××</div>
         ) : (
           <>
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{current.name}</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות משויכות</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} ××©××× ×××ª ××©×××××ª</p>
               </div>
               <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
-                {current.category === 'artist' ? '🎤 אומן' : '🎬 הפקה'}
+                {current.category === 'artist' ? 'ð¤ ××××' : 'ð¬ ××¤×§×'}
               </span>
             </div>
 
             {/* KPI cards */}
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'סה"כ הכנסות', value: fmtP(totalRev),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-                { label: 'שולם',         value: fmtP(totalPaid), color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-                { label: 'נותר לגבייה', value: fmtP(totalRem),  color: totalRem > 0 ? '#f59e0b' : '#10b981', bg: totalRem > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)' },
-                { label: 'חשבוניות',    value: String(invoices.length), color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+                { label: '×¡×"× ××× ×¡××ª', value: fmtP(totalRev),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+                { label: '×©×××',         value: fmtP(totalPaid), color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+                { label: '× ××ª×¨ ××××××', value: fmtP(totalRem),  color: totalRem > 0 ? '#f59e0b' : '#10b981', bg: totalRem > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)' },
+                { label: '××©××× ×××ª',    value: String(invoices.length), color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
               ].map(card => (
                 <div key={card.label} className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                   <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{card.label}</div>
@@ -2469,9 +2469,9 @@ function FinProjectsTab() {
             {/* Filter tabs */}
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
               {([
-                { key: 'all',  label: 'הכל',    count: invoices.length },
-                { key: 'open', label: 'פתוחות', count: openCount },
-                { key: 'paid', label: 'שולם',   count: paidCount },
+                { key: 'all',  label: '×××',    count: invoices.length },
+                { key: 'open', label: '×¤×ª××××ª', count: openCount },
+                { key: 'paid', label: '×©×××',   count: paidCount },
               ] as const).map(({ key, label, count }) => (
                 <button
                   key={key}
@@ -2487,16 +2487,16 @@ function FinProjectsTab() {
             {/* Invoice table */}
             <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
               {loadingInv ? (
-                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען חשבוניות...</div>
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>×××¢× ××©××× ×××ª...</div>
               ) : displayed.length === 0 ? (
                 <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  {invoices.length === 0 ? 'לא נמצאו חשבוניות לפרויקט זה' : 'אין חשבוניות להצגה בפילטר זה'}
+                  {invoices.length === 0 ? '×× × ××¦×× ××©××× ×××ª ××¤×¨×××§× ××' : '××× ××©××× ×××ª ×××¦×× ××¤××××¨ ××'}
                 </div>
               ) : (
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      {['מס׳', 'תאריך', 'סוג', 'מי הוציא', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
+                      {['××¡×³', '×ª××¨××', '×¡××', '×× ×××¦××', '××¤× × ××¢"×', '×¡×"×', '×©×××', '××ª×¨×', '×¡××××¡'].map(h => (
                         <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
@@ -2507,20 +2507,20 @@ function FinProjectsTab() {
                       const isPaid = rem === 0
                       const status = isPaid ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
                       const statusStyle = {
-                        paid:    { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
-                        partial: { bg: '#fef3c7', color: '#92400e', label: 'חלקי' },
-                        unpaid:  { bg: '#fee2e2', color: '#991b1b', label: 'ממתין' },
+                        paid:    { bg: '#d1fae5', color: '#065f46', label: '×©×××' },
+                        partial: { bg: '#fef3c7', color: '#92400e', label: '×××§×' },
+                        unpaid:  { bg: '#fee2e2', color: '#991b1b', label: '×××ª××' },
                       }[status]
                       return (
                         <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
-                          <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{inv.date || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || '—'}</td>
+                          <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || 'â'}</td>
+                          <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{inv.date || 'â'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || 'â'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || 'â'}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmtP(inv.before_vat)}</td>
                           <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmtP(inv.total)}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(inv.paid)}</td>
-                          <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmtP(rem) : '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmtP(rem) : 'â'}</td>
                           <td className="px-4 py-2.5">
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: statusStyle.bg, color: statusStyle.color }}>{statusStyle.label}</span>
                           </td>
@@ -2530,7 +2530,7 @@ function FinProjectsTab() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({displayed.length})</td>
+                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>×¡×"× ({displayed.length})</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{fmtP(displayed.reduce((s,i) => s+i.before_vat,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
@@ -2566,8 +2566,8 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
         <div className='flex-1 flex items-center justify-center'>
           <div className='text-center text-gray-400'>
             <svg className='w-12 h-12 mx-auto mb-3 text-gray-300' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={1.5} d='M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' /></svg>
-            <p className='text-sm font-semibold text-gray-500'>הוצאות ותשלומים</p>
-            <p className='text-xs text-gray-400 mt-1'>בקרוב...</p>
+            <p className='text-sm font-semibold text-gray-500'>×××¦×××ª ××ª×©×××××</p>
+            <p className='text-xs text-gray-400 mt-1'>××§×¨××...</p>
           </div>
         </div>
       )}
@@ -2577,7 +2577,7 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
           <iframe
             src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTbSGGOVXESrSzFqHyFXdGNbpW_s7O6AVR8JF8MLzSXsLpJ5XCv3syW038Vp0pIapEWfYJ35hDXH_GJ/pubhtml?gid=584902190&widget=true&headers=false"
             className="flex-1 w-full border-0"
-            title="טבלה ישנה"
+            title="×××× ××©× ×"
             loading="lazy"
           />
         </div>
