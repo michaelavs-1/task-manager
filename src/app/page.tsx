@@ -50,13 +50,11 @@ export default function LoginPage() {
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="text-xl text-gray-500">טוען...</div></div>
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-slate-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <svg className="w-7 h-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
+          <div className="flex items-center justify-center mx-auto mb-3" style={{ filter: 'drop-shadow(0 4px 16px rgba(77,208,225,0.4))' }}>
+            <img src="/logo.svg" alt="Algorithm" className="w-20 h-20 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">מערכת ניהול משימות</h1>
           <p className="text-gray-500 mt-1">התחבר כדי להמשיך</p>
@@ -68,7 +66,7 @@ export default function LoginPage() {
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-sky-400 focus:border-transparent"
               required
             >
               <option value="">-- בחר --</option>
