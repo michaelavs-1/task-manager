@@ -918,7 +918,7 @@ function InvoicesTab() {
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
-  const [groupByMonth, setGroupByMonth] = useState(false)
+  const [groupByMonth, setGroupByMonth] = useState(true)
   const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
 
   const load = () => {
