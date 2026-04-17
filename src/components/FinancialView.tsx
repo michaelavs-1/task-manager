@@ -1048,6 +1048,7 @@ function InvoicesTab() {
   })
 
   const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
+  const totalBeforeVat = filtered.reduce((s, i) => s + (i.before_vat || 0), 0)
   const totalPaid      = filtered.reduce((s, i) => s + i.paid, 0)
   const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, roundCents(i.total - i.paid)), 0)
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
@@ -1144,9 +1145,10 @@ function InvoicesTab() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3 flex-shrink-0">
+      <div className="grid grid-cols-5 gap-3 flex-shrink-0">
         {[
           { label: 'חשבוניות מוצגות', value: filtered.length, color: '#6366f1' },
+          { label: 'סכום החשבוניות', value: fmt(totalBeforeVat), color: '#64748b' },
           { label: 'סה"כ לתשלום', value: fmt(totalAmount), color: '#3b82f6' },
           { label: 'שולם', value: fmt(totalPaid), color: '#10b981' },
           { label: 'יתרה לגביה', value: fmt(totalRemaining), color: '#ef4444' },
