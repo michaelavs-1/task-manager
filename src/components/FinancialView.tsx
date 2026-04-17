@@ -490,6 +490,7 @@ function InvoicesTab() {
   const [modalInv, setModalInv] = useState<InvoiceRow | null | 'new'>(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [reassignId, setReassignId] = useState<number | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -624,7 +625,39 @@ function InvoicesTab() {
               return (
                 <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-800 max-w-[150px] truncate">{inv.client || '—'}</td>
+                  <td className="px-4 py-3 max-w-[180px]">
+                    {reassignId === inv.id ? (
+                      <select
+                        autoFocus
+                        defaultValue={inv.client_id ?? ''}
+                        onBlur={() => setReassignId(null)}
+                        onChange={async e => {
+                          const chosen = clientList.find(c => c.id === Number(e.target.value))
+                          if (!chosen) return
+                          await fetch(`/api/invoices/${inv.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ client_id: chosen.id, client: chosen.name }),
+                          })
+                          setReassignId(null)
+                          load()
+                        }}
+                        className="w-full border border-indigo-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      >
+                        <option value="">— בחר לקוח —</option>
+                        {clientList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => setReassignId(inv.id)}
+                        className="text-right w-full font-semibold text-gray-800 truncate hover:text-indigo-600 transition-colors group flex items-center gap-1"
+                        title="לחץ לשיוך לקוח"
+                      >
+                        <span className="truncate">{inv.client || '—'}</span>
+                        <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
@@ -776,7 +809,9 @@ function ClientsTab() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [modalClient, setModalClient] = useState<ClientRecord | 'new' | null>(null)
+  const [deleteClientId, setDeleteClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+  const [view, setView] = useState<'cards' | 'table'>('cards')
   const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
   const [ledgerInvoices, setLedgerInvoices] = useState<InvoiceRow[]>([])
   const [ledgerLoading, setLedgerLoading] = useState(false)
@@ -811,6 +846,12 @@ function ClientsTab() {
       const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       if (r.ok) { setModalClient(null); load() }
     } finally { setSaving(false) }
+  }
+
+  const handleDeleteClient = async (id: number) => {
+    await fetch(`/api/clients/${id}`, { method: 'DELETE' })
+    setDeleteClientId(null)
+    load()
   }
 
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
@@ -850,78 +891,174 @@ function ClientsTab() {
         </button>
       </div>
 
-      {/* Search */}
-      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-        placeholder="חפש לקוח..." className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white flex-shrink-0" />
-
-      {/* Cards grid */}
-      <div className="flex-1 overflow-auto min-h-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
-          {filtered.length === 0 ? (
-            <div className="col-span-3 text-center py-16 text-gray-400">לא נמצאו לקוחות</div>
-          ) : filtered.map(c => {
-            const remaining = c.totalAmount - c.paidAmount
-            return (
-              <div key={c.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                {/* Card header */}
-                <div className="px-5 pt-5 pb-3 border-b border-gray-100">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{c.name}</h3>
-                      {c.tax_id && <p className="text-xs text-gray-400 mt-0.5">ח.פ: {c.tax_id}</p>}
-                    </div>
-                    <div className="flex gap-1 mr-2 flex-shrink-0">
-                      {c.tax_status && (
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {c.tax_status}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {(c.contact_name || c.contact_email) && (
-                    <div className="mt-2 space-y-0.5">
-                      {c.contact_name && <p className="text-xs text-gray-500">👤 {c.contact_name}</p>}
-                      {c.contact_email && <p className="text-xs text-gray-400 dir-ltr" dir="ltr">{c.contact_email}</p>}
-                    </div>
-                  )}
-                </div>
-                {/* Card stats */}
-                <div className="px-5 py-3 grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div className="text-base font-bold text-indigo-600">{c.invoiceCount}</div>
-                    <div className="text-[10px] text-gray-400">חשבוניות</div>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold text-gray-800">{fmt(c.totalAmount)}</div>
-                    <div className="text-[10px] text-gray-400">סה״כ</div>
-                  </div>
-                  <div>
-                    <div className={`text-base font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                      {remaining > 0 ? fmt(remaining) : '✓'}
-                    </div>
-                    <div className="text-[10px] text-gray-400">{remaining > 0 ? 'יתרה' : 'שולם'}</div>
-                  </div>
-                </div>
-                {/* Card actions */}
-                <div className="px-5 pb-4 flex gap-2">
-                  <button
-                    onClick={() => openLedger(c)}
-                    className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
-                  >
-                    כרטסת
-                  </button>
-                  <button
-                    onClick={() => setModalClient(c)}
-                    className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                    עריכה
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+      {/* Search + view toggle */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="חפש לקוח..." className="flex-1 max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white">
+          {/* Cards toggle */}
+          <button onClick={() => setView('cards')} title="תצוגת כרטיסים"
+            className={`px-3 py-2 transition-colors ${view === 'cards' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <rect x="2" y="2" width="7" height="7" rx="1.5" /><rect x="11" y="2" width="7" height="7" rx="1.5" />
+              <rect x="2" y="11" width="7" height="7" rx="1.5" /><rect x="11" y="11" width="7" height="7" rx="1.5" />
+            </svg>
+          </button>
+          {/* Table toggle */}
+          <button onClick={() => setView('table')} title="תצוגת טבלה"
+            className={`px-3 py-2 border-r border-gray-200 transition-colors ${view === 'table' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 6h18M3 14h18M3 18h18" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto min-h-0">
+        {view === 'cards' ? (
+          /* ── Cards grid ── */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+            {filtered.length === 0 ? (
+              <div className="col-span-3 text-center py-16 text-gray-400">לא נמצאו לקוחות</div>
+            ) : filtered.map(c => {
+              const remaining = c.totalAmount - c.paidAmount
+              return (
+                <div key={c.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                  <div className="px-5 pt-5 pb-3 border-b border-gray-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{c.name}</h3>
+                        {c.tax_id && <p className="text-xs text-gray-400 mt-0.5">ח.פ: {c.tax_id}</p>}
+                      </div>
+                      <div className="flex gap-1 mr-2 flex-shrink-0">
+                        {c.tax_status && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {c.tax_status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {(c.contact_name || c.contact_email) && (
+                      <div className="mt-2 space-y-0.5">
+                        {c.contact_name && <p className="text-xs text-gray-500">👤 {c.contact_name}</p>}
+                        {c.contact_email && <p className="text-xs text-gray-400" dir="ltr">{c.contact_email}</p>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-5 py-3 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-base font-bold text-indigo-600">{c.invoiceCount}</div>
+                      <div className="text-[10px] text-gray-400">חשבוניות</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-gray-800">{fmt(c.totalAmount)}</div>
+                      <div className="text-[10px] text-gray-400">סה״כ</div>
+                    </div>
+                    <div>
+                      <div className={`text-base font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {remaining > 0 ? fmt(remaining) : '✓'}
+                      </div>
+                      <div className="text-[10px] text-gray-400">{remaining > 0 ? 'יתרה' : 'שולם'}</div>
+                    </div>
+                  </div>
+                  <div className="px-5 pb-4 flex gap-2">
+                    <button onClick={() => openLedger(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
+                    <button onClick={() => setModalClient(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">עריכה</button>
+                    <button onClick={() => setDeleteClientId(c.id)} className="py-1.5 px-2.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* ── Table view ── */
+          <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="px-5 py-3 text-right font-semibold">שם לקוח</th>
+                  <th className="px-5 py-3 text-right font-semibold">ח.פ</th>
+                  <th className="px-5 py-3 text-right font-semibold">סטטוס</th>
+                  <th className="px-5 py-3 text-right font-semibold">איש קשר</th>
+                  <th className="px-5 py-3 text-right font-semibold">חשבוניות</th>
+                  <th className="px-5 py-3 text-right font-semibold">סה״כ</th>
+                  <th className="px-5 py-3 text-right font-semibold">יתרה</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td></tr>
+                ) : filtered.map((c, i) => {
+                  const remaining = c.totalAmount - c.paidAmount
+                  return (
+                    <tr key={c.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                      <td className="px-5 py-3 font-semibold text-gray-900">{c.name}</td>
+                      <td className="px-5 py-3 text-gray-400 text-xs font-mono">{c.tax_id || '—'}</td>
+                      <td className="px-5 py-3">
+                        {c.tax_status ? (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.tax_status}</span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-5 py-3 text-gray-600 text-xs">
+                        <div>{c.contact_name || '—'}</div>
+                        {c.contact_email && <div className="text-gray-400" dir="ltr">{c.contact_email}</div>}
+                      </td>
+                      <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{c.invoiceCount}</td>
+                      <td className="px-5 py-3 font-semibold text-gray-800">{fmt(c.totalAmount)}</td>
+                      <td className="px-5 py-3">
+                        {remaining > 0
+                          ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
+                          : <span className="text-emerald-500 text-xs">✓ שולם</span>}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => openLedger(c)} className="text-xs px-3 py-1 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
+                          <button onClick={() => setModalClient(c)} className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">עריכה</button>
+                          <button onClick={() => setDeleteClientId(c.id)} className="text-xs px-2 py-1 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              {filtered.length > 0 && (
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
+                    <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">סה״כ ({filtered.length})</td>
+                    <td className="px-5 py-3 text-indigo-600 text-center">{filtered.reduce((s, c) => s + c.invoiceCount, 0)}</td>
+                    <td className="px-5 py-3 text-gray-800">{fmt(filtered.reduce((s, c) => s + c.totalAmount, 0))}</td>
+                    <td className="px-5 py-3 text-red-500">{fmt(filtered.reduce((s, c) => s + Math.max(0, c.totalAmount - c.paidAmount), 0))}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Delete confirm */}
+      {deleteClientId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteClientId(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+            </div>
+            <p className="font-semibold text-gray-800">למחוק את הלקוח?</p>
+            <p className="text-sm text-gray-500">הלקוח יימחק. החשבוניות המשויכות אליו יישארו.</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleDeleteClient(deleteClientId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">מחק</button>
+              <button onClick={() => setDeleteClientId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Client Modal (add / edit) */}
       {modalClient !== null && (
