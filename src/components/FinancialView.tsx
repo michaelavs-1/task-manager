@@ -887,6 +887,8 @@ function InvoicesTab() {
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
+  const [groupByMonth, setGroupByMonth] = useState(false)
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
 
   const load = () => {
     setLoading(true)
@@ -972,14 +974,24 @@ function InvoicesTab() {
           <h2 className="text-base font-bold text-gray-800">חשבוניות</h2>
           <p className="text-xs text-gray-400 mt-0.5">{invoices.length} חשבוניות סה"כ</p>
         </div>
-        <button
-          onClick={() => setModalInv('new')}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-all"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          הזנת חשבונית חדשה
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Group by month toggle */}
+          <button
+            onClick={() => setGroupByMonth(g => !g)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${groupByMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            לפי חודש
+          </button>
+          <button
+            onClick={() => setModalInv('new')}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-all"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            הזנת חשבונית חדשה
+          </button>
+        </div>
       </div>
 
       {/* Open / Closed tabs */}
@@ -1051,98 +1063,224 @@ function InvoicesTab() {
         </select>
       </div>
 
-      {/* Table */}
+      {/* Table — flat or grouped by month */}
       <div className="flex-1 overflow-auto rounded-2xl border border-gray-200 bg-white min-h-0">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
-              <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
-              <th className="px-4 py-3 text-right font-semibold">מס'</th>
-              <th className="px-4 py-3 text-right font-semibold">לקוח</th>
-              <th className="px-4 py-3 text-right font-semibold">תאריך</th>
-              <th className="px-4 py-3 text-right font-semibold">סוג</th>
-              <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
-              <th className="px-4 py-3 text-right font-semibold">לפני מע"מ</th>
-              <th className="px-4 py-3 text-right font-semibold">סה"כ</th>
-              <th className="px-4 py-3 text-right font-semibold">שולם</th>
-              <th className="px-4 py-3 text-right font-semibold">יתרה</th>
-              <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
-              <th className="px-4 py-3 text-center font-semibold">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
-            ) : filtered.map((inv, i) => {
-              const st = invoiceStatus(inv)
-              const remaining = Math.max(0, inv.total - inv.paid)
-              return (
-                <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
-                  <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
-                  <td className="px-4 py-3 max-w-[200px] relative">
-                    {reassignId === inv.id ? (
-                      <ClientPicker
-                        clientList={clientList}
-                        currentClientId={inv.client_id}
-                        onSave={async chosen => {
-                          await fetch(`/api/invoices/${inv.id}`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ client_id: chosen.id, client: chosen.name }),
-                          })
-                          setInvoices(prev => prev.map(i =>
-                            i.id === inv.id ? { ...i, client_id: chosen.id, client: chosen.name } : i
-                          ))
-                          setReassignId(null)
-                        }}
-                        onClose={() => setReassignId(null)}
-                      />
-                    ) : null}
-                    <button
-                      onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)}
-                      className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`}
-                      title="לחץ לשיוך לקוח"
-                    >
-                      <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך לקוח'}</span>
-                      <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
-                  <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
-                  <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
-                  <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-center">
-                      <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      </button>
-                      <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-          {filtered.length > 0 && (
-            <tfoot>
-              <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
-                <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
-                <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
-                <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
-                <td className="px-4 py-3 text-red-500">{fmt(totalRemaining)}</td>
-                <td /><td />
+        {!groupByMonth ? (
+          /* ── Flat list ── */
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+                <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
+                <th className="px-4 py-3 text-right font-semibold">מס'</th>
+                <th className="px-4 py-3 text-right font-semibold">לקוח</th>
+                <th className="px-4 py-3 text-right font-semibold">תאריך</th>
+                <th className="px-4 py-3 text-right font-semibold">סוג</th>
+                <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
+                <th className="px-4 py-3 text-right font-semibold">לפני מע"מ</th>
+                <th className="px-4 py-3 text-right font-semibold">סה"כ</th>
+                <th className="px-4 py-3 text-right font-semibold">שולם</th>
+                <th className="px-4 py-3 text-right font-semibold">יתרה</th>
+                <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
+                <th className="px-4 py-3 text-center font-semibold">פעולות</th>
               </tr>
-            </tfoot>
-          )}
-        </table>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+              ) : filtered.map((inv, i) => {
+                const st = invoiceStatus(inv)
+                const remaining = Math.max(0, inv.total - inv.paid)
+                return (
+                  <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                    <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                    <td className="px-4 py-3 max-w-[200px] relative">
+                      {reassignId === inv.id ? (
+                        <ClientPicker clientList={clientList} currentClientId={inv.client_id}
+                          onSave={async chosen => {
+                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: chosen.id, client: chosen.name }) })
+                            setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, client_id: chosen.id, client: chosen.name } : i))
+                            setReassignId(null)
+                          }}
+                          onClose={() => setReassignId(null)}
+                        />
+                      ) : null}
+                      <button onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)} className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`} title="לחץ לשיוך לקוח">
+                        <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך לקוח'}</span>
+                        <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
+                    <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
+                    <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 justify-center">
+                        <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
+                  <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                  <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
+                  <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
+                  <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
+                  <td className="px-4 py-3 text-red-500">{fmt(totalRemaining)}</td>
+                  <td /><td />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        ) : (
+          /* ── Grouped by month ── */
+          (() => {
+            // Build month groups from filtered
+            const mGroups: Record<string, { key: string; label: string; rows: InvoiceRow[] }> = {}
+            filtered.forEach(inv => {
+              if (!inv.date) return
+              const d = new Date(inv.date)
+              if (isNaN(d.getTime())) return
+              const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+              const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
+              if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
+              mGroups[key].rows.push(inv)
+            })
+            const groups = Object.values(mGroups).sort((a,b) => b.key.localeCompare(a.key))
+            const COLS = 12
+            const TH = 'px-4 py-3 text-right font-semibold'
+
+            return (
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+                    <th className="px-3 py-3 w-8" />
+                    <th className={TH}>מס'</th>
+                    <th className={TH}>לקוח</th>
+                    <th className={TH}>תאריך</th>
+                    <th className={TH}>סוג</th>
+                    <th className={TH}>מי הוציא</th>
+                    <th className={TH}>לפני מע"מ</th>
+                    <th className={TH}>סה"כ</th>
+                    <th className={TH}>שולם</th>
+                    <th className={TH}>יתרה</th>
+                    <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
+                    <th className="px-4 py-3 text-center font-semibold">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.length === 0 ? (
+                    <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+                  ) : groups.map(group => {
+                    const isCollapsed = collapsedMonths.has(group.key)
+                    const mTotal = group.rows.reduce((s,i) => s+i.total, 0)
+                    const mPaid  = group.rows.reduce((s,i) => s+i.paid,  0)
+                    const mRem   = Math.max(0, mTotal - mPaid)
+                    const mOpen  = group.rows.filter(i => Math.max(0,i.total-i.paid) > 0).length
+
+                    return (
+                      <Fragment key={group.key}>
+                        {/* Month header row */}
+                        <tr
+                          className="cursor-pointer select-none"
+                          style={{ background: 'linear-gradient(to left, #eef2ff, #f5f3ff)', borderTop: '2px solid #c7d2fe', borderBottom: '1px solid #c7d2fe' }}
+                          onClick={() => setCollapsedMonths(prev => {
+                            const next = new Set(prev)
+                            next.has(group.key) ? next.delete(group.key) : next.add(group.key)
+                            return next
+                          })}
+                        >
+                          <td className="px-3 py-3 text-center">
+                            <span className="text-indigo-400 text-xs transition-transform inline-block" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>▶</span>
+                          </td>
+                          <td colSpan={2} className="px-4 py-3">
+                            <span className="font-bold text-indigo-700 text-sm">{group.label}</span>
+                            <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
+                            {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
+                          </td>
+                          <td colSpan={4} />
+                          <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
+                          <td className="px-4 py-3 text-xs font-bold text-emerald-600">{fmt(mPaid)}</td>
+                          <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : '✓'}</td>
+                          <td colSpan={2} />
+                        </tr>
+
+                        {/* Invoice rows for this month */}
+                        {!isCollapsed && group.rows.map((inv, i) => {
+                          const st = invoiceStatus(inv)
+                          const remaining = Math.max(0, inv.total - inv.paid)
+                          return (
+                            <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                              <td className="px-3 py-2.5 text-center text-gray-300 text-xs font-mono">{i + 1}</td>
+                              <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                              <td className="px-4 py-2.5 max-w-[180px] relative">
+                                {reassignId === inv.id ? (
+                                  <ClientPicker clientList={clientList} currentClientId={inv.client_id}
+                                    onSave={async chosen => {
+                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: chosen.id, client: chosen.name }) })
+                                      setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, client_id: chosen.id, client: chosen.name } : i))
+                                      setReassignId(null)
+                                    }}
+                                    onClose={() => setReassignId(null)}
+                                  />
+                                ) : null}
+                                <button onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)} className={`text-right w-full truncate hover:text-indigo-600 group flex items-center gap-1 text-xs ${inv.client_id ? 'font-semibold text-gray-800' : 'text-amber-500'}`}>
+                                  <span className="truncate">{inv.client_id ? (inv.client || '—') : '⚠ לא משוייך'}</span>
+                                  <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                              </td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
+                              <td className="px-4 py-2.5 font-semibold text-gray-800 text-xs">{fmt(inv.total)}</td>
+                              <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
+                              <td className="px-4 py-2.5 text-xs">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                              <td className="px-4 py-2.5 text-center"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
+                              <td className="px-4 py-2.5">
+                                <div className="flex gap-1 justify-center">
+                                  <button onClick={() => setModalInv(inv)} className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                  </button>
+                                  <button onClick={() => setDeleteId(inv.id)} className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
+                    <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
+                    <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
+                    <td className="px-4 py-3 text-emerald-600 text-xs">{fmt(totalPaid)}</td>
+                    <td className="px-4 py-3 text-red-500 text-xs">{fmt(totalRemaining)}</td>
+                    <td /><td />
+                  </tr>
+                </tfoot>
+              </table>
+            )
+          })()
+        )}
       </div>
 
       {/* Create / Edit Modal */}
