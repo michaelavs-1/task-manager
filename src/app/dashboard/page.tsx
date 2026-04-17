@@ -272,13 +272,13 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 flex flex-col flex-shrink-0 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #0c0e1c 0%, #111827 60%, #0e1220 100%)', borderLeft: '1px solid rgba(99,102,241,0.1)' }}>
         {/* Ambient top glow */}
-        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 70%)' }} />
+        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none" style={{ background: activeSection === 'financial' ? 'radial-gradient(ellipse at 50% -10%, rgba(20,184,166,0.22) 0%, transparent 70%)' : 'radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 70%)', transition: 'background 0.4s ease' }} />
 
         {/* Header */}
         <div className="relative px-5 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {/* Logo row */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', boxShadow: '0 4px 16px rgba(99,102,241,0.45)' }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: activeSection === 'financial' ? 'linear-gradient(135deg, #14b8a6 0%, #059669 100%)' : 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)', boxShadow: activeSection === 'financial' ? '0 4px 16px rgba(20,184,166,0.45)' : '0 4px 16px rgba(21,101,192,0.45)', transition: 'all 0.4s ease' }}>
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
               </svg>
@@ -291,12 +291,12 @@ export default function Dashboard() {
 
           {/* User chip */}
           <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: activeSection === 'financial' ? 'linear-gradient(135deg, #14b8a6, #059669)' : 'linear-gradient(135deg, #1565c0, #0d47a1)', color: 'white', boxShadow: activeSection === 'financial' ? '0 2px 8px rgba(20,184,166,0.4)' : '0 2px 8px rgba(21,101,192,0.4)', transition: 'all 0.4s ease' }}>
               {userName ? userName.charAt(0) : '?'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{userName}</p>
-              <p className="text-xs" style={{ color: 'rgba(139,92,246,0.8)' }}>{userRole === 'manager' ? 'מנהל' : 'עובד'}</p>
+              <p className="text-xs" style={{ color: activeSection === 'financial' ? 'rgba(45,212,191,0.8)' : 'rgba(56,189,248,0.8)', transition: 'color 0.4s ease' }}>{userRole === 'manager' ? 'מנהל' : 'עובד'}</p>
             </div>
           </div>
 
@@ -305,14 +305,14 @@ export default function Dashboard() {
             <button
               onClick={() => setActiveSection("management")}
               className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
-              style={activeSection === "management" ? { background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 2px 10px rgba(99,102,241,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
+              style={activeSection === "management" ? { background: 'linear-gradient(135deg, #1565c0, #0d47a1)', color: 'white', boxShadow: '0 2px 10px rgba(21,101,192,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
               ניהול
             </button>
             <button
               onClick={() => setActiveSection("financial")}
               className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
-              style={activeSection === "financial" ? { background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 2px 10px rgba(99,102,241,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
+              style={activeSection === "financial" ? { background: 'linear-gradient(135deg, #14b8a6, #059669)', color: 'white', boxShadow: '0 2px 10px rgba(20,184,166,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
               פיננסי
             </button>
@@ -351,15 +351,15 @@ export default function Dashboard() {
                 onClick={() => setActiveFinTab(tab)}
                 className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
                 style={{
-                  background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
-                  border: isActive ? '1px solid rgba(99,102,241,0.15)' : '1px solid transparent',
+                  background: isActive ? 'rgba(20,184,166,0.12)' : 'transparent',
+                  border: isActive ? '1px solid rgba(20,184,166,0.2)' : '1px solid transparent',
                   color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
                 }}
-                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(20,184,166,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
                 onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)' } }}
               >
-                {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #6366f1, #a855f7)' }} />}
-                <div className="flex-shrink-0" style={{ color: isActive ? '#818cf8' : 'rgba(255,255,255,0.3)' }}>{icon}</div>
+                {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #14b8a6, #059669)' }} />}
+                <div className="flex-shrink-0" style={{ color: isActive ? '#2dd4bf' : 'rgba(255,255,255,0.3)' }}>{icon}</div>
                 <span className="font-medium">{label}</span>
               </button>
             )
@@ -371,11 +371,11 @@ export default function Dashboard() {
                 onClick={() => setActiveTab(tab)}
                 className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all group"
                 style={{
-                  background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
-                  border: isActive ? '1px solid rgba(99,102,241,0.15)' : '1px solid transparent',
+                  background: isActive ? 'rgba(21,101,192,0.14)' : 'transparent',
+                  border: isActive ? '1px solid rgba(21,101,192,0.2)' : '1px solid transparent',
                   color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
                 }}
-                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(21,101,192,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
                 onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)' } }}
               >
                 {isActive && (
