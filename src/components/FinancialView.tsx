@@ -1145,6 +1145,7 @@ function ClientsTab() {
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [view, setView] = useState<'cards' | 'table'>('table')
+  const [showCharts, setShowCharts] = useState(false)
   const [sortKey, setSortKey] = useState<'name' | 'invoiceCount' | 'totalAmount' | 'paidAmount' | 'remaining'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
@@ -1267,8 +1268,33 @@ function ClientsTab() {
         </button>
       </div>
 
-      {/* Charts snapshot */}
-      {clients.length > 0 && <ClientsSnapshot clients={clients} fmt={fmt} />}
+      {/* Charts snapshot — collapsible */}
+      {clients.length > 0 && (
+        <div className="flex-shrink-0">
+          <button
+            onClick={() => setShowCharts(v => !v)}
+            className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-indigo-600 transition-colors px-1 py-1 rounded-lg group"
+          >
+            <svg
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${showCharts ? 'rotate-90' : 'rotate-0'}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+            תמונת מצב
+            <span className="text-gray-300 group-hover:text-indigo-300 font-normal">{showCharts ? 'סגור' : 'פתח'}</span>
+          </button>
+          {showCharts && (
+            <div className="mt-3">
+              <ClientsSnapshot clients={clients} fmt={fmt} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search + view toggle */}
       <div className="flex items-center gap-3 flex-shrink-0">
