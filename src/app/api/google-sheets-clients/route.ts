@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server'
 const SHEET_ID = '1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo'
 const GID = '584902190'
 
-// Column indices (0-based) — based on חשבוניות כללי sheet layout
-// Adjust if needed: F = index 5 = לקוח, look for amount/paid columns
+// Column indices (0-based) — "חשבוניות כללי" sheet:
+// A=0 מי הוציא | B=1 מי שלח | C=2 תאריך | D=3 סוג | E=4 מס' | F=5 לקוח | G=6 לפני מע"מ | H=7 סה"כ | I=8 שולם
 const COL_CLIENT = 5        // F — לקוח
-const COL_TOTAL = 8         // I — סכום / סה"כ (adjust to actual column)
-const COL_PAID = 9          // J — שולם (adjust to actual column)
+const COL_TOTAL = 7         // H — סה"כ לתשלום
+const COL_PAID = 8          // I — שולם
 
 interface ClientRow {
   name: string
