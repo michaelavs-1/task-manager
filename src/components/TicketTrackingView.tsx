@@ -212,7 +212,7 @@ export function TicketTrackingView() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {daysToShow !== null
-                      ? <span className={'text-sm ' + daysColor}>{daysToShow === 0 ? 'היום!' : daysToShow === 1 ? 'מחר' : daysToShow + ' י''}</span>
+                      ? <span className={'text-sm ' + daysColor}>{daysToShow === 0 ? 'היום!' : daysToShow === 1 ? 'מחר' : daysToShow + ' י\''}</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-4 py-3">
