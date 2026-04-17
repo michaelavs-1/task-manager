@@ -402,7 +402,12 @@ export function CampaignsView() {
               </button>
             ))}
           </div>
-          <div className="flex items-center justify-between gap-3">
+          <input
+            type="text"
+            placeholder="חפש קמפיין..."
+            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
+          />
+          <div className="flex justify-end">
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <button
                 onClick={() => setBarbyViewMode('cards')}
@@ -419,11 +424,6 @@ export function CampaignsView() {
                 תצוגת טבלה
               </button>
             </div>
-            <input
-              type="text"
-              placeholder="חפש קמפיין..."
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
-            />
           </div>
         </div>
       )}
