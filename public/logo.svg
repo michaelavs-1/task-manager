@@ -1,31 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="topFace" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4dd0e1"/>
-      <stop offset="100%" style="stop-color:#0097a7"/>
+    <linearGradient id="gTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#62d9e8"/>
+      <stop offset="50%" stop-color="#29b6c8"/>
+      <stop offset="100%" stop-color="#0097a7"/>
     </linearGradient>
-    <linearGradient id="leftFace" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#1976d2"/>
-      <stop offset="100%" style="stop-color:#1565c0"/>
+    <linearGradient id="gLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2196f3"/>
+      <stop offset="100%" stop-color="#1565c0"/>
     </linearGradient>
-    <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#0d47a1"/>
-      <stop offset="100%" style="stop-color:#1a237e"/>
+    <linearGradient id="gRight" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#0a2260"/>
+      <stop offset="100%" stop-color="#0d1a4a"/>
+    </linearGradient>
+    <linearGradient id="gEdgeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a0ecf5"/>
+      <stop offset="100%" stop-color="#4dd0e1"/>
     </linearGradient>
   </defs>
-  <polygon points="60,8 104,32 60,56 16,32" fill="url(#topFace)"/>
-  <polygon points="16,32 60,56 60,98 16,74" fill="url(#leftFace)"/>
-  <polygon points="104,32 60,56 60,98 104,74" fill="url(#rightFace)"/>
-  <line x1="60" y1="8" x2="60" y2="56" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-  <line x1="38" y1="20" x2="82" y2="44" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-  <line x1="16" y1="32" x2="104" y2="32" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-  <line x1="38" y1="44" x2="82" y2="20" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-  <line x1="16" y1="53" x2="60" y2="77" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
-  <line x1="38" y1="44" x2="38" y2="86" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
-  <line x1="60" y1="77" x2="104" y2="53" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
-  <line x1="82" y1="44" x2="82" y2="86" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
-  <line x1="60" y1="8" x2="104" y2="32" stroke="rgba(255,255,255,0.35)" stroke-width="1.2"/>
-  <line x1="60" y1="8" x2="16" y2="32" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
-  <line x1="60" y1="56" x2="60" y2="98" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-  <text x="60" y="80" font-family="Arial Black, sans-serif" font-size="18" font-weight="900" fill="white" text-anchor="middle" opacity="0.9">A</text>
+
+  <!-- Outer cube faces -->
+  <!-- Top face -->
+  <polygon points="100,14 168,52 100,90 32,52" fill="url(#gTop)"/>
+  <!-- Left face -->
+  <polygon points="32,52 100,90 100,162 32,124" fill="url(#gLeft)"/>
+  <!-- Right face -->
+  <polygon points="168,52 100,90 100,162 168,124" fill="url(#gRight)"/>
+
+  <!-- Inner diamond grid on TOP face (4x4 arrangement) -->
+  <!-- Row 1 top face diamonds -->
+  <polygon points="100,20 119,29 100,38 81,29" fill="rgba(255,255,255,0.18)"/>
+  <polygon points="119,29 138,38 119,47 100,38" fill="rgba(255,255,255,0.12)"/>
+  <polygon points="81,29 100,38 81,47 62,38" fill="rgba(255,255,255,0.12)"/>
+  <!-- Row 2 top face diamonds -->
+  <polygon points="100,38 119,47 100,56 81,47" fill="rgba(255,255,255,0.15)"/>
+  <polygon points="119,47 138,56 119,65 100,56" fill="rgba(0,0,0,0.08)"/>
+  <polygon points="81,47 100,56 81,65 62,56" fill="rgba(0,0,0,0.08)"/>
+  <!-- Row 3 top face diamonds -->
+  <polygon points="100,56 119,65 100,74 81,65" fill="rgba(255,255,255,0.1)"/>
+  <polygon points="119,65 138,74 119,83 100,74" fill="rgba(0,0,0,0.1)"/>
+  <polygon points="81,65 100,74 81,83 62,74" fill="rgba(0,0,0,0.1)"/>
+
+  <!-- Inner diamond grid on LEFT face -->
+  <polygon points="32,59 51,68 51,87 32,78" fill="rgba(255,255,255,0.12)"/>
+  <polygon points="51,68 70,77 70,96 51,87" fill="rgba(255,255,255,0.08)"/>
+  <polygon points="70,77 89,86 89,105 70,96" fill="rgba(255,255,255,0.06)"/>
+  <polygon points="32,78 51,87 51,106 32,97" fill="rgba(255,255,255,0.08)"/>
+  <polygon points="51,87 70,96 70,115 51,106" fill="rgba(255,255,255,0.05)"/>
+  <polygon points="70,96 89,105 89,124 70,115" fill="rgba(255,255,255,0.04)"/>
+  <polygon points="32,97 51,106 51,125 32,116" fill="rgba(255,255,255,0.06)"/>
+  <polygon points="51,106 70,115 70,134 51,125" fill="rgba(255,255,255,0.03)"/>
+  <polygon points="70,115 89,124 89,143 70,134" fill="rgba(255,255,255,0.02)"/>
+
+  <!-- Inner diamond grid on RIGHT face -->
+  <polygon points="168,59 168,78 149,87 149,68" fill="rgba(255,255,255,0.08)"/>
+  <polygon points="149,68 149,87 130,96 130,77" fill="rgba(255,255,255,0.05)"/>
+  <polygon points="130,77 130,96 111,105 111,86" fill="rgba(255,255,255,0.04)"/>
+  <polygon points="168,78 168,97 149,106 149,87" fill="rgba(255,255,255,0.06)"/>
+  <polygon points="149,87 149,106 130,115 130,96" fill="rgba(255,255,255,0.04)"/>
+  <polygon points="130,96 130,115 111,124 111,105" fill="rgba(255,255,255,0.03)"/>
+  <polygon points="168,97 168,116 149,125 149,106" fill="rgba(255,255,255,0.04)"/>
+  <polygon points="149,106 149,125 130,134 130,115" fill="rgba(255,255,255,0.02)"/>
+  <polygon points="130,115 130,134 111,143 111,124" fill="rgba(255,255,255,0.02)"/>
+
+  <!-- Edge highlights -->
+  <line x1="100" y1="14" x2="100" y2="90" stroke="rgba(180,240,250,0.5)" stroke-width="1.5"/>
+  <line x1="32" y1="52" x2="100" y2="90" stroke="rgba(180,240,250,0.3)" stroke-width="1"/>
+  <line x1="168" y1="52" x2="100" y2="90" stroke="rgba(180,240,250,0.2)" stroke-width="1"/>
+  <line x1="100" y1="90" x2="100" y2="162" stroke="rgba(180,240,250,0.25)" stroke-width="1.5"/>
+
+  <!-- Top face edge glow -->
+  <polyline points="32,52 100,14 168,52" fill="none" stroke="rgba(160,236,245,0.6)" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- "Algorithm" text -->
+  <text x="100" y="186" font-family="Arial,sans-serif" font-size="22" font-weight="bold" text-anchor="middle" letter-spacing="1" fill="#4dd0e1">Algorithm</text>
 </svg>
