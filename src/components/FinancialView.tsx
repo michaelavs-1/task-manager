@@ -869,6 +869,151 @@ function ClientModal({ initial, onSave, onClose, saving }: {
   )
 }
 
+// ── LedgerDrawer ─────────────────────────────────────────────────────────────
+function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
+  client: ClientRecord
+  invoices: InvoiceRow[]
+  loading: boolean
+  onClose: () => void
+  fmt: (n: number) => string
+}) {
+  const [filter, setFilter] = useState<'all' | 'paid' | 'open'>('all')
+
+  const displayed = invoices.filter(inv => {
+    const remaining = Math.max(0, inv.total - inv.paid)
+    if (filter === 'paid') return remaining === 0
+    if (filter === 'open') return remaining > 0
+    return true
+  })
+
+  const totalAll   = invoices.reduce((s, i) => s + i.total, 0)
+  const totalPaid  = invoices.reduce((s, i) => s + i.paid,  0)
+  const totalOpen  = Math.max(0, totalAll - totalPaid)
+
+  const openCount  = invoices.filter(i => Math.max(0, i.total - i.paid) > 0).length
+  const paidCount  = invoices.filter(i => Math.max(0, i.total - i.paid) === 0).length
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="font-bold text-gray-900 text-lg">{client.name}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">כרטסת לקוח — {invoices.length} חשבוניות</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Summary stats */}
+        <div className="px-6 py-4 grid grid-cols-3 gap-3 flex-shrink-0 border-b border-gray-100">
+          <div className="rounded-xl bg-gray-50 px-4 py-3 text-center">
+            <div className="text-lg font-bold text-gray-800">{fmt(totalAll)}</div>
+            <div className="text-xs text-gray-400 mt-0.5">סה״כ חשבוניות</div>
+          </div>
+          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center">
+            <div className="text-lg font-bold text-emerald-600">{fmt(totalPaid)}</div>
+            <div className="text-xs text-emerald-500 mt-0.5">שולם</div>
+          </div>
+          <div className={`rounded-xl px-4 py-3 text-center ${totalOpen > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
+            <div className={`text-lg font-bold ${totalOpen > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              {totalOpen > 0 ? fmt(totalOpen) : '✓ שולם הכל'}
+            </div>
+            <div className={`text-xs mt-0.5 ${totalOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>יתרה לתשלום</div>
+          </div>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="px-6 py-3 flex gap-1 flex-shrink-0">
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            {([
+              { key: 'all',  label: 'הכל',    count: invoices.length },
+              { key: 'open', label: 'פתוחות', count: openCount },
+              { key: 'paid', label: 'שולם',   count: paidCount },
+            ] as const).map(({ key, label, count }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${filter === key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {label}
+                <span className={`text-xs font-normal mr-1.5 ${filter === key ? 'text-indigo-500' : 'text-gray-400'}`}>({count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto px-6 pb-6">
+          {loading ? (
+            <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
+          ) : displayed.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-sm">אין חשבוניות להצגה</div>
+          ) : (
+            <table className="w-full text-sm border-collapse">
+              <thead className="sticky top-0">
+                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
+                  <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">מי הוציא</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">לפני מע״מ</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">סה״כ</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">שולם</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">יתרה</th>
+                  <th className="px-3 py-2.5 text-center font-semibold">סטטוס</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayed.map((inv, i) => {
+                  const remaining = Math.max(0, inv.total - inv.paid)
+                  const isPaid = remaining === 0
+                  return (
+                    <tr key={inv.id} className={`border-b border-gray-100 transition-colors ${isPaid ? 'hover:bg-emerald-50/30' : 'hover:bg-red-50/30'} ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                      <td className="px-3 py-2.5 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-600 text-xs">{inv.issued_by || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-800">{fmt(inv.total)}</td>
+                      <td className="px-3 py-2.5 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
+                      <td className="px-3 py-2.5">
+                        {remaining > 0
+                          ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
+                          : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {isPaid
+                          ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">שולם</span>
+                          : inv.paid > 0
+                            ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">חלקי</span>
+                            : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">ממתין</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold text-sm">
+                  <td colSpan={4} className="px-3 py-2.5 text-xs text-gray-500 uppercase">סה״כ ({displayed.length})</td>
+                  <td className="px-3 py-2.5 text-gray-600">{fmt(displayed.reduce((s, i) => s + i.before_vat, 0))}</td>
+                  <td className="px-3 py-2.5 text-gray-800">{fmt(displayed.reduce((s, i) => s + i.total, 0))}</td>
+                  <td className="px-3 py-2.5 text-emerald-600">{fmt(displayed.reduce((s, i) => s + i.paid, 0))}</td>
+                  <td className="px-3 py-2.5 text-red-500">{fmt(displayed.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0))}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ClientsTab() {
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -1195,55 +1340,13 @@ function ClientsTab() {
 
       {/* Ledger drawer */}
       {ledgerClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setLedgerClient(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-bold text-gray-900 text-lg">{ledgerClient.name}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">כרטסת לקוח</p>
-              </div>
-              <button onClick={() => setLedgerClient(null)} className="text-gray-400 hover:text-gray-600 p-1">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-6">
-              {ledgerLoading ? (
-                <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
-              ) : ledgerInvoices.length === 0 ? (
-                <div className="text-center py-12 text-gray-400 text-sm">אין חשבוניות ללקוח זה</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
-                      <th className="px-3 py-2 text-right">מס׳</th>
-                      <th className="px-3 py-2 text-right">תאריך</th>
-                      <th className="px-3 py-2 text-right">סוג</th>
-                      <th className="px-3 py-2 text-right">מי הוציא</th>
-                      <th className="px-3 py-2 text-right">סכום</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledgerInvoices.map((inv, i) => (
-                      <tr key={inv.id} className={`border-b border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
-                        <td className="px-3 py-2 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
-                        <td className="px-3 py-2 text-gray-500 text-xs">{inv.date || '—'}</td>
-                        <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{inv.issued_by || '—'}</td>
-                        <td className="px-3 py-2 font-semibold text-gray-800">{fmt(inv.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
-                      <td colSpan={4} className="px-3 py-2 text-xs text-gray-500">סה״כ ({ledgerInvoices.length} חשבוניות)</td>
-                      <td className="px-3 py-2 text-gray-800">{fmt(ledgerInvoices.reduce((s, i) => s + i.total, 0))}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
+        <LedgerDrawer
+          client={ledgerClient}
+          invoices={ledgerInvoices}
+          loading={ledgerLoading}
+          onClose={() => setLedgerClient(null)}
+          fmt={fmt}
+        />
       )}
     </div>
   )
