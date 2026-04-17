@@ -292,6 +292,54 @@ function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
   return 'unpaid'
 }
 
+// ── ClientPicker — searchable dropdown for inline client reassignment ──
+function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
+  clientList: ClientRecord[]
+  currentClientId: number | null
+  onSave: (client: ClientRecord) => void
+  onClose: () => void
+}) {
+  const [q, setQ] = useState('')
+  const [chosen, setChosen] = useState<ClientRecord | null>(
+    currentClientId ? clientList.find(c => c.id === currentClientId) ?? null : null
+  )
+  const matches = clientList.filter(c => c.name.toLowerCase().includes(q.toLowerCase()))
+  return (
+    <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-2" dir="rtl">
+      <input
+        autoFocus
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="חפש לקוח..."
+        className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      />
+      <ul className="max-h-52 overflow-y-auto space-y-0.5">
+        {matches.length === 0 && <li className="text-xs text-gray-400 text-center py-3">לא נמצאו תוצאות</li>}
+        {matches.map(c => (
+          <li
+            key={c.id}
+            onClick={() => setChosen(c)}
+            className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen?.id === c.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}
+          >
+            {c.name}
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-2 pt-1 border-t border-gray-100">
+        <button
+          onClick={() => { if (chosen) onSave(chosen) }}
+          disabled={!chosen}
+          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-colors"
+          style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+        >
+          שמור
+        </button>
+        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
   client_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
   invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, payment_date: '', notes: '',
@@ -648,15 +696,12 @@ function InvoicesTab() {
                 <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                   <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
-                  <td className="px-4 py-3 max-w-[180px]">
+                  <td className="px-4 py-3 max-w-[200px] relative">
                     {reassignId === inv.id ? (
-                      <select
-                        autoFocus
-                        defaultValue={inv.client_id ?? ''}
-                        onBlur={() => setReassignId(null)}
-                        onChange={async e => {
-                          const chosen = clientList.find(c => c.id === Number(e.target.value))
-                          if (!chosen) return
+                      <ClientPicker
+                        clientList={clientList}
+                        currentClientId={inv.client_id}
+                        onSave={async chosen => {
                           await fetch(`/api/invoices/${inv.id}`, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
@@ -665,21 +710,17 @@ function InvoicesTab() {
                           setReassignId(null)
                           load()
                         }}
-                        className="w-full border border-indigo-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      >
-                        <option value="">— בחר לקוח —</option>
-                        {clientList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    ) : (
-                      <button
-                        onClick={() => setReassignId(inv.id)}
-                        className="text-right w-full font-semibold text-gray-800 truncate hover:text-indigo-600 transition-colors group flex items-center gap-1"
-                        title="לחץ לשיוך לקוח"
-                      >
-                        <span className="truncate">{inv.client || '—'}</span>
-                        <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
-                    )}
+                        onClose={() => setReassignId(null)}
+                      />
+                    ) : null}
+                    <button
+                      onClick={() => setReassignId(reassignId === inv.id ? null : inv.id)}
+                      className={`text-right w-full truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 ${inv.client ? 'font-semibold text-gray-800' : 'text-amber-500 font-medium'}`}
+                      title="לחץ לשיוך לקוח"
+                    >
+                      <span className="truncate">{inv.client || '⚠ לא משוייך לקוח'}</span>
+                      <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
@@ -835,6 +876,8 @@ function ClientsTab() {
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [view, setView] = useState<'cards' | 'table'>('cards')
+  const [sortKey, setSortKey] = useState<'name' | 'invoiceCount' | 'totalAmount' | 'paidAmount' | 'remaining'>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
   const [ledgerInvoices, setLedgerInvoices] = useState<InvoiceRow[]>([])
   const [ledgerLoading, setLedgerLoading] = useState(false)
@@ -879,8 +922,26 @@ function ClientsTab() {
 
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
-  const filtered = clients.filter(c =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase())
+  const filtered = clients
+    .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      let av: string | number, bv: string | number
+      if (sortKey === 'name') { av = a.name; bv = b.name }
+      else if (sortKey === 'remaining') { av = Math.max(0, a.totalAmount - a.paidAmount); bv = Math.max(0, b.totalAmount - b.paidAmount) }
+      else { av = a[sortKey] as number; bv = b[sortKey] as number }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+
+  function toggleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('asc') }
+  }
+  const SortIcon = ({ col }: { col: typeof sortKey }) => (
+    <span className={`mr-1 text-[10px] ${sortKey === col ? 'text-indigo-500' : 'text-gray-300'}`}>
+      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
   )
   const totalInvoices = clients.reduce((s, c) => s + c.invoiceCount, 0)
   const totalAmount   = clients.reduce((s, c) => s + c.totalAmount, 0)
@@ -969,20 +1030,24 @@ function ClientsTab() {
                       </div>
                     )}
                   </div>
-                  <div className="px-5 py-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center border-t border-gray-100">
                     <div>
-                      <div className="text-base font-bold text-indigo-600">{c.invoiceCount}</div>
+                      <div className="text-sm font-bold text-indigo-600">{c.invoiceCount}</div>
                       <div className="text-[10px] text-gray-400">חשבוניות</div>
                     </div>
                     <div>
-                      <div className="text-base font-bold text-gray-800">{fmt(c.totalAmount)}</div>
+                      <div className="text-sm font-bold text-gray-800">{fmt(c.totalAmount)}</div>
                       <div className="text-[10px] text-gray-400">סה״כ</div>
                     </div>
                     <div>
-                      <div className={`text-base font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                      <div className="text-sm font-bold text-emerald-600">{fmt(c.paidAmount)}</div>
+                      <div className="text-[10px] text-gray-400">שולם</div>
+                    </div>
+                    <div>
+                      <div className={`text-sm font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                         {remaining > 0 ? fmt(remaining) : '✓'}
                       </div>
-                      <div className="text-[10px] text-gray-400">{remaining > 0 ? 'יתרה' : 'שולם'}</div>
+                      <div className="text-[10px] text-gray-400">יתרה</div>
                     </div>
                   </div>
                   <div className="px-5 pb-4 flex gap-2">
@@ -1002,19 +1067,20 @@ function ClientsTab() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
-                  <th className="px-5 py-3 text-right font-semibold">שם לקוח</th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('name')}>שם לקוח <SortIcon col="name" /></th>
                   <th className="px-5 py-3 text-right font-semibold">ח.פ</th>
                   <th className="px-5 py-3 text-right font-semibold">סטטוס</th>
                   <th className="px-5 py-3 text-right font-semibold">איש קשר</th>
-                  <th className="px-5 py-3 text-right font-semibold">חשבוניות</th>
-                  <th className="px-5 py-3 text-right font-semibold">סה״כ</th>
-                  <th className="px-5 py-3 text-right font-semibold">יתרה</th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('invoiceCount')}>חשבוניות <SortIcon col="invoiceCount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('totalAmount')}>סה״כ חשבוניות <SortIcon col="totalAmount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('paidAmount')}>שולם <SortIcon col="paidAmount" /></th>
+                  <th className="px-5 py-3 text-right font-semibold cursor-pointer hover:text-indigo-600 select-none" onClick={() => toggleSort('remaining')}>יתרה לתשלום <SortIcon col="remaining" /></th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td></tr>
+                  <tr><td colSpan={9} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td></tr>
                 ) : filtered.map((c, i) => {
                   const remaining = c.totalAmount - c.paidAmount
                   return (
@@ -1032,10 +1098,11 @@ function ClientsTab() {
                       </td>
                       <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{c.invoiceCount}</td>
                       <td className="px-5 py-3 font-semibold text-gray-800">{fmt(c.totalAmount)}</td>
+                      <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(c.paidAmount)}</td>
                       <td className="px-5 py-3">
                         {remaining > 0
                           ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
-                          : <span className="text-emerald-500 text-xs">✓ שולם</span>}
+                          : <span className="text-emerald-500 text-xs font-semibold">✓ שולם</span>}
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex gap-2 justify-end">
@@ -1056,6 +1123,7 @@ function ClientsTab() {
                     <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">סה״כ ({filtered.length})</td>
                     <td className="px-5 py-3 text-indigo-600 text-center">{filtered.reduce((s, c) => s + c.invoiceCount, 0)}</td>
                     <td className="px-5 py-3 text-gray-800">{fmt(filtered.reduce((s, c) => s + c.totalAmount, 0))}</td>
+                    <td className="px-5 py-3 text-emerald-600">{fmt(filtered.reduce((s, c) => s + c.paidAmount, 0))}</td>
                     <td className="px-5 py-3 text-red-500">{fmt(filtered.reduce((s, c) => s + Math.max(0, c.totalAmount - c.paidAmount), 0))}</td>
                     <td />
                   </tr>
