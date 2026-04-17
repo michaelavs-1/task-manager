@@ -13,15 +13,16 @@ import { useTheme } from "@/components/ThemeProvider"
 import { FinancialView } from "@/components/FinancialView"
 import { UserManagementView } from "@/components/UserManagementView"
 import { MeetingsView } from "@/components/MeetingsView"
+import { GeneralOverviewView } from "@/components/GeneralOverviewView"
 
 type Section = "management" | "financial"
-type Tab = "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users" | "meetings"
+type Tab = "general" | "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users" | "meetings"
 
 export default function Dashboard() {
   const { theme, setTheme } = useTheme()
   const [tasks, setTasks] = useState<Task[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [activeTab, setActiveTab] = useState<Tab>("tasks")
+  const [activeTab, setActiveTab] = useState<Tab>("general")
   const [selectedArtistName, setSelectedArtistName] = useState<string>("")
   const [activeSection, setActiveSection] = useState<Section>("management")
   const [financialTab, setFinancialTab] = useState<'overview'|'main'>('main')
@@ -182,6 +183,15 @@ export default function Dashboard() {
 
   const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
     {
+      tab: "general",
+      label: "כללי",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      ),
+    },
+    {
       tab: "tasks",
       label: "משימות",
       icon: (
@@ -249,27 +259,49 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }} dir="rtl">
       {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-[#0f1117] to-[#1a1d2e] text-white flex flex-col flex-shrink-0 border-r border-white/5">
+      <aside className="w-64 flex flex-col flex-shrink-0 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #0c0e1c 0%, #111827 60%, #0e1220 100%)', borderLeft: '1px solid rgba(99,102,241,0.1)' }}>
+        {/* Ambient top glow */}
+        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 70%)' }} />
+
         {/* Header */}
-        <div className="px-6 py-6 border-b border-white/10">
-          <div className="flex items-center gap-2 mb-2">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">אלגוריתם הפקות</h1>
+        <div className="relative px-5 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          {/* Logo row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', boxShadow: '0 4px 16px rgba(99,102,241,0.45)' }}>
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-sm font-bold leading-tight tracking-tight" style={{ color: 'rgba(255,255,255,0.95)' }}>אלגוריתם הפקות</h1>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>מערכת ניהול</p>
+            </div>
           </div>
-          <p className="text-xs text-white/60">{userName}{userRole === "manager" ? " · מנהל" : ""}</p>
+
+          {/* User chip */}
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
+              {userName ? userName.charAt(0) : '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{userName}</p>
+              <p className="text-xs" style={{ color: 'rgba(139,92,246,0.8)' }}>{userRole === 'manager' ? 'מנהל' : 'עובד'}</p>
+            </div>
+          </div>
+
           {/* Section switcher */}
-          <div className="flex mt-4 bg-white/5 rounded-xl p-1 gap-1">
+          <div className="flex mt-4 p-1 rounded-xl gap-1" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <button
               onClick={() => setActiveSection("management")}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "management" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/90"}`}
+              className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+              style={activeSection === "management" ? { background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 2px 10px rgba(99,102,241,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
               ניהול
             </button>
             <button
               onClick={() => setActiveSection("financial")}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeSection === "financial" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/90"}`}
+              className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+              style={activeSection === "financial" ? { background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 2px 10px rgba(99,102,241,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
               פיננסי
             </button>
@@ -277,95 +309,83 @@ export default function Dashboard() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {activeSection === "financial" ? (
-            <button
-              onClick={() => {}}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-white/10 text-white"
-            >
-              <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            <div className="relative flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #6366f1, #a855f7)' }} />
+              <svg className="w-4 h-4 flex-shrink-0" style={{ color: '#818cf8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              סקירה כללית
-            </button>
-          ) : navItems.map(({ tab, label, icon }) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all before:absolute before:left-0 before:h-full before:w-0.5 before:bg-indigo-400 before:scale-y-0 group-hover:before:scale-y-100 before:transition-transform ${
-                activeTab === tab
-                  ? "bg-white/10 text-white"
-                  : "text-white/50 hover:text-white/90"
-              }`}
-            >
-              <div className={activeTab === tab ? "text-indigo-400" : "text-white/50 group-hover:text-indigo-400 transition-colors"}>
-                {icon}
-              </div>
-              <span>{label}</span>
-            </button>
-          ))}
+              <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>סקירה פיננסית</span>
+            </div>
+          ) : navItems.map(({ tab, label, icon }) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all group"
+                style={{
+                  background: isActive ? 'rgba(99,102,241,0.12)' : 'transparent',
+                  border: isActive ? '1px solid rgba(99,102,241,0.15)' : '1px solid transparent',
+                  color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
+                }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
+                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)' } }}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #6366f1, #a855f7)' }} />
+                )}
+                <div className="flex-shrink-0" style={{ color: isActive ? '#818cf8' : 'rgba(255,255,255,0.3)' }}>
+                  {icon}
+                </div>
+                <span className="font-medium">{label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         {/* Bottom Actions */}
-        <div className="px-3 py-4 border-t border-white/10 space-y-3">
-          {userRole === "manager" && activeTab === "tasks" && (
+        <div className="relative px-3 py-4 space-y-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {userRole === "manager" && activeTab === "tasks" && activeSection === "management" && (
             <button
               onClick={() => setShowNewTask(true)}
-              className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
             >
               + משימה חדשה
             </button>
           )}
 
           {/* Theme Toggle */}
-          <div className="bg-white/5 rounded-xl p-3">
-            <p className="text-xs text-white/60 mb-2 font-medium uppercase tracking-wider">עיצוב</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTheme('light')}
-                title="בהיר"
-                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  theme === 'light'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
-                }`}
-              >
-                בהיר
-              </button>
-              <button
-                onClick={() => setTheme('middle')}
-                title="בינוני"
-                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  theme === 'middle'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
-                }`}
-              >
-                בינוני
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                title="כהה"
-                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  theme === 'dark'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
-                }`}
-              >
-                כהה
-              </button>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="text-xs mb-2 font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>ערכת נושא</p>
+            <div className="flex gap-1.5">
+              {(['light', 'middle', 'dark'] as const).map((t, i) => (
+                <button
+                  key={t}
+                  onClick={() => setTheme(t)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={theme === t ? { background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.35)' } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  {['בהיר', 'בינוני', 'כהה'][i]}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Logout */}
           <button
             onClick={logout}
-            className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm transition-all"
+            style={{ color: 'rgba(255,255,255,0.3)', border: '1px solid transparent' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(252,165,165,0.7)'; (e.currentTarget as HTMLButtonElement).style.border = '1px solid rgba(239,68,68,0.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.3)'; (e.currentTarget as HTMLButtonElement).style.border = '1px solid transparent' }}
           >
-            <span>יציאה</span>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
+            <span>יציאה</span>
           </button>
         </div>
       </aside>
@@ -376,6 +396,16 @@ export default function Dashboard() {
           <FinancialView defaultTab={financialTab} />
         ) : (
         <>
+        {/* General Overview Tab */}
+        {activeTab === "general" && (
+          <GeneralOverviewView
+            tasks={tasks}
+            userName={userName}
+            userRole={userRole}
+            onNavigate={(tab) => setActiveTab(tab as Tab)}
+          />
+        )}
+
         {/* Tasks Tab */}
         {activeTab === "tasks" && (
           <div className="max-w-6xl mx-auto px-8 py-8">

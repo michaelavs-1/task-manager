@@ -116,10 +116,16 @@ export function MediaLibraryView() {
   useEffect(() => {
     setMounted(true)
     loadCampaigns().then(camps => loadGallery(camps))
-    try {
-      const t = localStorage.getItem('dropbox_token_v1')
-      if (t) setDropboxToken(t)
-    } catch {}
+    // Use env var token first, fallback to localStorage
+    const envToken = process.env.NEXT_PUBLIC_DROPBOX_TOKEN
+    if (envToken) {
+      setDropboxToken(envToken)
+    } else {
+      try {
+        const t = localStorage.getItem('dropbox_token_v1')
+        if (t) setDropboxToken(t)
+      } catch {}
+    }
   }, [])
 
   async function loadCampaigns() {
