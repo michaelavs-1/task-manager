@@ -624,6 +624,7 @@ function InvoicesTab() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
+              <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
               <th className="px-4 py-3 text-right font-semibold">מס'</th>
               <th className="px-4 py-3 text-right font-semibold">לקוח</th>
               <th className="px-4 py-3 text-right font-semibold">תאריך</th>
@@ -635,7 +636,6 @@ function InvoicesTab() {
               <th className="px-4 py-3 text-right font-semibold">יתרה</th>
               <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
               <th className="px-4 py-3 text-center font-semibold">פעולות</th>
-              <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
             </tr>
           </thead>
           <tbody>
@@ -646,6 +646,7 @@ function InvoicesTab() {
               const remaining = Math.max(0, inv.total - inv.paid)
               return (
                 <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                  <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
                   <td className="px-4 py-3 max-w-[180px]">
                     {reassignId === inv.id ? (
@@ -698,7 +699,6 @@ function InvoicesTab() {
                       </button>
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
                 </tr>
               )
             })}
@@ -706,7 +706,7 @@ function InvoicesTab() {
           {filtered.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                <td colSpan={5} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                 <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                 <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                 <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
