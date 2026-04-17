@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [activeFinTab, setActiveFinTabRaw] = useState<FinTab>('dashboard')
 
   const setActiveTab = (t: Tab) => { setActiveTabRaw(t); localStorage.setItem('dash_tab', t) }
-  const setActiveSection = (s: Section) => { setActiveSectionRaw(s); localStorage.setItem('dash_section', s) }
+  const setActiveSection = (s: Section) => { setActiveSectionRaw(s); localStorage.setItem('dash_section', s); if (s === 'financial') { setActiveFinTabRaw('dashboard'); localStorage.setItem('dash_fin_tab', 'dashboard') } }
   const setActiveFinTab = (f: FinTab) => { setActiveFinTabRaw(f); localStorage.setItem('dash_fin_tab', f) }
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
