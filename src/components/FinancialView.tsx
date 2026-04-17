@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 
 export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients'
 
@@ -1493,9 +1493,10 @@ function ClientsTab() {
   const [showCharts, setShowCharts] = useState(false)
   const [sortKey, setSortKey] = useState<'name' | 'invoiceCount' | 'totalAmount' | 'paidAmount' | 'remaining'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
-  const [ledgerInvoices, setLedgerInvoices] = useState<InvoiceRow[]>([])
-  const [ledgerLoading, setLedgerLoading] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [invoiceCache, setInvoiceCache] = useState<Record<number, InvoiceRow[]>>({})
+  const [loadingId, setLoadingId] = useState<number | null>(null)
+  const [expandedFilter, setExpandedFilter] = useState<'all' | 'paid' | 'open'>('all')
 
   const load = () => {
     setLoading(true)
@@ -1508,14 +1509,18 @@ function ClientsTab() {
 
   useEffect(load, [])
 
-  const openLedger = (c: ClientRecord) => {
-    setLedgerClient(c)
-    setLedgerLoading(true)
-    fetch(`/api/invoices?client_id=${c.id}`)
-      .then(r => r.json())
-      .then(d => setLedgerInvoices((d.invoices || []).filter((i: InvoiceRow) => i.client_id === c.id)))
-      .catch(() => setLedgerInvoices([]))
-      .finally(() => setLedgerLoading(false))
+  const toggleExpand = (c: ClientRecord) => {
+    if (expandedId === c.id) { setExpandedId(null); return }
+    setExpandedId(c.id)
+    setExpandedFilter('all')
+    if (!invoiceCache[c.id]) {
+      setLoadingId(c.id)
+      fetch(`/api/invoices?client_id=${c.id}`)
+        .then(r => r.json())
+        .then(d => setInvoiceCache(prev => ({ ...prev, [c.id]: (d.invoices || []).filter((i: InvoiceRow) => i.client_id === c.id) })))
+        .catch(() => setInvoiceCache(prev => ({ ...prev, [c.id]: [] })))
+        .finally(() => setLoadingId(null))
+    }
   }
 
   const handleSaveClient = async (data: typeof EMPTY_CLIENT) => {
@@ -1717,7 +1722,7 @@ function ClientsTab() {
                     </div>
                   </div>
                   <div className="px-5 pb-4 flex gap-2">
-                    <button onClick={() => openLedger(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
+                    <button onClick={() => toggleExpand(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
                     <button onClick={() => setModalClient(c)} className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">עריכה</button>
                     <button onClick={() => setDeleteClientId(c.id)} className="py-1.5 px-2.5 rounded-xl border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1749,37 +1754,168 @@ function ClientsTab() {
                   <tr><td colSpan={9} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td></tr>
                 ) : filtered.map((c, i) => {
                   const remaining = c.totalAmount - c.paidAmount
+                  const isExpanded = expandedId === c.id
+                  const clientInvs = invoiceCache[c.id] || []
+                  const isLoading = loadingId === c.id
+
+                  const dispInvs = clientInvs.filter(inv => {
+                    const r = Math.max(0, inv.total - inv.paid)
+                    if (expandedFilter === 'paid') return r === 0
+                    if (expandedFilter === 'open') return r > 0
+                    return true
+                  })
+                  const ledTotal = clientInvs.reduce((s, i) => s + i.total, 0)
+                  const ledPaid  = clientInvs.reduce((s, i) => s + i.paid,  0)
+                  const ledOpen  = Math.max(0, ledTotal - ledPaid)
+                  const openCount = clientInvs.filter(i => Math.max(0, i.total - i.paid) > 0).length
+                  const paidCount = clientInvs.filter(i => Math.max(0, i.total - i.paid) === 0).length
+
                   return (
-                    <tr key={c.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
-                      <td className="px-5 py-3 font-semibold text-gray-900">{c.name}</td>
-                      <td className="px-5 py-3 text-gray-400 text-xs font-mono">{c.tax_id || '—'}</td>
-                      <td className="px-5 py-3">
-                        {c.tax_status ? (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.tax_status}</span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-5 py-3 text-gray-600 text-xs">
-                        <div>{c.contact_name || '—'}</div>
-                        {c.contact_email && <div className="text-gray-400" dir="ltr">{c.contact_email}</div>}
-                      </td>
-                      <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{c.invoiceCount}</td>
-                      <td className="px-5 py-3 font-semibold text-gray-800">{fmt(c.totalAmount)}</td>
-                      <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(c.paidAmount)}</td>
-                      <td className="px-5 py-3">
-                        {remaining > 0
-                          ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
-                          : <span className="text-emerald-500 text-xs font-semibold">✓ שולם</span>}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex gap-2 justify-end">
-                          <button onClick={() => openLedger(c)} className="text-xs px-3 py-1 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">כרטסת</button>
-                          <button onClick={() => setModalClient(c)} className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">עריכה</button>
-                          <button onClick={() => setDeleteClientId(c.id)} className="text-xs px-2 py-1 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <Fragment key={c.id}>
+                      {/* ── Client row ── */}
+                      <tr
+                        onClick={() => toggleExpand(c)}
+                        className={`border-b border-gray-100 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50' : i % 2 === 0 ? 'bg-white hover:bg-indigo-50/50' : 'bg-gray-50/40 hover:bg-indigo-50/50'}`}
+                      >
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400 text-xs transition-transform duration-200 inline-block" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                            <span className="font-semibold text-gray-900">{c.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-gray-400 text-xs font-mono">{c.tax_id || '—'}</td>
+                        <td className="px-5 py-3">
+                          {c.tax_status ? (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{c.tax_status}</span>
+                          ) : '—'}
+                        </td>
+                        <td className="px-5 py-3 text-gray-600 text-xs">
+                          <div>{c.contact_name || '—'}</div>
+                          {c.contact_email && <div className="text-gray-400" dir="ltr">{c.contact_email}</div>}
+                        </td>
+                        <td className="px-5 py-3 text-indigo-600 font-semibold text-center">{c.invoiceCount}</td>
+                        <td className="px-5 py-3 font-semibold text-gray-800">{fmt(c.totalAmount)}</td>
+                        <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(c.paidAmount)}</td>
+                        <td className="px-5 py-3">
+                          {remaining > 0
+                            ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
+                            : <span className="text-emerald-500 text-xs font-semibold">✓ שולם</span>}
+                        </td>
+                        <td className="px-5 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => setModalClient(c)} className="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">עריכה</button>
+                            <button onClick={() => setDeleteClientId(c.id)} className="text-xs px-2 py-1 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* ── Inline ledger (accordion) ── */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={9} className="p-0 border-b border-indigo-100">
+                            <div className="bg-indigo-50/40 px-6 py-4 space-y-4">
+
+                              {/* Stats */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="rounded-xl bg-white border border-gray-100 px-4 py-3 text-center shadow-sm">
+                                  <div className="text-base font-bold text-gray-800">{fmt(ledTotal)}</div>
+                                  <div className="text-xs text-gray-400 mt-0.5">סה״כ חשבוניות</div>
+                                </div>
+                                <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-center shadow-sm">
+                                  <div className="text-base font-bold text-emerald-600">{fmt(ledPaid)}</div>
+                                  <div className="text-xs text-emerald-500 mt-0.5">שולם</div>
+                                </div>
+                                <div className={`rounded-xl border px-4 py-3 text-center shadow-sm ${ledOpen > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                  <div className={`text-base font-bold ${ledOpen > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{ledOpen > 0 ? fmt(ledOpen) : '✓ שולם הכל'}</div>
+                                  <div className={`text-xs mt-0.5 ${ledOpen > 0 ? 'text-red-400' : 'text-emerald-400'}`}>יתרה לתשלום</div>
+                                </div>
+                              </div>
+
+                              {/* Filter tabs */}
+                              <div className="flex gap-1 bg-white rounded-xl p-1 w-fit border border-gray-100 shadow-sm">
+                                {([
+                                  { key: 'all',  label: 'הכל',    count: clientInvs.length },
+                                  { key: 'open', label: 'פתוחות', count: openCount },
+                                  { key: 'paid', label: 'שולם',   count: paidCount },
+                                ] as const).map(({ key, label, count }) => (
+                                  <button
+                                    key={key}
+                                    onClick={e => { e.stopPropagation(); setExpandedFilter(key) }}
+                                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${expandedFilter === key ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                  >
+                                    {label} <span className={`text-xs font-normal mr-1 ${expandedFilter === key ? 'text-indigo-200' : 'text-gray-400'}`}>({count})</span>
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Invoices table */}
+                              {isLoading ? (
+                                <div className="text-center py-6 text-gray-400 text-sm">טוען חשבוניות...</div>
+                              ) : dispInvs.length === 0 ? (
+                                <div className="text-center py-6 text-gray-400 text-sm">אין חשבוניות להצגה</div>
+                              ) : (
+                                <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                                  <table className="w-full text-sm border-collapse">
+                                    <thead>
+                                      <tr className="bg-white border-b border-gray-100 text-gray-500 text-xs">
+                                        <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">מי הוציא</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">לפני מע״מ</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">סה״כ</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">שולם</th>
+                                        <th className="px-3 py-2.5 text-right font-semibold">יתרה</th>
+                                        <th className="px-3 py-2.5 text-center font-semibold">סטטוס</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {dispInvs.map((inv, idx) => {
+                                        const rem = Math.max(0, inv.total - inv.paid)
+                                        const isPaid = rem === 0
+                                        return (
+                                          <tr key={inv.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`} onClick={e => e.stopPropagation()}>
+                                            <td className="px-3 py-2 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                                            <td className="px-3 py-2 text-gray-600 text-xs">{inv.issued_by || '—'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
+                                            <td className="px-3 py-2 font-semibold text-gray-800">{fmt(inv.total)}</td>
+                                            <td className="px-3 py-2 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
+                                            <td className="px-3 py-2">
+                                              {rem > 0 ? <span className="text-red-500 font-semibold">{fmt(rem)}</span> : <span className="text-gray-300 text-xs">—</span>}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              {isPaid
+                                                ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700">שולם</span>
+                                                : inv.paid > 0
+                                                  ? <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700">חלקי</span>
+                                                  : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">ממתין</span>}
+                                            </td>
+                                          </tr>
+                                        )
+                                      })}
+                                    </tbody>
+                                    <tfoot>
+                                      <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold text-sm">
+                                        <td colSpan={4} className="px-3 py-2 text-xs text-gray-500 uppercase">סה״כ ({dispInvs.length})</td>
+                                        <td className="px-3 py-2 text-gray-600">{fmt(dispInvs.reduce((s,i) => s+i.before_vat,0))}</td>
+                                        <td className="px-3 py-2 text-gray-800">{fmt(dispInvs.reduce((s,i) => s+i.total,0))}</td>
+                                        <td className="px-3 py-2 text-emerald-600">{fmt(dispInvs.reduce((s,i) => s+i.paid,0))}</td>
+                                        <td className="px-3 py-2 text-red-500">{fmt(dispInvs.reduce((s,i) => s+Math.max(0,i.total-i.paid),0))}</td>
+                                        <td />
+                                      </tr>
+                                    </tfoot>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>
@@ -1834,16 +1970,6 @@ function ClientsTab() {
         />
       )}
 
-      {/* Ledger drawer */}
-      {ledgerClient && (
-        <LedgerDrawer
-          client={ledgerClient}
-          invoices={ledgerInvoices}
-          loading={ledgerLoading}
-          onClose={() => setLedgerClient(null)}
-          fmt={fmt}
-        />
-      )}
     </div>
   )
 }
