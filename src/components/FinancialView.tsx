@@ -922,9 +922,18 @@ function ClientsTab() {
 
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
+  const PINNED_BOTTOM = ['סה"כ', 'סהכ', 'total', 'סה״כ']
+  const isPinned = (name: string) => PINNED_BOTTOM.some(p => name.trim() === p)
+
   const filtered = clients
     .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
+      // Always pin certain names to the bottom regardless of sort direction
+      const aPin = isPinned(a.name)
+      const bPin = isPinned(b.name)
+      if (aPin && !bPin) return 1
+      if (!aPin && bPin) return -1
+      if (aPin && bPin) return 0
       let av: string | number, bv: string | number
       if (sortKey === 'name') { av = a.name; bv = b.name }
       else if (sortKey === 'remaining') { av = Math.max(0, a.totalAmount - a.paidAmount); bv = Math.max(0, b.totalAmount - b.paidAmount) }
