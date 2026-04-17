@@ -298,6 +298,7 @@ function FinancialDashboard() {
   invoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(inv.date)
+    if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, count: 0 }
     monthMap[key].revenue += inv.total || 0
@@ -508,6 +509,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
   invoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(inv.date)
+    if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
     if (!monthMap[key]) monthMap[key] = { label, invoices: [] }
