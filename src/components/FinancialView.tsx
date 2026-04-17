@@ -707,8 +707,10 @@ function InvoicesTab() {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ client_id: chosen.id, client: chosen.name }),
                           })
+                          setInvoices(prev => prev.map(i =>
+                            i.id === inv.id ? { ...i, client_id: chosen.id, client: chosen.name } : i
+                          ))
                           setReassignId(null)
-                          load()
                         }}
                         onClose={() => setReassignId(null)}
                       />
@@ -910,14 +912,28 @@ function ClientsTab() {
       const url = isEdit ? `/api/clients/${(modalClient as ClientRecord).id}` : '/api/clients'
       const method = isEdit ? 'PATCH' : 'POST'
       const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      if (r.ok) { setModalClient(null); load() }
+      const json = await r.json()
+      if (r.ok) {
+        if (isEdit) {
+          // Merge updated fields, keep existing computed stats
+          const updated = json.client as ClientRecord
+          setClients(prev => prev.map(c =>
+            c.id === updated.id ? { ...c, ...updated } : c
+          ))
+        } else {
+          // New client — add with zero stats
+          const fresh = json as ClientRecord
+          setClients(prev => [...prev, { ...fresh, invoiceCount: 0, totalAmount: 0, paidAmount: 0 }])
+        }
+        setModalClient(null)
+      }
     } finally { setSaving(false) }
   }
 
   const handleDeleteClient = async (id: number) => {
     await fetch(`/api/clients/${id}`, { method: 'DELETE' })
+    setClients(prev => prev.filter(c => c.id !== id))
     setDeleteClientId(null)
-    load()
   }
 
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
