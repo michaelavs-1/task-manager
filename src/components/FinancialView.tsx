@@ -297,7 +297,7 @@ function FinancialDashboard() {
   const monthMap: Record<string, MonthData> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
-    const d = new Date(inv.date)
+    const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, count: 0 }
@@ -508,7 +508,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
   const monthMap: Record<string, { label: string; invoices: FinDashInvoice[] }> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
-    const d = new Date(inv.date)
+    const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
@@ -691,6 +691,63 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
   )
 }
 
+
+// ── ProjectPicker — inline project assignment dropdown ──
+function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
+  projectList: { id: string; name: string; category: string }[]
+  currentProjectId: string | null
+  onSave: (projectId: string | null, projectName: string | null) => void
+  onClose: () => void
+}) {
+  const [q, setQ] = useState('')
+  const [chosen, setChosen] = useState<string | null>(currentProjectId)
+  const filtered = projectList.filter(p => p.name.toLowerCase().includes(q.toLowerCase()))
+  const artists = filtered.filter(p => p.category === 'artist')
+  const productions = filtered.filter(p => p.category === 'production')
+  return (
+    <div className="absolute z-50 right-0 top-full mt-1 w-60 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-2" dir="rtl">
+      <input
+        autoFocus
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="חפש פרויקט..."
+        className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      />
+      <ul className="max-h-56 overflow-y-auto space-y-0.5">
+        <li
+          onClick={() => setChosen(null)}
+          className={`px-3 py-1.5 rounded-xl text-xs cursor-pointer transition-colors italic ${chosen === null ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-400'}`}
+        >ללא שיוך</li>
+        {artists.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">אומנים</li>}
+        {artists.map(p => (
+          <li key={p.id} onClick={() => setChosen(p.id)}
+            className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen === p.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+            {p.name}
+          </li>
+        ))}
+        {productions.length > 0 && <li className="px-3 pt-2 pb-0.5 text-xs font-bold text-gray-400 uppercase tracking-wide">הפקות</li>}
+        {productions.map(p => (
+          <li key={p.id} onClick={() => setChosen(p.id)}
+            className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen === p.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+            {p.name}
+          </li>
+        ))}
+        {filtered.length === 0 && <li className="text-xs text-gray-400 text-center py-3">לא נמצאו תוצאות</li>}
+      </ul>
+      <div className="flex gap-2 pt-1 border-t border-gray-100">
+        <button
+          onClick={() => {
+            const proj = projectList.find(p => p.id === chosen)
+            onSave(chosen, proj?.name || null)
+          }}
+          className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white transition-colors"
+          style={{ background: "linear-gradient(135deg, #6366f1, #7c3aed)" }}
+        >שמור</button>
+        <button onClick={onClose} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+      </div>
+    </div>
+  )
+}
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
   client_id: null, project_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
   invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, payment_date: '', notes: '',
@@ -916,6 +973,7 @@ function InvoicesTab() {
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [reassignId, setReassignId] = useState<number | null>(null)
+  const [reassignProjectId, setReassignProjectId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
   const [groupByMonth, setGroupByMonth] = useState(true)
@@ -946,7 +1004,7 @@ function InvoicesTab() {
   const monthMap: Record<string, { key: string; label: string; count: number }> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
-    const d = new Date(inv.date)
+    const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
@@ -961,7 +1019,7 @@ function InvoicesTab() {
     const remaining = Math.max(0, roundCents(inv.total - inv.paid))
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
     const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
-    const matchMonth = !filterMonth || (inv.date && inv.date.startsWith(filterMonth))
+    const matchMonth = !filterMonth || (inv.date && israeliToISO(inv.date).startsWith(filterMonth))
     return matchSearch
       && matchPayment
       && matchMonth
@@ -1151,17 +1209,29 @@ function InvoicesTab() {
                         <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td className="px-4 py-3 text-xs relative">
+                      {reassignProjectId === inv.id ? (
+                        <ProjectPicker
+                          projectList={projectList}
+                          currentProjectId={inv.project_id}
+                          onSave={async (pid, _pname) => {
+                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: pid }) })
+                            setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, project_id: pid } : i))
+                            setReassignProjectId(null)
+                          }}
+                          onClose={() => setReassignProjectId(null)}
+                        />
+                      ) : null}
                       {inv.project_id ? (
                         <button
-                          onClick={() => setModalInv(inv)}
+                          onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)}
                           className="text-indigo-600 font-medium hover:text-indigo-800 truncate max-w-[120px] block"
                           title={projectList.find(p => p.id === inv.project_id)?.name || ''}
                         >
                           {projectList.find(p => p.id === inv.project_id)?.name || '—'}
                         </button>
                       ) : (
-                        <button onClick={() => setModalInv(inv)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="שייך לפרויקט">+ שייך</button>
+                        <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="שייך לפרויקט">+ שייך</button>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
@@ -1206,7 +1276,7 @@ function InvoicesTab() {
             const mGroups: Record<string, { key: string; label: string; rows: InvoiceRow[] }> = {}
             filtered.forEach(inv => {
               if (!inv.date) return
-              const d = new Date(inv.date)
+              const d = new Date(israeliToISO(inv.date))
               if (isNaN(d.getTime())) return
               const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
               const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
@@ -1214,7 +1284,7 @@ function InvoicesTab() {
               mGroups[key].rows.push(inv)
             })
             const groups = Object.values(mGroups).sort((a,b) => b.key.localeCompare(a.key))
-            const COLS = 12
+            const COLS = 13
             const TH = 'px-4 py-3 text-right font-semibold'
 
             return (
@@ -1224,6 +1294,7 @@ function InvoicesTab() {
                     <th className="px-3 py-3 w-8" />
                     <th className={TH}>מס'</th>
                     <th className={TH}>לקוח</th>
+                    <th className={TH}>פרויקט</th>
                     <th className={TH}>תאריך</th>
                     <th className={TH}>סוג</th>
                     <th className={TH}>מי הוציא</th>
@@ -1265,7 +1336,7 @@ function InvoicesTab() {
                             <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
                           </td>
-                          <td colSpan={4} />
+                          <td colSpan={5} />
                           <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
                           <td className="px-4 py-3 text-xs font-bold text-emerald-600">{fmt(mPaid)}</td>
                           <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : '✓'}</td>
@@ -1296,6 +1367,29 @@ function InvoicesTab() {
                                   <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                 </button>
                               </td>
+                              <td className="px-4 py-2.5 text-xs relative">
+                                {reassignProjectId === inv.id ? (
+                                  <ProjectPicker
+                                    projectList={projectList}
+                                    currentProjectId={inv.project_id}
+                                    onSave={async (pid, _pname) => {
+                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: pid }) })
+                                      setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, project_id: pid } : x))
+                                      setReassignProjectId(null)
+                                    }}
+                                    onClose={() => setReassignProjectId(null)}
+                                  />
+                                ) : null}
+                                {inv.project_id ? (
+                                  <button
+                                    onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)}
+                                    className="text-indigo-600 font-medium hover:text-indigo-800 truncate max-w-[120px] block text-xs"
+                                    title={projectList.find(p => p.id === inv.project_id)?.name || ''}
+                                  >{projectList.find(p => p.id === inv.project_id)?.name || '—'}</button>
+                                ) : (
+                                  <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs">+ שייך</button>
+                                )}
+                              </td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || '—'}</td>
@@ -1323,7 +1417,7 @@ function InvoicesTab() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
-                    <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                    <td colSpan={8} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                     <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
                     <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
                     <td className="px-4 py-3 text-emerald-600 text-xs">{fmt(totalPaid)}</td>
