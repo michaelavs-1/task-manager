@@ -370,7 +370,7 @@ function FinancialDashboard() {
           {months.length === 0 ? (
             <div className="text-sm text-center py-8" style={{ color: 'var(--text-secondary)' }}>אין נתונים</div>
           ) : (
-            <div className="flex items-end gap-2 h-40 overflow-x-auto">
+            <div className="flex items-end gap-2 overflow-x-auto" style={{ height: 168, paddingTop: 32 }}>
               {months.map(m => {
                 const revH = Math.round((m.revenue / maxRev) * 130)
                 const paidH = Math.round((m.paid / maxRev) * 130)
