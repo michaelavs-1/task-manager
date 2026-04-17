@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
 
@@ -16,13 +16,15 @@ export async function PATCH(
   const body = await req.json()
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
 
-  const fields = ['issued_by','sent_to','date','doc_type','invoice_num','client','notes']
+  const fields = ['issued_by','sent_to','date','doc_type','invoice_num','client','notes','payment_date']
   for (const f of fields) {
     if (f in body) updates[f] = body[f]
   }
   for (const f of ['before_vat','total','paid']) {
     if (f in body) updates[f] = Number(body[f]) || 0
   }
+  // client_id is a nullable FK — handle separately so null is preserved
+  if ('client_id' in body) updates['client_id'] = body.client_id === null ? null : Number(body.client_id)
 
   const { data, error } = await supabase
     .from('invoices')
