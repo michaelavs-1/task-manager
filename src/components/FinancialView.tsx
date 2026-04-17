@@ -638,7 +638,7 @@ const STATUS_STYLE: Record<string, string> = {
 function roundCents(n: number) { return Math.round(n * 100) / 100 }
 function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
   const remaining = roundCents(inv.total - inv.paid)
-  if (inv.total > 0 && remaining <= 0) return 'paid'
+  if (inv.total > 0 && remaining < 1) return 'paid'
   if (inv.paid > 0) return 'partial'
   return 'unpaid'
 }
@@ -800,10 +800,18 @@ function israeliToISO(d: string): string {
 function isoToIsraeli(iso: string): string {
   if (!iso) return ''
   const [year, month, day] = iso.split('-')
-  return `${parseInt(day)}.${parseInt(month)}.${year.slice(2)}`
+  return `${parseInt(day)}.${parseInt(month)}.${year}`
 }
 
-// ── InvoiceModal ──────────────────────────────────────────────────────────────
+function formatDateFull(d: string): string {
+  if (!d) return '—'
+  const iso = israeliToISO(d)
+  if (!iso) return d
+  const [year, month, day] = iso.split('-')
+  return `${parseInt(day)}.${parseInt(month)}.${year}`
+}
+
+// ── InvoiceModal ──────────────────────────────────────────────────────────────────────────────
 function InvoiceModal({
   initial, onSave, onClose, saving, clientOptions = [], clientList = [], projectList = [],
 }: {
@@ -1245,14 +1253,14 @@ function InvoicesTab() {
                         <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs" title="שייך לפרויקט">+ שייך</button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
                     <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
                     <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.payment_date || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                     <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-center">
@@ -1344,7 +1352,7 @@ function InvoicesTab() {
                           <td className="px-3 py-3 text-center">
                             <span className="text-indigo-400 text-xs transition-transform inline-block" style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(90deg)' }}>▶</span>
                           </td>
-                          <td colSpan={2} className="px-4 py-3">
+                          <td colSpan={2} className="px-4 py-3 whitespace-nowrap">
                             <span className="font-bold text-indigo-700 text-sm">{group.label}</span>
                             <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
@@ -1403,14 +1411,14 @@ function InvoicesTab() {
                                   <button onClick={() => setReassignProjectId(reassignProjectId === inv.id ? null : inv.id)} className="text-gray-300 hover:text-indigo-400 transition-colors text-xs">+ שייך</button>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || '—'}</td>
                               <td className="px-4 py-2.5 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                               <td className="px-4 py-2.5 font-semibold text-gray-800 text-xs">{fmt(inv.total)}</td>
                               <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
                               <td className="px-4 py-2.5 text-xs">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{inv.payment_date || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                               <td className="px-4 py-2.5 text-center"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1 justify-center">
@@ -2202,7 +2210,6 @@ function ClientsTab() {
                                         <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
-                                        <th className="px-3 py-2.5 text-right font-semibold">מי הוציא</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">לפני מע״מ</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">סה״כ</th>
                                         <th className="px-3 py-2.5 text-right font-semibold">שולם</th>
@@ -2213,13 +2220,12 @@ function ClientsTab() {
                                     <tbody>
                                       {dispInvs.map((inv, idx) => {
                                         const rem = Math.max(0, roundCents(inv.total - inv.paid))
-                                        const isPaid = rem === 0
+                                        const isPaid = rem < 1
                                         return (
                                           <tr key={inv.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`} onClick={e => e.stopPropagation()}>
                                             <td className="px-3 py-2 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
-                                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                                            <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                                             <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                                            <td className="px-3 py-2 text-gray-600 text-xs">{inv.issued_by || '—'}</td>
                                             <td className="px-3 py-2 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
                                             <td className="px-3 py-2 font-semibold text-gray-800">{fmt(inv.total)}</td>
                                             <td className="px-3 py-2 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
@@ -2510,7 +2516,7 @@ function FinProjectsTab() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      {['מס׳', 'תאריך', 'סוג', 'מי הוציא', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
+                      {['מס׳', 'תאריך', 'סוג', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
                         <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
@@ -2518,7 +2524,7 @@ function FinProjectsTab() {
                   <tbody>
                     {displayed.map((inv, i) => {
                       const rem = Math.max(0, roundCents(inv.total - inv.paid))
-                      const isPaid = rem === 0
+                      const isPaid = rem < 1
                       const status = isPaid ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
                       const statusStyle = {
                         paid:    { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
@@ -2528,7 +2534,7 @@ function FinProjectsTab() {
                       return (
                         <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
                           <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
-                          <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{inv.date || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{formatDateFull(inv.date)}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || '—'}</td>
                           <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmtP(inv.before_vat)}</td>
@@ -2544,7 +2550,7 @@ function FinProjectsTab() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({displayed.length})</td>
+                      <td colSpan={3} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({displayed.length})</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{fmtP(displayed.reduce((s,i) => s+i.before_vat,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
