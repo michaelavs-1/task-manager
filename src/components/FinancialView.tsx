@@ -297,33 +297,66 @@ const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
 
 type InvoiceForm = Omit<InvoiceRow, 'id'>
 
+// ── ModalField — defined OUTSIDE InvoiceModal so it never remounts on re-render ──
+function ModalField({ label, value, onChange, type = 'text', placeholder = '' }: {
+  label: string
+  value: string | number
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  type?: string
+  placeholder?: string
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+      />
+    </div>
+  )
+}
+
+// Date helpers: "D.M.YY" ↔ "YYYY-MM-DD"
+function israeliToISO(d: string): string {
+  if (!d) return ''
+  const parts = d.split('.')
+  if (parts.length < 3) return ''
+  const day = parts[0].padStart(2, '0')
+  const month = parts[1].padStart(2, '0')
+  const year = parts[2].length === 2 ? '20' + parts[2] : parts[2]
+  return `${year}-${month}-${day}`
+}
+function isoToIsraeli(iso: string): string {
+  if (!iso) return ''
+  const [year, month, day] = iso.split('-')
+  return `${parseInt(day)}.${parseInt(month)}.${year.slice(2)}`
+}
+
 // ── InvoiceModal ──────────────────────────────────────────────────────────────
 function InvoiceModal({
-  initial, onSave, onClose, saving,
+  initial, onSave, onClose, saving, clientOptions = [],
 }: {
   initial: InvoiceForm
   onSave: (data: InvoiceForm) => void
   onClose: () => void
   saving: boolean
+  clientOptions?: string[]
 }) {
   const [form, setForm] = useState<InvoiceForm>(initial)
+  const [clientQuery, setClientQuery] = useState(initial.client || '')
+  const [clientOpen, setClientOpen] = useState(false)
+
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
     setForm(f => ({ ...f, [k]: v }))
   }
   const remaining = Math.max(0, (form.total as number) - (form.paid as number))
 
-  const Field = ({ label, k, type = 'text', placeholder = '' }: { label: string; k: keyof InvoiceForm; type?: string; placeholder?: string }) => (
-    <div>
-      <label className="block text-xs text-gray-400 mb-1">{label}</label>
-      <input
-        type={type}
-        value={form[k] as string | number}
-        onChange={set(k)}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-      />
-    </div>
+  const filteredClients = clientOptions.filter(c =>
+    c.toLowerCase().includes(clientQuery.toLowerCase())
   )
 
   return (
@@ -332,9 +365,54 @@ function InvoiceModal({
         <h2 className="text-lg font-bold text-gray-900">{(initial as InvoiceRow).id ? 'עריכת חשבונית' : 'חשבונית חדשה'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="לקוח *" k="client" placeholder="שם הלקוח" />
-          <Field label="מס' חשבונית" k="invoice_num" placeholder="20001" />
-          <Field label="תאריך" k="date" type="text" placeholder="1.11.25" />
+          {/* Client autocomplete */}
+          <div className="relative">
+            <label className="block text-xs text-gray-400 mb-1">לקוח *</label>
+            <input
+              type="text"
+              value={clientQuery}
+              onChange={e => {
+                setClientQuery(e.target.value)
+                setForm(f => ({ ...f, client: e.target.value }))
+                setClientOpen(true)
+              }}
+              onFocus={() => setClientOpen(true)}
+              onBlur={() => setTimeout(() => setClientOpen(false), 150)}
+              placeholder="הקלד או בחר לקוח..."
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+            />
+            {clientOpen && filteredClients.length > 0 && (
+              <ul className="absolute z-50 right-0 left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto text-sm">
+                {filteredClients.map(c => (
+                  <li
+                    key={c}
+                    onMouseDown={() => {
+                      setClientQuery(c)
+                      setForm(f => ({ ...f, client: c }))
+                      setClientOpen(false)
+                    }}
+                    className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 transition-colors ${form.client === c ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-gray-800'}`}
+                  >
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <ModalField label="מס' חשבונית" value={form.invoice_num} onChange={set('invoice_num')} placeholder="20001" />
+
+          {/* Date picker */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">תאריך</label>
+            <input
+              type="date"
+              value={israeliToISO(form.date)}
+              onChange={e => setForm(f => ({ ...f, date: isoToIsraeli(e.target.value) }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+            />
+          </div>
+
           <div>
             <label className="block text-xs text-gray-400 mb-1">סוג מסמך</label>
             <select value={form.doc_type} onChange={set('doc_type')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
@@ -342,11 +420,27 @@ function InvoiceModal({
               {['מס','חשבון עסקה','קבלה','חשבונית מס קבלה','הזמנה'].map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          <Field label="מי הוציא" k="issued_by" placeholder="מ.ש ובניו הפקות" />
-          <Field label="מי שלח ללקוח" k="sent_to" placeholder="" />
-          <Field label="לפני מע״מ ₪" k="before_vat" type="number" />
-          <Field label="סה״כ לתשלום ₪" k="total" type="number" />
-          <Field label="שולם ₪" k="paid" type="number" />
+
+          {/* issued_by — employee select */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">מי הוציא</label>
+            <select value={form.issued_by} onChange={set('issued_by')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="">— בחר —</option>
+              {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+          {/* sent_to — employee select */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">מי שלח ללקוח</label>
+            <select value={form.sent_to} onChange={set('sent_to')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="">— בחר —</option>
+              {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+          <ModalField label="לפני מע״מ ₪" value={form.before_vat} onChange={set('before_vat')} type="number" />
+          <ModalField label="סה״כ לתשלום ₪" value={form.total} onChange={set('total')} type="number" />
+          <ModalField label="שולם ₪" value={form.paid} onChange={set('paid')} type="number" />
+
           <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: remaining > 0 ? '#fef2f2' : '#f0fdf4' }}>
             <span className="text-xs text-gray-400">יתרה לגביה:</span>
             <span className={`font-bold text-sm ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -561,6 +655,7 @@ function InvoicesTab() {
       {modalInv !== null && (
         <InvoiceModal
           initial={modalInv === 'new' ? EMPTY_FORM : { ...modalInv }}
+          clientOptions={clients}
           onSave={handleSave}
           onClose={() => setModalInv(null)}
           saving={saving}
