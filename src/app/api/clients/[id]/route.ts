@@ -19,6 +19,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  // Nullify client_id on all linked invoices before deleting
+  const { error: unlinkErr } = await supabase
+    .from('invoices')
+    .update({ client_id: null })
+    .eq('client_id', params.id)
+  if (unlinkErr) return NextResponse.json({ error: unlinkErr.message }, { status: 500 })
+
   const { error } = await supabase.from('clients').delete().eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
