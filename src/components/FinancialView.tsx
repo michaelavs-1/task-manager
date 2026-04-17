@@ -286,10 +286,6 @@ const STATUS_STYLE: Record<string, string> = {
   unpaid: 'bg-red-100 text-red-600',
 }
 
-// Names treated as aggregate/summary rows — excluded from all totals
-const AGGREGATE_NAMES = ['סה"כ', 'סה״כ', 'סהכ', 'total', 'סה"כ']
-const isAggregate = (name: string) => AGGREGATE_NAMES.some(a => (name || '').trim() === a)
-
 function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
   if (inv.total > 0 && inv.paid >= inv.total) return 'paid'
   if (inv.paid > 0) return 'partial'
@@ -577,11 +573,9 @@ function InvoicesTab() {
       && (!filterStatus || st === filterStatus)
   })
 
-  // Exclude aggregate/summary rows (e.g. "סה"כ" imported from spreadsheet) from all totals
-  const filteredReal = filtered.filter(i => !isAggregate(i.client))
-  const totalAmount   = filteredReal.reduce((s, i) => s + i.total, 0)
-  const totalPaid     = filteredReal.reduce((s, i) => s + i.paid, 0)
-  const totalRemaining = filteredReal.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0)
+  const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
+  const totalPaid      = filtered.reduce((s, i) => s + i.paid, 0)
+  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0)
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
   async function handleSave(form: InvoiceForm) {
@@ -698,9 +692,8 @@ function InvoicesTab() {
             ) : filtered.map((inv, i) => {
               const st = invoiceStatus(inv)
               const remaining = Math.max(0, inv.total - inv.paid)
-              const aggRow = isAggregate(inv.client)
               return (
-                <tr key={inv.id} className={`border-b border-gray-100 transition-colors ${aggRow ? 'bg-amber-50/60 opacity-60 italic' : `hover:bg-indigo-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}`}>
+                <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                   <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
                   <td className="px-4 py-3 max-w-[200px] relative">
@@ -753,11 +746,11 @@ function InvoicesTab() {
               )
             })}
           </tbody>
-          {filteredReal.length > 0 && (
+          {filtered.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filteredReal.length})</td>
-                <td className="px-4 py-3 text-gray-700">{fmt(filteredReal.reduce((s, i) => s + i.before_vat, 0))}</td>
+                <td colSpan={6} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                 <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                 <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
                 <td className="px-4 py-3 text-red-500">{fmt(totalRemaining)}</td>
@@ -908,14 +901,13 @@ function DonutChart({ paid, remaining, size = 120 }: { paid: number; remaining: 
 }
 
 function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: number) => string }) {
-  const realClients = clients.filter(c => !['סה"כ','סה״כ','סהכ'].includes(c.name.trim()))
-  const totalAll      = realClients.reduce((s, c) => s + c.totalAmount, 0)
-  const totalPaid     = realClients.reduce((s, c) => s + c.paidAmount, 0)
+  const totalAll      = clients.reduce((s, c) => s + c.totalAmount, 0)
+  const totalPaid     = clients.reduce((s, c) => s + c.paidAmount, 0)
   const totalRemaining = Math.max(0, totalAll - totalPaid)
-  const topClients    = [...realClients].sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 6)
+  const topClients    = [...clients].sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 6)
   const maxAmount     = topClients[0]?.totalAmount || 1
-  const openCount     = realClients.filter(c => c.totalAmount - c.paidAmount > 0).length
-  const closedCount   = realClients.filter(c => c.totalAmount > 0 && c.totalAmount - c.paidAmount <= 0).length
+  const openCount     = clients.filter(c => c.totalAmount - c.paidAmount > 0).length
+  const closedCount   = clients.filter(c => c.totalAmount > 0 && c.totalAmount - c.paidAmount <= 0).length
 
   return (
     <div className="grid grid-cols-3 gap-4 flex-shrink-0">
@@ -986,11 +978,11 @@ function ClientsSnapshot({ clients, fmt }: { clients: ClientRecord[]; fmt: (n: n
         <div className="space-y-1.5 border-t border-gray-100 pt-3">
           <div className="flex justify-between text-xs text-gray-500">
             <span>ממוצע לחשבונית</span>
-            <span className="font-semibold text-gray-700">{realClients.reduce((s,c)=>s+c.invoiceCount,0) > 0 ? fmt(totalAll / realClients.reduce((s,c)=>s+c.invoiceCount,0)) : '—'}</span>
+            <span className="font-semibold text-gray-700">{clients.reduce((s,c)=>s+c.invoiceCount,0) > 0 ? fmt(totalAll / clients.reduce((s,c)=>s+c.invoiceCount,0)) : '—'}</span>
           </div>
           <div className="flex justify-between text-xs text-gray-500">
             <span>לקוחות פעילים</span>
-            <span className="font-semibold text-gray-700">{realClients.filter(c=>c.invoiceCount>0).length}</span>
+            <span className="font-semibold text-gray-700">{clients.filter(c=>c.invoiceCount>0).length}</span>
           </div>
         </div>
       </div>
@@ -1243,9 +1235,8 @@ function ClientsTab() {
       {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
     </span>
   )
-  const realClients   = clients.filter(c => !isAggregate(c.name))
-  const totalInvoices = realClients.reduce((s, c) => s + c.invoiceCount, 0)
-  const totalAmount   = realClients.reduce((s, c) => s + c.totalAmount, 0)
+  const totalInvoices = clients.reduce((s, c) => s + c.invoiceCount, 0)
+  const totalAmount   = clients.reduce((s, c) => s + c.totalAmount, 0)
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען לקוחות...</div></div>
   if (error)   return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
@@ -1256,7 +1247,7 @@ function ClientsTab() {
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex gap-4">
           {[
-            { label: 'לקוחות', value: realClients.length, color: '#6366f1' },
+            { label: 'לקוחות', value: clients.length, color: '#6366f1' },
             { label: 'חשבוניות', value: totalInvoices, color: '#3b82f6' },
             { label: 'סה״כ', value: fmt(totalAmount), color: '#10b981' },
           ].map(({ label, value, color }) => (
@@ -1448,19 +1439,14 @@ function ClientsTab() {
               </tbody>
               {filtered.length > 0 && (
                 <tfoot>
-                  {(() => {
-                    const realRows = filtered.filter(c => !isAggregate(c.name))
-                    return (
-                      <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
-                        <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">סה״כ ({realRows.length})</td>
-                        <td className="px-5 py-3 text-indigo-600 text-center">{realRows.reduce((s, c) => s + c.invoiceCount, 0)}</td>
-                        <td className="px-5 py-3 text-gray-800">{fmt(realRows.reduce((s, c) => s + c.totalAmount, 0))}</td>
-                        <td className="px-5 py-3 text-emerald-600">{fmt(realRows.reduce((s, c) => s + c.paidAmount, 0))}</td>
-                        <td className="px-5 py-3 text-red-500">{fmt(realRows.reduce((s, c) => s + Math.max(0, c.totalAmount - c.paidAmount), 0))}</td>
-                        <td />
-                      </tr>
-                    )
-                  })()}
+                  <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
+                    <td colSpan={4} className="px-5 py-3 text-gray-500 text-xs uppercase">סה״כ ({filtered.length})</td>
+                    <td className="px-5 py-3 text-indigo-600 text-center">{filtered.reduce((s, c) => s + c.invoiceCount, 0)}</td>
+                    <td className="px-5 py-3 text-gray-800">{fmt(filtered.reduce((s, c) => s + c.totalAmount, 0))}</td>
+                    <td className="px-5 py-3 text-emerald-600">{fmt(filtered.reduce((s, c) => s + c.paidAmount, 0))}</td>
+                    <td className="px-5 py-3 text-red-500">{fmt(filtered.reduce((s, c) => s + Math.max(0, c.totalAmount - c.paidAmount), 0))}</td>
+                    <td />
+                  </tr>
                 </tfoot>
               )}
             </table>
