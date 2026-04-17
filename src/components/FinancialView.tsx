@@ -2393,6 +2393,11 @@ function FinProjectsTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
+  const [savingNew, setSavingNew] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const fmtP = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
 
   // Load projects from Supabase
@@ -2433,6 +2438,20 @@ function FinProjectsTab() {
       .finally(() => setLoadingInv(false))
   }, [sel, projects])
 
+  const addProject = async () => {
+    if (!newName.trim()) return
+    setSavingNew(true)
+    const res = await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName.trim(), category: newCategory }) })
+    const d = await res.json()
+    if (d.project) { setProjects(prev => [...prev, d.project].sort((a,b) => a.category.localeCompare(b.category)||a.name.localeCompare(b.name))); setSel(d.project.id) }
+    setNewName(''); setShowAddModal(false); setSavingNew(false)
+  }
+  const deleteProject = async (id: string) => {
+    await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+    setProjects(prev => prev.filter(p => p.id !== id))
+    if (sel === id) { const rem = projects.filter(p => p.id !== id); setSel(rem.find(p => p.category === 'artist')?.id || rem[0]?.id || null) }
+    setDeleteConfirmId(null)
+  }
   const current = projects.find(p => p.id === sel)
   const artists     = projects.filter(p => p.category === 'artist')
   const productions = projects.filter(p => p.category === 'production')
@@ -2454,36 +2473,37 @@ function FinProjectsTab() {
     const isOpen = expanded[category] !== false
     return (
       <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(99,102,241,0.15)', background: 'rgba(255,255,255,0.04)' }}>
-        <button
-          onClick={() => setExpanded(p => ({ ...p, [category]: !p[category] }))}
-          className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-          style={{ color: 'rgba(255,255,255,0.7)' }}
-        >
-          <div className="flex items-center gap-2">
+        <div className="flex items-center px-4 py-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <button onClick={() => setExpanded(p => ({ ...p, [category]: !p[category] }))} className="flex items-center gap-2 flex-1">
             <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>{items.length}</span>
-          </div>
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(77,208,225,0.2)', color: '#4dd0e1' }}>{items.length}</span>
+          </button>
+          <button onClick={() => { setNewCategory(category as 'artist' | 'production'); setNewName(''); setShowAddModal(true) }} className="w-5 h-5 rounded-full flex items-center justify-center mr-1 text-sm font-bold transition-colors" style={{ background: 'rgba(77,208,225,0.15)', color: '#4dd0e1' }} title="הוסף">+</button>
           <svg className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-        </button>
+        </div>
         {isOpen && (
           <div className="px-2 pb-2 space-y-0.5">
             {items.map(p => {
               const isActive = sel === p.id
               return (
-                <button
-                  key={p.id}
-                  onClick={() => setSel(p.id)}
-                  className="w-full text-right px-3 py-2 rounded-xl text-sm font-medium transition-all"
-                  style={{
-                    background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
-                    color: isActive ? '#e0e7ff' : 'rgba(255,255,255,0.45)',
-                    border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
-                  }}
-                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
-                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' } }}
-                >
-                  {p.name}
-                </button>
+                <div key={p.id} className="relative group">
+                  <button
+                    onClick={() => setSel(p.id)}
+                    className="w-full text-right px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                    style={{
+                      background: isActive ? 'rgba(77,208,225,0.15)' : 'transparent',
+                      color: isActive ? '#e0f7fa' : 'rgba(255,255,255,0.45)',
+                      border: isActive ? '1px solid rgba(77,208,225,0.3)' : '1px solid transparent',
+                    }}
+                    onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
+                    onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' } }}
+                  >{p.name}</button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id) }}
+                    className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs transition-all"
+                    style={{ color: 'rgba(248,113,113,0.8)' }}
+                  >✕</button>
+                </div>
               )
             })}
           </div>
@@ -2503,6 +2523,58 @@ function FinProjectsTab() {
         <ProjectList label="אומנים" category="artist" items={artists} />
         <ProjectList label="הפקות" category="production" items={productions} />
       </aside>
+
+      {/* Add project modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" dir="rtl" onClick={() => setShowAddModal(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-white mb-4">הוסף {newCategory === 'artist' ? 'אומן' : 'הפקה'}</h3>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {(['artist', 'production'] as const).map(cat => (
+                  <button key={cat} onClick={() => setNewCategory(cat)}
+                    className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+                    style={newCategory === cat ? { background: 'rgba(77,208,225,0.2)', color: '#4dd0e1', border: '1px solid rgba(77,208,225,0.3)' } : { background: 'transparent', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {cat === 'artist' ? 'אומן' : 'הפקה'}
+                  </button>
+                ))}
+              </div>
+              <input
+                autoFocus
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addProject()}
+                placeholder="שם..."
+                className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setShowAddModal(false)} className="flex-1 py-2 text-sm text-gray-400 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors">ביטול</button>
+              <button onClick={addProject} disabled={savingNew || !newName.trim()} className="flex-1 py-2 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #4dd0e1, #0284c7)', color: 'white' }}>
+                {savingNew ? 'שומר...' : 'הוסף'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirmId && (() => {
+        const target = projects.find(p => p.id === deleteConfirmId)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" dir="rtl" onClick={() => setDeleteConfirmId(null)}>
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
+              <h3 className="text-base font-bold text-white mb-2">מחיקת {target?.category === 'artist' ? 'אומן' : 'הפקה'}</h3>
+              <p className="text-sm text-gray-400 mb-5">למחוק את <span className="font-semibold text-white">{target?.name}</span>? הפעולה אינה ניתנת לביטול.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-2 text-sm text-gray-400 bg-gray-800 rounded-xl hover:bg-gray-700">ביטול</button>
+                <button onClick={() => deleteProject(deleteConfirmId)} className="flex-1 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl">מחק</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Right panel ── */}
       <div className="flex-1 overflow-auto p-6 space-y-5">
