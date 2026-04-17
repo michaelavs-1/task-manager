@@ -262,19 +262,19 @@ function SuppliersTab() {
   )
 }
 
+// ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
-  rowIndex: number
-  issuedBy: string
-  sentTo: string
+  id: number
+  issued_by: string
+  sent_to: string
   date: string
-  docType: string
-  invoiceNum: string
+  doc_type: string
+  invoice_num: string
   client: string
-  beforeVat: number
+  before_vat: number
   total: number
   paid: number
-  remaining: number
-  status: 'paid' | 'partial' | 'unpaid'
+  notes: string
 }
 
 const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }
@@ -284,6 +284,101 @@ const STATUS_STYLE: Record<string, string> = {
   unpaid: 'bg-red-100 text-red-600',
 }
 
+function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
+  if (inv.total > 0 && inv.paid >= inv.total) return 'paid'
+  if (inv.paid > 0) return 'partial'
+  return 'unpaid'
+}
+
+const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
+  issued_by: '', sent_to: '', date: '', doc_type: '',
+  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, notes: '',
+}
+
+type InvoiceForm = Omit<InvoiceRow, 'id'>
+
+// ── InvoiceModal ──────────────────────────────────────────────────────────────
+function InvoiceModal({
+  initial, onSave, onClose, saving,
+}: {
+  initial: InvoiceForm
+  onSave: (data: InvoiceForm) => void
+  onClose: () => void
+  saving: boolean
+}) {
+  const [form, setForm] = useState<InvoiceForm>(initial)
+  const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
+    setForm(f => ({ ...f, [k]: v }))
+  }
+  const remaining = Math.max(0, (form.total as number) - (form.paid as number))
+
+  const Field = ({ label, k, type = 'text', placeholder = '' }: { label: string; k: keyof InvoiceForm; type?: string; placeholder?: string }) => (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      <input
+        type={type}
+        value={form[k] as string | number}
+        onChange={set(k)}
+        placeholder={placeholder}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+      />
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-gray-900">{(initial as InvoiceRow).id ? 'עריכת חשבונית' : 'חשבונית חדשה'}</h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="לקוח *" k="client" placeholder="שם הלקוח" />
+          <Field label="מס' חשבונית" k="invoice_num" placeholder="20001" />
+          <Field label="תאריך" k="date" type="text" placeholder="1.11.25" />
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">סוג מסמך</label>
+            <select value={form.doc_type} onChange={set('doc_type')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="">— בחר —</option>
+              {['מס','חשבון עסקה','קבלה','חשבונית מס קבלה','הזמנה'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <Field label="מי הוציא" k="issued_by" placeholder="מ.ש ובניו הפקות" />
+          <Field label="מי שלח ללקוח" k="sent_to" placeholder="" />
+          <Field label="לפני מע״מ ₪" k="before_vat" type="number" />
+          <Field label="סה״כ לתשלום ₪" k="total" type="number" />
+          <Field label="שולם ₪" k="paid" type="number" />
+          <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: remaining > 0 ? '#fef2f2' : '#f0fdf4' }}>
+            <span className="text-xs text-gray-400">יתרה לגביה:</span>
+            <span className={`font-bold text-sm ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              {remaining > 0 ? `₪${remaining.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : 'שולם במלואו'}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">הערות</label>
+          <textarea value={form.notes} onChange={set('notes')} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none" />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button
+            onClick={() => onSave(form)}
+            disabled={saving || !form.client}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+          >
+            {saving ? 'שומר...' : 'שמור'}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors">
+            ביטול
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── InvoicesTab ───────────────────────────────────────────────────────────────
 function InvoicesTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -292,69 +387,79 @@ function InvoicesTab() {
   const [filterClient, setFilterClient] = useState('')
   const [filterDocType, setFilterDocType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [selected, setSelected] = useState<InvoiceRow | null>(null)
+  const [modalInv, setModalInv] = useState<InvoiceRow | null | 'new'>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  useEffect(() => {
-    fetch('/api/google-sheets-invoices')
+  const load = () => {
+    setLoading(true)
+    fetch('/api/invoices')
       .then(r => r.json())
-      .then(d => {
-        if (d.error) setError(d.error)
-        else setInvoices(d.invoices || [])
-      })
+      .then(d => { if (d.error) setError(d.error); else setInvoices(d.invoices || []) })
       .catch(() => setError('שגיאה בטעינת חשבוניות'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(load, [])
 
   const clients = [...new Set(invoices.map(i => i.client).filter(Boolean))].sort()
-  const docTypes = [...new Set(invoices.map(i => i.docType).filter(Boolean))].sort()
+  const docTypes = [...new Set(invoices.map(i => i.doc_type).filter(Boolean))].sort()
 
   const filtered = invoices.filter(inv => {
     const q = search.toLowerCase()
-    const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoiceNum.includes(q) || inv.issuedBy.toLowerCase().includes(q)
-    const matchClient = !filterClient || inv.client === filterClient
-    const matchDoc = !filterDocType || inv.docType === filterDocType
-    const matchStatus = !filterStatus || inv.status === filterStatus
-    return matchSearch && matchClient && matchDoc && matchStatus
+    const st = invoiceStatus(inv)
+    const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
+    return matchSearch
+      && (!filterClient || inv.client === filterClient)
+      && (!filterDocType || inv.doc_type === filterDocType)
+      && (!filterStatus || st === filterStatus)
   })
 
-  const totalAmount = filtered.reduce((s, i) => s + i.total, 0)
-  const totalPaid = filtered.reduce((s, i) => s + i.paid, 0)
-  const totalRemaining = filtered.reduce((s, i) => s + i.remaining, 0)
-
+  const totalAmount   = filtered.reduce((s, i) => s + i.total, 0)
+  const totalPaid     = filtered.reduce((s, i) => s + i.paid, 0)
+  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, i.total - i.paid), 0)
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
-  if (loading) return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-gray-400 text-sm">טוען חשבוניות מ-Google Sheets...</div>
-    </div>
-  )
+  async function handleSave(form: InvoiceForm) {
+    setSaving(true)
+    if (modalInv === 'new') {
+      const res = await fetch('/api/invoices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const data = await res.json()
+      if (!data.error) setInvoices(prev => [data, ...prev])
+    } else if (modalInv) {
+      const res = await fetch(`/api/invoices/${modalInv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const data = await res.json()
+      if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+    }
+    setSaving(false)
+    setModalInv(null)
+  }
 
-  if (error) return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-red-500 text-sm">{error}</div>
-    </div>
-  )
+  async function handleDelete(id: number) {
+    await fetch(`/api/invoices/${id}`, { method: 'DELETE' })
+    setInvoices(prev => prev.filter(i => i.id !== id))
+    setDeleteId(null)
+  }
+
+  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
+  if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
   return (
     <div className="flex-1 flex flex-col min-h-0 p-6 gap-4">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h2 className="text-base font-bold text-gray-800">חשבוניות</h2>
           <p className="text-xs text-gray-400 mt-0.5">{invoices.length} חשבוניות סה"כ</p>
         </div>
-        <a
-          href={INVOICES_EDIT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
+        <button
+          onClick={() => setModalInv('new')}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-all"
           style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           הזנת חשבונית חדשה
-        </a>
+        </button>
       </div>
 
       {/* Stats */}
@@ -374,26 +479,16 @@ function InvoicesTab() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 flex-shrink-0">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="חפש לקוח, מס' חשבונית, מי הוציא..."
-          className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-        />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="חפש לקוח, מס' חשבונית, מי הוציא..." className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
         <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל הלקוחות</option>
-          {clients.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="">כל הלקוחות</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={filterDocType} onChange={e => setFilterDocType(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל סוגי המסמך</option>
-          {docTypes.map(d => <option key={d} value={d}>{d}</option>)}
+          <option value="">כל סוגי המסמך</option>{docTypes.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
           <option value="">כל הסטטוסים</option>
-          <option value="paid">שולם</option>
-          <option value="partial">חלקי</option>
-          <option value="unpaid">ממתין</option>
+          <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
         </select>
       </div>
 
@@ -408,90 +503,83 @@ function InvoicesTab() {
               <th className="px-4 py-3 text-right font-semibold">סוג</th>
               <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
               <th className="px-4 py-3 text-right font-semibold">לפני מע"מ</th>
-              <th className="px-4 py-3 text-right font-semibold">סה"כ לתשלום</th>
+              <th className="px-4 py-3 text-right font-semibold">סה"כ</th>
               <th className="px-4 py-3 text-right font-semibold">שולם</th>
               <th className="px-4 py-3 text-right font-semibold">יתרה</th>
               <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
+              <th className="px-4 py-3 text-center font-semibold">פעולות</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={10} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
-            ) : filtered.map((inv, i) => (
-              <tr
-                key={inv.rowIndex}
-                onClick={() => setSelected(inv)}
-                className={`border-b border-gray-100 hover:bg-indigo-50 cursor-pointer transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}
-              >
-                <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoiceNum || '—'}</td>
-                <td className="px-4 py-3 font-semibold text-gray-800 max-w-[160px] truncate">{inv.client || '—'}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs">{inv.docType || '—'}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issuedBy || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.beforeVat)}</td>
-                <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
-                <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
-                <td className="px-4 py-3">
-                  {inv.remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(inv.remaining)}</span> : <span className="text-gray-300">—</span>}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[inv.status]}`}>
-                    {STATUS_LABEL[inv.status]}
-                  </span>
-                </td>
-              </tr>
-            ))}
+              <tr><td colSpan={11} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
+            ) : filtered.map((inv, i) => {
+              const st = invoiceStatus(inv)
+              const remaining = Math.max(0, inv.total - inv.paid)
+              return (
+                <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-800 max-w-[150px] truncate">{inv.client || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{inv.date || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
+                  <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
+                  <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 justify-center">
+                      <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      </button>
+                      <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
           {filtered.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                <td colSpan={5} className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">סה"כ ({filtered.length})</td>
-                <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.beforeVat, 0))}</td>
+                <td colSpan={5} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
+                <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                 <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                 <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
                 <td className="px-4 py-3 text-red-500">{fmt(totalRemaining)}</td>
-                <td />
+                <td /><td />
               </tr>
             </tfoot>
           )}
         </table>
       </div>
 
-      {/* Detail Modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">{selected.client}</h2>
-                <p className="text-sm text-gray-400 font-mono">מס' {selected.invoiceNum}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${STATUS_STYLE[selected.status]}`}>
-                {STATUS_LABEL[selected.status]}
-              </span>
+      {/* Create / Edit Modal */}
+      {modalInv !== null && (
+        <InvoiceModal
+          initial={modalInv === 'new' ? EMPTY_FORM : { ...modalInv }}
+          onSave={handleSave}
+          onClose={() => setModalInv(null)}
+          saving={saving}
+        />
+      )}
+
+      {/* Delete Confirm */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteId(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ['תאריך', selected.date],
-                ['סוג מסמך', selected.docType],
-                ['מי הוציא', selected.issuedBy],
-                ['מי שלח', selected.sentTo],
-              ].map(([l, v]) => v ? (
-                <div key={l}><div className="text-xs text-gray-400">{l}</div><div className="font-medium text-gray-800">{v}</div></div>
-              ) : null)}
+            <p className="font-semibold text-gray-800">למחוק את החשבונית?</p>
+            <p className="text-sm text-gray-500">פעולה זו אינה ניתנת לביטול</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">מחק</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
             </div>
-            <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-xl p-4">
-              <div className="text-center"><div className="text-xs text-gray-400 mb-1">לפני מע"מ</div><div className="font-bold text-gray-700">{fmt(selected.beforeVat)}</div></div>
-              <div className="text-center"><div className="text-xs text-gray-400 mb-1">סה"כ לתשלום</div><div className="font-bold text-blue-600">{fmt(selected.total)}</div></div>
-              <div className="text-center"><div className="text-xs text-gray-400 mb-1">שולם</div><div className="font-bold text-emerald-600">{fmt(selected.paid)}</div></div>
-            </div>
-            {selected.remaining > 0 && (
-              <div className="text-center bg-red-50 rounded-xl p-3">
-                <div className="text-xs text-red-400 mb-1">יתרה לגביה</div>
-                <div className="text-xl font-bold text-red-500">{fmt(selected.remaining)}</div>
-              </div>
-            )}
-            <button onClick={() => setSelected(null)} className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">סגור</button>
           </div>
         </div>
       )}
@@ -513,11 +601,20 @@ function ClientsTab() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetch('/api/google-sheets-clients')
+    fetch('/api/invoices')
       .then(r => r.json())
       .then(d => {
-        if (d.error) setError(d.error)
-        else setClients(d.clients || [])
+        if (d.error) { setError(d.error); return }
+        // Aggregate by client name
+        const map: Record<string, ClientRow> = {}
+        for (const inv of (d.invoices || []) as InvoiceRow[]) {
+          if (!inv.client) continue
+          if (!map[inv.client]) map[inv.client] = { name: inv.client, invoiceCount: 0, totalAmount: 0, paidAmount: 0 }
+          map[inv.client].invoiceCount++
+          map[inv.client].totalAmount += inv.total
+          map[inv.client].paidAmount  += inv.paid
+        }
+        setClients(Object.values(map).sort((a, b) => b.invoiceCount - a.invoiceCount))
       })
       .catch(() => setError('שגיאה בטעינת לקוחות'))
       .finally(() => setLoading(false))
@@ -533,7 +630,7 @@ function ClientsTab() {
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="text-gray-400 text-sm">טוען לקוחות מ-Google Sheets...</div>
+      <div className="text-gray-400 text-sm">טוען לקוחות...</div>
     </div>
   )
 

@@ -31,6 +31,25 @@ export type Task = {
   creator?: User
 }
 
+export type Invoice = {
+  id: number
+  issued_by: string
+  sent_to: string
+  date: string
+  doc_type: string
+  invoice_num: string
+  client: string
+  before_vat: number
+  total: number
+  paid: number
+  notes: string
+  created_at: string
+  updated_at: string
+  // computed client-side
+  remaining?: number
+  status?: 'paid' | 'partial' | 'unpaid'
+}
+
 export type Project = {
   id: string
   name: string
