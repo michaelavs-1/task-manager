@@ -491,6 +491,7 @@ function InvoicesTab() {
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [reassignId, setReassignId] = useState<number | null>(null)
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
 
   const load = () => {
     setLoading(true)
@@ -514,8 +515,11 @@ function InvoicesTab() {
   const filtered = invoices.filter(inv => {
     const q = search.toLowerCase()
     const st = invoiceStatus(inv)
+    const remaining = Math.max(0, inv.total - inv.paid)
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
+    const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
     return matchSearch
+      && matchPayment
       && (!filterClient || inv.client === filterClient)
       && (!filterDocType || inv.doc_type === filterDocType)
       && (!filterStatus || st === filterStatus)
@@ -566,6 +570,23 @@ function InvoicesTab() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           הזנת חשבונית חדשה
         </button>
+      </div>
+
+      {/* Open / Closed tabs */}
+      <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
+        {([
+          { key: 'all', label: 'הכל', count: invoices.length },
+          { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, inv.total - inv.paid) > 0).length },
+          { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, inv.total - inv.paid) === 0).length },
+        ] as const).map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setPaymentFilter(key)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${paymentFilter === key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {label} <span className={`text-xs font-normal ml-1 ${paymentFilter === key ? 'text-indigo-500' : 'text-gray-400'}`}>({count})</span>
+          </button>
+        ))}
       </div>
 
       {/* Stats */}
