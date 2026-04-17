@@ -278,10 +278,8 @@ export default function Dashboard() {
         <div className="relative px-5 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {/* Logo row */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: activeSection === 'financial' ? 'linear-gradient(135deg, #14b8a6 0%, #059669 100%)' : 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)', boxShadow: activeSection === 'financial' ? '0 4px 16px rgba(20,184,166,0.45)' : '0 4px 16px rgba(21,101,192,0.45)', transition: 'all 0.4s ease' }}>
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
+            <div className="w-12 h-12 flex items-center justify-center flex-shrink-0" style={{ filter: 'drop-shadow(0 4px 12px rgba(77,208,225,0.35))' }}>
+              <img src="/logo.svg" alt="Algorithm" className="w-12 h-12 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-sm font-bold leading-tight tracking-tight" style={{ color: 'rgba(255,255,255,0.95)' }}>אלגוריתם הפקות</h1>
@@ -379,9 +377,9 @@ export default function Dashboard() {
                 onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)' } }}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #6366f1, #a855f7)' }} />
+                  <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #4dd0e1, #1976d2)' }} />
                 )}
-                <div className="flex-shrink-0" style={{ color: isActive ? '#818cf8' : 'rgba(255,255,255,0.3)' }}>
+                <div className="flex-shrink-0" style={{ color: isActive ? '#4dd0e1' : 'rgba(255,255,255,0.3)' }}>
                   {icon}
                 </div>
                 <span className="font-medium">{label}</span>
@@ -396,7 +394,7 @@ export default function Dashboard() {
             <button
               onClick={() => setShowNewTask(true)}
               className="w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
+              style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: 'white', boxShadow: '0 4px 14px rgba(2,132,199,0.4)' }}
             >
               + משימה חדשה
             </button>
