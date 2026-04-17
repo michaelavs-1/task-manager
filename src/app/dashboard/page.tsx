@@ -22,10 +22,14 @@ export default function Dashboard() {
   const { theme, setTheme } = useTheme()
   const [tasks, setTasks] = useState<Task[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [activeTab, setActiveTab] = useState<Tab>("general")
+  const [activeTab, setActiveTabRaw] = useState<Tab>("general")
   const [selectedArtistName, setSelectedArtistName] = useState<string>("")
-  const [activeSection, setActiveSection] = useState<Section>("management")
-  const [activeFinTab, setActiveFinTab] = useState<FinTab>('old_table')
+  const [activeSection, setActiveSectionRaw] = useState<Section>("management")
+  const [activeFinTab, setActiveFinTabRaw] = useState<FinTab>('old_table')
+
+  const setActiveTab = (t: Tab) => { setActiveTabRaw(t); localStorage.setItem('dash_tab', t) }
+  const setActiveSection = (s: Section) => { setActiveSectionRaw(s); localStorage.setItem('dash_section', s) }
+  const setActiveFinTab = (f: FinTab) => { setActiveFinTabRaw(f); localStorage.setItem('dash_fin_tab', f) }
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
@@ -44,6 +48,13 @@ export default function Dashboard() {
     setUserId(id)
     setUserName(name || "")
     setUserRole(role || "")
+    // Restore last active position
+    const savedSection = localStorage.getItem('dash_section') as Section | null
+    const savedTab = localStorage.getItem('dash_tab') as Tab | null
+    const savedFinTab = localStorage.getItem('dash_fin_tab') as FinTab | null
+    if (savedSection) setActiveSectionRaw(savedSection)
+    if (savedTab) setActiveTabRaw(savedTab)
+    if (savedFinTab) setActiveFinTabRaw(savedFinTab)
   }, [])
 
   const loadTasks = useCallback(async () => {
