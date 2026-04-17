@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, Fragment } from 'react'
 
-export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients'
+export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects'
 
 const INVOICES_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo/edit?gid=584902190'
 
@@ -2026,6 +2026,238 @@ function Detail({ label, value, href, mono }: { label: string; value?: string; h
   )
 }
 
+// ── FinProjectsTab ────────────────────────────────────────────────────────────
+interface Project { id: string; name: string; category: string }
+
+function FinProjectsTab() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [sel, setSel] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ artist: true, production: true })
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [loadingInv, setLoadingInv] = useState(false)
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
+  const fmtP = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
+
+  // Load projects from Supabase
+  useEffect(() => {
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then(d => {
+        const list: Project[] = d.projects || []
+        setProjects(list)
+        const first = list.find(p => p.category === 'artist') || list[0]
+        if (first) setSel(first.id)
+      })
+      .catch(() => {})
+  }, [])
+
+  // When project selected — fetch matching invoices
+  useEffect(() => {
+    if (!sel) return
+    const project = projects.find(p => p.id === sel)
+    if (!project) return
+    setLoadingInv(true)
+    setLedgerFilter('all')
+    fetch('/api/invoices')
+      .then(r => r.json())
+      .then(d => {
+        const all: InvoiceRow[] = d.invoices || []
+        const q = project.name.toLowerCase()
+        const matched = all.filter(inv =>
+          inv.client?.toLowerCase().includes(q) ||
+          q.includes(inv.client?.toLowerCase() || '__nomatch__')
+        )
+        setInvoices(matched)
+      })
+      .catch(() => setInvoices([]))
+      .finally(() => setLoadingInv(false))
+  }, [sel, projects])
+
+  const current = projects.find(p => p.id === sel)
+  const artists     = projects.filter(p => p.category === 'artist')
+  const productions = projects.filter(p => p.category === 'production')
+
+  const displayed = invoices.filter(inv => {
+    const rem = Math.max(0, inv.total - inv.paid)
+    if (ledgerFilter === 'open') return rem > 0
+    if (ledgerFilter === 'paid') return rem === 0
+    return true
+  })
+
+  const totalRev  = invoices.reduce((s, i) => s + i.total, 0)
+  const totalPaid = invoices.reduce((s, i) => s + i.paid,  0)
+  const totalRem  = Math.max(0, totalRev - totalPaid)
+  const openCount = invoices.filter(i => Math.max(0, i.total - i.paid) > 0).length
+  const paidCount = invoices.filter(i => Math.max(0, i.total - i.paid) === 0).length
+
+  function ProjectList({ label, category, items }: { label: string; category: string; items: Project[] }) {
+    const isOpen = expanded[category] !== false
+    return (
+      <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(99,102,241,0.15)', background: 'rgba(255,255,255,0.04)' }}>
+        <button
+          onClick={() => setExpanded(p => ({ ...p, [category]: !p[category] }))}
+          className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+          style={{ color: 'rgba(255,255,255,0.7)' }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>{items.length}</span>
+          </div>
+          <svg className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {isOpen && (
+          <div className="px-2 pb-2 space-y-0.5">
+            {items.map(p => {
+              const isActive = sel === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSel(p.id)}
+                  className="w-full text-right px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                  style={{
+                    background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
+                    color: isActive ? '#e0e7ff' : 'rgba(255,255,255,0.45)',
+                    border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent',
+                  }}
+                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' } }}
+                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' } }}
+                >
+                  {p.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full" dir="rtl" style={{ background: 'var(--bg-secondary)' }}>
+
+      {/* ── Left sidebar ── */}
+      <aside className="w-60 flex-shrink-0 overflow-y-auto p-4 space-y-3" style={{ background: 'linear-gradient(160deg, #0c0e1c 0%, #111827 60%)', borderLeft: '1px solid rgba(99,102,241,0.1)' }}>
+        <div className="px-1 pb-2">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>פרויקטים</p>
+        </div>
+        <ProjectList label="אומנים" category="artist" items={artists} />
+        <ProjectList label="הפקות" category="production" items={productions} />
+      </aside>
+
+      {/* ── Right panel ── */}
+      <div className="flex-1 overflow-auto p-6 space-y-5">
+        {!current ? (
+          <div className="flex items-center justify-center h-full text-gray-400 text-sm">בחר פרויקט מהרשימה</div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{current.name}</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות משויכות</p>
+              </div>
+              <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
+                {current.category === 'artist' ? '🎤 אומן' : '🎬 הפקה'}
+              </span>
+            </div>
+
+            {/* KPI cards */}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'סה"כ הכנסות', value: fmtP(totalRev),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+                { label: 'שולם',         value: fmtP(totalPaid), color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+                { label: 'נותר לגבייה', value: fmtP(totalRem),  color: totalRem > 0 ? '#f59e0b' : '#10b981', bg: totalRem > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)' },
+                { label: 'חשבוניות',    value: String(invoices.length), color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+              ].map(card => (
+                <div key={card.label} className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                  <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{card.label}</div>
+                  <div className="text-xl font-bold" style={{ color: card.color }}>{card.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter tabs */}
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              {([
+                { key: 'all',  label: 'הכל',    count: invoices.length },
+                { key: 'open', label: 'פתוחות', count: openCount },
+                { key: 'paid', label: 'שולם',   count: paidCount },
+              ] as const).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setLedgerFilter(key)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all`}
+                  style={ledgerFilter === key ? { background: '#6366f1', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' } : { background: 'transparent', color: 'var(--text-secondary)' }}
+                >
+                  {label} <span style={{ opacity: 0.6, fontSize: 11 }}>({count})</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Invoice table */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              {loadingInv ? (
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען חשבוניות...</div>
+              ) : displayed.length === 0 ? (
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {invoices.length === 0 ? 'לא נמצאו חשבוניות לפרויקט זה' : 'אין חשבוניות להצגה בפילטר זה'}
+                </div>
+              ) : (
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      {['מס׳', 'תאריך', 'סוג', 'מי הוציא', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
+                        <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayed.map((inv, i) => {
+                      const rem = Math.max(0, inv.total - inv.paid)
+                      const isPaid = rem === 0
+                      const status = isPaid ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
+                      const statusStyle = {
+                        paid:    { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
+                        partial: { bg: '#fef3c7', color: '#92400e', label: 'חלקי' },
+                        unpaid:  { bg: '#fee2e2', color: '#991b1b', label: 'ממתין' },
+                      }[status]
+                      return (
+                        <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
+                          <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{inv.date || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmtP(inv.before_vat)}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmtP(inv.total)}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(inv.paid)}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmtP(rem) : '—'}</td>
+                          <td className="px-4 py-2.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: statusStyle.bg, color: statusStyle.color }}>{statusStyle.label}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({displayed.length})</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{fmtP(displayed.reduce((s,i) => s+i.before_vat,0))}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(displayed.reduce((s,i) => s+Math.max(0,i.total-i.paid),0))}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function FinancialView({ activeTab }: { activeTab: FinTab }) {
   return (
     <div className="flex flex-col h-full bg-gray-50" dir="rtl">
@@ -2037,6 +2269,8 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
       {activeTab === 'invoices' && <InvoicesTab />}
 
       {activeTab === 'dashboard' && <FinancialDashboard />}
+
+      {activeTab === 'projects' && <FinProjectsTab />}
 
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">
