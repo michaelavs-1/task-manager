@@ -110,8 +110,8 @@ export function MediaLibraryView() {
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const heDays = ['\u05E8\u05D0\u05E9\u05D5\u05DF', '\u05E9\u05E0\u05D9', '\u05E9\u05DC\u05D9\u05E9\u05D9', '\u05E8\u05D1\u05D9\u05E2\u05D9', '\u05D7\u05DE\u05D9\u05E9\u05D9', '\u05E9\u05D9\u05E9\u05D9', '\u05E9\u05D1\u05EA']
-  const heMonths = ['\u05D9\u05E0\u05D5\u05D0\u05E8', '\u05E4\u05D1\u05E8\u05D5\u05D0\u05E8', '\u05DE\u05E8\u05E5', '\u05D0\u05E4\u05E8\u05D9\u05DC', '\u05DE\u05D0\u05D9', '\u05D9\u05D5\u05E0\u05D9', '\u05D9\u05D5\u05DC\u05D9', '\u05D0\u05D5\u05D2\u05D5\u05E1\u05D8', '\u05E1\u05E4\u05D8\u05DE\u05D1\u05E8', '\u05D0\u05D5\u05E7\u05D8\u05D5\u05D1\u05E8', '\u05E0\u05D5\u05D1\u05DE\u05D1\u05E8', '\u05D3\u05E6\u05DE\u05D1\u05E8']
+  const heDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+  const heMonths = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
   useEffect(() => {
     setMounted(true)
@@ -241,7 +241,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         }
       } catch (err) {
         setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, status: 'error' } : u))
-        setUploadError(err instanceof Error ? err.message : '\u05E9\u05D2\u05D9\u05D0\u05EA \u05D4\u05E2\u05DC\u05D0\u05D4')
+        setUploadError(err instanceof Error ? err.message : 'שגיאת העלאה')
       }
     }))
 
@@ -270,20 +270,20 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     <div className="max-w-5xl mx-auto px-6 py-8" dir="rtl">
       {/* Upload section */}
       <div className="mb-8 rounded-2xl border-2 border-dashed border-pink-200 dark:border-pink-900 bg-gradient-to-br from-pink-50 to-white dark:from-gray-800 dark:to-gray-850 p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">\u05D4\u05E2\u05DC\u05D0\u05EA \u05DE\u05D3\u05D9\u05D4 \u05D7\u05D3\u05E9\u05D4</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">העלאת מדיה חדשה</h2>
 
         {/* Step indicators */}
         <div className="flex items-center gap-2 mb-6">
           {[1, 2, 3].map(s => (
             <div key={s} className="flex items-center gap-2">
               <div className={'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ' + (step === s ? 'bg-pink-600 text-white' : step > s ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400')}>
-                {step > s ? '\u2713' : s}
+                {step > s ? '✓' : s}
               </div>
               {s < 3 && <div className={'h-0.5 w-8 ' + (step > s ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700')} />}
             </div>
           ))}
           <div className="mr-3 text-sm text-gray-500">
-            {step === 1 ? '\u05D1\u05D7\u05E8 \u05D0\u05D5\u05DE\u05DF' : step === 2 ? '\u05D1\u05D7\u05E8 \u05DE\u05D5\u05E4\u05E2' : '\u05D4\u05E2\u05DC\u05D4 \u05DE\u05D3\u05D9\u05D4'}
+            {step === 1 ? 'בחר אומן' : step === 2 ? 'בחר מופע' : 'העלה מדיה'}
           </div>
         </div>
 
@@ -305,18 +305,18 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         {step === 2 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <button onClick={() => { setStep(1); setSelectedArtist('') }} className="text-xs text-gray-400 hover:text-gray-600">\u2190 \u05D7\u05D6\u05E8\u05D4</button>
+              <button onClick={() => { setStep(1); setSelectedArtist('') }} className="text-xs text-gray-400 hover:text-gray-600">← חזרה</button>
               <span className="text-sm font-bold text-pink-600">{selectedArtist}</span>
             </div>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">\u05D0\u05D9\u05D6\u05D4 \u05DE\u05D5\u05E4\u05E2?</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">איזה מופע?</p>
             {artistCampaigns.length === 0 ? (
-              <p className="text-sm text-gray-400">\u05D0\u05D9\u05DF \u05DE\u05D5\u05E4\u05E2\u05D9\u05DD \u05E2\u05EA\u05D9\u05D3\u05D9\u05D9\u05DD</p>
+              <p className="text-sm text-gray-400">אין מופעים עתידיים</p>
             ) : (
               <div className="space-y-2">
                 {artistCampaigns.map(camp => (
                   <button key={camp.id} onClick={() => { setSelectedCampaign(camp); setStep(3) }}
                     className="w-full text-right px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-pink-300 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-colors flex items-center justify-between">
-                    <span className="text-xs text-gray-400 font-medium">{camp.launch_date ? formatDate(camp.launch_date) : '\u05DC\u05DC\u05D0 \u05EA\u05D0\u05E8\u05D9\u05DA'}</span>
+                    <span className="text-xs text-gray-400 font-medium">{camp.launch_date ? formatDate(camp.launch_date) : 'ללא תאריך'}</span>
                     <span className="font-semibold text-gray-800 dark:text-white text-sm">{camp.name}</span>
                   </button>
                 ))}
@@ -329,7 +329,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         {step === 3 && selectedCampaign && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <button onClick={() => { setStep(2); setSelectedCampaign(null) }} className="text-xs text-gray-400 hover:text-gray-600">\u2190 \u05D7\u05D6\u05E8\u05D4</button>
+              <button onClick={() => { setStep(2); setSelectedCampaign(null) }} className="text-xs text-gray-400 hover:text-gray-600">← חזרה</button>
               <span className="text-sm font-bold text-pink-600">{selectedArtist}</span>
               <span className="text-gray-300">/</span>
               <span className="text-sm text-gray-600 dark:text-gray-300">{selectedCampaign.launch_date ? formatDate(selectedCampaign.launch_date) : selectedCampaign.name}</span>
@@ -344,12 +344,12 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
               <svg className="w-10 h-10 mx-auto mb-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">\u05D2\u05E8\u05D5\u05E8 \u05E7\u05D1\u05E6\u05D9\u05DD \u05DC\u05DB\u05D0\u05DF \u05D0\u05D5 \u05DC\u05D7\u05E5 \u05DC\u05D1\u05D7\u05D9\u05E8\u05D4</p>
-              <p className="text-xs text-gray-400 mt-1">JPG, PNG, MP4, MOV \u05D5\u05E2\u05D5\u05D3 — \u05D0\u05E4\u05E9\u05E8 \u05DC\u05D1\u05D7\u05D5\u05E8 \u05DE\u05E1\u05E4\u05E8 \u05E7\u05D1\u05E6\u05D9\u05DD \u05D1\u05D1\u05EA \u05D0\u05D7\u05EA</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">גרור קבצים לכאן או לחץ לבחירה</p>
+              <p className="text-xs text-gray-400 mt-1">JPG, PNG, MP4, MOV ועוד — אפשר לבחור מספר קבצים בבת אחת</p>
             </div>
             <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => handleFiles(e.target.files)} />
             {uploadError && <p className="mt-2 text-sm text-red-500">{uploadError}</p>}
-            {dropboxToken && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox \u05DE\u05D7\u05D5\u05D1\u05E8</p>}
+            {dropboxToken && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox מחובר</p>}
           </div>
         )}
       </div>
@@ -357,12 +357,12 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
       {/* Gallery */}
       <div>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">\u05E1\u05E4\u05E8\u05D9\u05D9\u05EA \u05DE\u05D3\u05D9\u05D4 ({galleryItems.length})</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">ספריית מדיה ({galleryItems.length})</h2>
           {galleryArtists.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => setFilterArtist('')}
                 className={'px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ' + (!filterArtist ? 'bg-pink-600 text-white border-pink-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50')}>
-                \u05D4\u05DB\u05DC
+                הכל
               </button>
               {galleryArtists.map(a => (
                 <button key={a} onClick={() => setFilterArtist(a)}
@@ -383,7 +383,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
             <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-sm">\u05D0\u05D9\u05DF \u05DE\u05D3\u05D9\u05D4 \u05E2\u05D3\u05D9\u05D9\u05DF</p>
+            <p className="text-sm">אין מדיה עדיין</p>
           </div>
         ) : (
           (() => {
@@ -409,11 +409,11 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                       )}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-end justify-between p-2 opacity-0 group-hover:opacity-100">
                         <a href={item.url} target="_blank" rel="noopener noreferrer"
-                          className="text-white bg-black/50 rounded-lg p-1.5 hover:bg-black/70 transition-colors" title="\u05E6\u05E4\u05D9\u05D9\u05D4">
+                          className="text-white bg-black/50 rounded-lg p-1.5 hover:bg-black/70 transition-colors" title="צפייה">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                         </a>
                         <button onClick={() => deleteItem(item.campaignId, item.name)}
-                          className="text-white bg-red-500/80 rounded-lg p-1.5 hover:bg-red-600 transition-colors" title="\u05DE\u05D7\u05E7">
+                          className="text-white bg-red-500/80 rounded-lg p-1.5 hover:bg-red-600 transition-colors" title="מחק">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </div>
@@ -434,10 +434,10 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         <div className="fixed bottom-5 left-5 z-[9999] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-72">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold text-gray-800 dark:text-white">
-              {activeUploads > 0 ? `\u05DE\u05E2\u05DC\u05D4... (${activeUploads}/${totalUploads})` : `\u05D4\u05E2\u05DC\u05D0\u05D4 \u05D4\u05E1\u05EA\u05D9\u05D9\u05DE\u05D4 \u2713`}
+              {activeUploads > 0 ? `מעלה... (${activeUploads}/${totalUploads})` : `העלאה הסתיימה ✓`}
             </p>
             {activeUploads === 0 && (
-              <button onClick={() => setUploadQueue([])} className="text-gray-400 hover:text-gray-600 text-lg leading-none">\u00D7</button>
+              <button onClick={() => setUploadQueue([])} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
             )}
           </div>
           <div className="space-y-2.5 max-h-48 overflow-y-auto">
@@ -446,7 +446,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 ml-2 max-w-[180px]">{item.name}</span>
                   <span className={`text-xs font-bold flex-shrink-0 ${item.status === 'done' ? 'text-emerald-500' : item.status === 'error' ? 'text-red-500' : 'text-pink-600'}`}>
-                    {item.status === 'done' ? '\u2713' : item.status === 'error' ? '\u2717' : item.progress + '%'}
+                    {item.status === 'done' ? '✓' : item.status === 'error' ? '✗' : item.progress + '%'}
                   </span>
                 </div>
                 <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
