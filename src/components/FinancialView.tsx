@@ -877,7 +877,7 @@ function ClientsTab() {
   const [modalClient, setModalClient] = useState<ClientRecord | 'new' | null>(null)
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
-  const [view, setView] = useState<'cards' | 'table'>('cards')
+  const [view, setView] = useState<'cards' | 'table'>('table')
   const [sortKey, setSortKey] = useState<'name' | 'invoiceCount' | 'totalAmount' | 'paidAmount' | 'remaining'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
