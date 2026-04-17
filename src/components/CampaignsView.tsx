@@ -112,6 +112,7 @@ export function CampaignsView() {
   const [showContactsModal, setShowContactsModal] = useState(false)
   const [contactRosterSearch, setContactRosterSearch] = useState('')
   const [newContactName, setNewContactName] = useState('')
+  const [showMediaModal, setShowMediaModal] = useState(false)
   const [newContactPhone, setNewContactPhone] = useState('')
   const [selectedContactId, setSelectedContactId] = useState('')
   const [contactModalSearch, setContactModalSearch] = useState('')
@@ -357,8 +358,8 @@ export function CampaignsView() {
           מאגר משרדים
         </button>
         <button
-          onClick={() => setBarbySubTab('media')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${barbySubTab === 'media' ? 'bg-pink-100 text-pink-700 border-pink-200' : 'text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-900/20'}`}
+          onClick={() => setShowMediaModal(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-800 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           מאגר מדיה
@@ -719,7 +720,20 @@ export function CampaignsView() {
             </div>
           </div>
         </div>
-      )} {showNewModal && (
+      )}
+
+      {/* Media Library Modal — stays mounted so background uploads continue */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 ${showMediaModal ? '' : 'hidden'}`} onClick={e => { if(e.target===e.currentTarget) setShowMediaModal(false) }}>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl relative max-h-[90vh] overflow-y-auto" dir="rtl">
+          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">מאגר מדיה</h2>
+            <button onClick={() => setShowMediaModal(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+          </div>
+          <MediaLibraryView />
+        </div>
+      </div>
+
+      {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if(e.target===e.currentTarget) setShowNewModal(false) }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative" dir="rtl">
             <div className="flex items-center justify-between mb-6">
@@ -1303,98 +1317,6 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             )}
           </div>
 
-          {/* Media section */}
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">מדיה</p>
-            {localMediaUrl ? (
-              <div className="space-y-2">
-                {isImage && <img src={localMediaUrl} alt="media" className="w-full rounded-lg max-h-48 object-cover" />}
-                {isVideo && <video src={localMediaUrl} controls className="w-full rounded-lg max-h-48" />}
-                {!isImage && !isVideo && (
-                  <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <svg className="w-8 h-8 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate flex-1">{localMediaUrl.split('/').pop()}</span>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <a href={localMediaUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors text-center">
-                    צפייה
-                  </a>
-                  <a href={localMediaUrl} download
-                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors text-center">
-                    הורדה
-                  </a>
-                  <button onClick={handleDelete}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
-                    מחיקה
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onDrop={handleDrop}
-                onDragOver={e => { e.preventDefault(); setDragging(true) }}
-                onDragLeave={() => setDragging(false)}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${dragging ? 'border-pink-400 bg-pink-50' : 'border-gray-200 dark:border-gray-600 hover:border-pink-300 hover:bg-pink-50/30'}`}
-              >
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">
-                    <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-pink-500 rounded-full animate-spin" />
-                    מעלה...
-                  </div>
-                ) : (
-                  <>
-                    <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">גרור קובץ לכאן</p>
-                    <p className="text-xs text-gray-300 mt-0.5">או לחץ לבחירה</p>
-                  </>
-                )}
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*,video/*,.pdf,.doc,.docx" className="hidden" onChange={e => { const f = e.target.files?.[0]; if(f) handleUpload(f) }} />
-            {uploadError && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
-          </div>
-          {/* Media Library section */}
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">מאגר מדיה</p>
-            {mediaLibraryLoading ? (
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-pink-500 rounded-full animate-spin" />
-                טוען...
-              </div>
-            ) : mediaLibraryFiles.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500">אין מדיה משויכת למופע זה</p>
-            ) : (
-              <div className="space-y-2">
-                {mediaLibraryFiles.map(file => {
-                  const isImg = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
-                  const isVid = /\.(mp4|mov|avi|webm)$/i.test(file.name)
-                  return (
-                    <div key={file.name} className="flex items-center gap-3 p-2 bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-lg">
-                      {isImg ? (
-                        <img src={file.url} alt={file.name} className="w-10 h-10 object-cover rounded-md flex-shrink-0" />
-                      ) : isVid ? (
-                        <div className="w-10 h-10 flex items-center justify-center bg-pink-50 dark:bg-pink-900/30 rounded-md flex-shrink-0">
-                          <svg className="w-5 h-5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-gray-600 rounded-md flex-shrink-0">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        </div>
-                      )}
-                      <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">{file.name}</span>
-                      <a href={file.url} download={file.name}
-                        className="flex-shrink-0 px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors">
-                        הורדה
-                      </a>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
 
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
             <button onClick={() => onDelete(campaign.id)} className="w-full py-2 rounded-xl text-xs font-semibold text-red-500 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
