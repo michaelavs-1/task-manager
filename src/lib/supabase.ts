@@ -31,8 +31,21 @@ export type Task = {
   creator?: User
 }
 
+export type Client = {
+  id: number
+  name: string
+  tax_id: string
+  tax_status: string
+  contact_name: string
+  contact_email: string
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
 export type Invoice = {
   id: number
+  client_id: number | null
   issued_by: string
   sent_to: string
   date: string
@@ -42,6 +55,7 @@ export type Invoice = {
   before_vat: number
   total: number
   paid: number
+  payment_date: string
   notes: string
   created_at: string
   updated_at: string

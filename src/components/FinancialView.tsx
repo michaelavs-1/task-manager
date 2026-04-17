@@ -265,6 +265,7 @@ function SuppliersTab() {
 // ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
   id: number
+  client_id: number | null
   issued_by: string
   sent_to: string
   date: string
@@ -274,6 +275,7 @@ interface InvoiceRow {
   before_vat: number
   total: number
   paid: number
+  payment_date: string
   notes: string
 }
 
@@ -291,8 +293,8 @@ function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
 }
 
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
-  issued_by: '', sent_to: '', date: '', doc_type: '',
-  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, notes: '',
+  client_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
+  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, payment_date: '', notes: '',
 }
 
 type InvoiceForm = Omit<InvoiceRow, 'id'>
@@ -337,13 +339,14 @@ function isoToIsraeli(iso: string): string {
 
 // ── InvoiceModal ──────────────────────────────────────────────────────────────
 function InvoiceModal({
-  initial, onSave, onClose, saving, clientOptions = [],
+  initial, onSave, onClose, saving, clientOptions = [], clientList = [],
 }: {
   initial: InvoiceForm
   onSave: (data: InvoiceForm) => void
   onClose: () => void
   saving: boolean
   clientOptions?: string[]
+  clientList?: ClientRecord[]
 }) {
   const [form, setForm] = useState<InvoiceForm>(initial)
   const [clientQuery, setClientQuery] = useState(initial.client || '')
@@ -353,7 +356,6 @@ function InvoiceModal({
     const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
     setForm(f => ({ ...f, [k]: v }))
   }
-  const remaining = Math.max(0, (form.total as number) - (form.paid as number))
 
   const filteredClients = clientOptions.filter(c =>
     c.toLowerCase().includes(clientQuery.toLowerCase())
@@ -387,8 +389,9 @@ function InvoiceModal({
                   <li
                     key={c}
                     onMouseDown={() => {
+                      const match = clientList.find(cl => cl.name === c)
                       setClientQuery(c)
-                      setForm(f => ({ ...f, client: c }))
+                      setForm(f => ({ ...f, client: c, client_id: match?.id ?? null }))
                       setClientOpen(false)
                     }}
                     className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 transition-colors ${form.client === c ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-gray-800'}`}
@@ -437,15 +440,17 @@ function InvoiceModal({
               {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          <ModalField label="לפני מע״מ ₪" value={form.before_vat} onChange={set('before_vat')} type="number" />
-          <ModalField label="סה״כ לתשלום ₪" value={form.total} onChange={set('total')} type="number" />
-          <ModalField label="שולם ₪" value={form.paid} onChange={set('paid')} type="number" />
+          <ModalField label="סכום ₪" value={form.total} onChange={set('total')} type="number" />
 
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: remaining > 0 ? '#fef2f2' : '#f0fdf4' }}>
-            <span className="text-xs text-gray-400">יתרה לגביה:</span>
-            <span className={`font-bold text-sm ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-              {remaining > 0 ? `₪${remaining.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : 'שולם במלואו'}
-            </span>
+          {/* payment_date picker */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">תאריך תשלום</label>
+            <input
+              type="date"
+              value={israeliToISO(form.payment_date)}
+              onChange={e => setForm(f => ({ ...f, payment_date: isoToIsraeli(e.target.value) }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+            />
           </div>
         </div>
 
@@ -475,6 +480,7 @@ function InvoiceModal({
 // ── InvoicesTab ───────────────────────────────────────────────────────────────
 function InvoicesTab() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [clientList, setClientList] = useState<ClientRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -487,16 +493,21 @@ function InvoicesTab() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/invoices')
-      .then(r => r.json())
-      .then(d => { if (d.error) setError(d.error); else setInvoices(d.invoices || []) })
-      .catch(() => setError('שגיאה בטעינת חשבוניות'))
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/invoices').then(r => r.json()),
+      fetch('/api/clients').then(r => r.json()),
+    ]).then(([invData, cliData]) => {
+      if (invData.error) setError(invData.error)
+      else setInvoices(invData.invoices || [])
+      if (!cliData.error) setClientList(cliData.clients || [])
+    })
+    .catch(() => setError('שגיאה בטעינת נתונים'))
+    .finally(() => setLoading(false))
   }
 
   useEffect(load, [])
 
-  const clients = [...new Set(invoices.map(i => i.client).filter(Boolean))].sort()
+  const clients = clientList.map(c => c.name).sort()
   const docTypes = [...new Set(invoices.map(i => i.doc_type).filter(Boolean))].sort()
 
   const filtered = invoices.filter(inv => {
@@ -656,6 +667,7 @@ function InvoicesTab() {
         <InvoiceModal
           initial={modalInv === 'new' ? EMPTY_FORM : { ...modalInv }}
           clientOptions={clients}
+          clientList={clientList}
           onSave={handleSave}
           onClose={() => setModalInv(null)}
           saving={saving}
@@ -682,139 +694,304 @@ function InvoicesTab() {
   )
 }
 
-interface ClientRow {
+// ── Client types ──────────────────────────────────────────────────────────────
+interface ClientRecord {
+  id: number
   name: string
+  tax_id: string
+  tax_status: string
+  contact_name: string
+  contact_email: string
+  notes: string
   invoiceCount: number
   totalAmount: number
   paidAmount: number
 }
 
+const EMPTY_CLIENT: Omit<ClientRecord, 'id' | 'invoiceCount' | 'totalAmount' | 'paidAmount'> = {
+  name: '', tax_id: '', tax_status: 'מורשה', contact_name: '', contact_email: '', notes: ''
+}
+
+function ClientModal({ initial, onSave, onClose, saving }: {
+  initial: Omit<ClientRecord, 'id' | 'invoiceCount' | 'totalAmount' | 'paidAmount'>
+  onSave: (data: typeof initial) => void
+  onClose: () => void
+  saving: boolean
+}) {
+  const [form, setForm] = useState(initial)
+  const s = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-bold text-gray-900">{(initial as ClientRecord).id ? 'עריכת לקוח' : 'לקוח חדש'}</h2>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">שם לקוח *</label>
+            <input value={form.name} onChange={s('name')} placeholder="שם החברה / אדם" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">ח.פ / ע.מ / ע.פ</label>
+              <input value={form.tax_id} onChange={s('tax_id')} placeholder="מספר עוסק" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">סטטוס ברשויות</label>
+              <select value={form.tax_status} onChange={s('tax_status')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="מורשה">מורשה</option>
+                <option value="פטור">פטור</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">איש קשר הנה&quot;ח</label>
+            <input value={form.contact_name} onChange={s('contact_name')} placeholder="שם איש הקשר" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Email הנהלת חשבונות</label>
+            <input type="email" value={form.contact_email} onChange={s('contact_email')} placeholder="accounting@company.com" className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" dir="ltr" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">הערות</label>
+            <textarea value={form.notes} onChange={s('notes')} rows={2} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => onSave(form)} disabled={saving || !form.name}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>
+            {saving ? 'שומר...' : 'שמור'}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ClientsTab() {
-  const [clients, setClients] = useState<ClientRow[]>([])
+  const [clients, setClients] = useState<ClientRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [modalClient, setModalClient] = useState<ClientRecord | 'new' | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [ledgerClient, setLedgerClient] = useState<ClientRecord | null>(null)
+  const [ledgerInvoices, setLedgerInvoices] = useState<InvoiceRow[]>([])
+  const [ledgerLoading, setLedgerLoading] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/invoices')
+  const load = () => {
+    setLoading(true)
+    fetch('/api/clients')
       .then(r => r.json())
-      .then(d => {
-        if (d.error) { setError(d.error); return }
-        // Aggregate by client name
-        const map: Record<string, ClientRow> = {}
-        for (const inv of (d.invoices || []) as InvoiceRow[]) {
-          if (!inv.client) continue
-          if (!map[inv.client]) map[inv.client] = { name: inv.client, invoiceCount: 0, totalAmount: 0, paidAmount: 0 }
-          map[inv.client].invoiceCount++
-          map[inv.client].totalAmount += inv.total
-          map[inv.client].paidAmount  += inv.paid
-        }
-        setClients(Object.values(map).sort((a, b) => b.invoiceCount - a.invoiceCount))
-      })
+      .then(d => { if (d.error) setError(d.error); else setClients(d.clients || []) })
       .catch(() => setError('שגיאה בטעינת לקוחות'))
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(load, [])
+
+  const openLedger = (c: ClientRecord) => {
+    setLedgerClient(c)
+    setLedgerLoading(true)
+    fetch(`/api/invoices?client_id=${c.id}`)
+      .then(r => r.json())
+      .then(d => setLedgerInvoices((d.invoices || []).filter((i: InvoiceRow) => i.client_id === c.id)))
+      .catch(() => setLedgerInvoices([]))
+      .finally(() => setLedgerLoading(false))
+  }
+
+  const handleSaveClient = async (data: typeof EMPTY_CLIENT) => {
+    setSaving(true)
+    try {
+      const isEdit = modalClient !== 'new' && modalClient !== null
+      const url = isEdit ? `/api/clients/${(modalClient as ClientRecord).id}` : '/api/clients'
+      const method = isEdit ? 'PATCH' : 'POST'
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      if (r.ok) { setModalClient(null); load() }
+    } finally { setSaving(false) }
+  }
+
+  const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
   const filtered = clients.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase())
   )
-
   const totalInvoices = clients.reduce((s, c) => s + c.invoiceCount, 0)
-  const totalAmount = clients.reduce((s, c) => s + c.totalAmount, 0)
-  const totalPaid = clients.reduce((s, c) => s + c.paidAmount, 0)
+  const totalAmount   = clients.reduce((s, c) => s + c.totalAmount, 0)
 
-  if (loading) return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-gray-400 text-sm">טוען לקוחות...</div>
-    </div>
-  )
-
-  if (error) return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-red-500 text-sm">{error}</div>
-    </div>
-  )
-
-  const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען לקוחות...</div></div>
+  if (error)   return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-6 gap-4">
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4 flex-shrink-0">
-        {[
-          { label: 'לקוחות', value: clients.length, color: '#6366f1' },
-          { label: 'חשבוניות', value: totalInvoices, color: '#3b82f6' },
-          { label: 'סה״כ מחויב', value: fmt(totalAmount), color: '#10b981', raw: true },
-        ].map(({ label, value, color, raw }) => (
-          <div key={label} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="text-2xl font-bold" style={{ color }}>{value}</div>
-            <div className="text-xs text-gray-500 mt-1.5">{label}</div>
-          </div>
-        ))}
+    <div className="flex-1 flex flex-col min-h-0 p-6 gap-4" dir="rtl">
+      {/* Header row */}
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div className="flex gap-4">
+          {[
+            { label: 'לקוחות', value: clients.length, color: '#6366f1' },
+            { label: 'חשבוניות', value: totalInvoices, color: '#3b82f6' },
+            { label: 'סה״כ', value: fmt(totalAmount), color: '#10b981' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-2xl border border-gray-200 bg-white px-5 py-3 shadow-sm flex items-center gap-3">
+              <span className="text-xl font-bold" style={{ color }}>{value}</span>
+              <span className="text-xs text-gray-400">{label}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => setModalClient('new')}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm"
+          style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הוספת לקוח
+        </button>
       </div>
 
       {/* Search */}
-      <div className="flex-shrink-0">
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="חפש לקוח..."
-          className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-        />
+      <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="חפש לקוח..." className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white flex-shrink-0" />
+
+      {/* Cards grid */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+          {filtered.length === 0 ? (
+            <div className="col-span-3 text-center py-16 text-gray-400">לא נמצאו לקוחות</div>
+          ) : filtered.map(c => {
+            const remaining = c.totalAmount - c.paidAmount
+            return (
+              <div key={c.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                {/* Card header */}
+                <div className="px-5 pt-5 pb-3 border-b border-gray-100">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{c.name}</h3>
+                      {c.tax_id && <p className="text-xs text-gray-400 mt-0.5">ח.פ: {c.tax_id}</p>}
+                    </div>
+                    <div className="flex gap-1 mr-2 flex-shrink-0">
+                      {c.tax_status && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.tax_status === 'מורשה' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {c.tax_status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {(c.contact_name || c.contact_email) && (
+                    <div className="mt-2 space-y-0.5">
+                      {c.contact_name && <p className="text-xs text-gray-500">👤 {c.contact_name}</p>}
+                      {c.contact_email && <p className="text-xs text-gray-400 dir-ltr" dir="ltr">{c.contact_email}</p>}
+                    </div>
+                  )}
+                </div>
+                {/* Card stats */}
+                <div className="px-5 py-3 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-base font-bold text-indigo-600">{c.invoiceCount}</div>
+                    <div className="text-[10px] text-gray-400">חשבוניות</div>
+                  </div>
+                  <div>
+                    <div className="text-base font-bold text-gray-800">{fmt(c.totalAmount)}</div>
+                    <div className="text-[10px] text-gray-400">סה״כ</div>
+                  </div>
+                  <div>
+                    <div className={`text-base font-bold ${remaining > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                      {remaining > 0 ? fmt(remaining) : '✓'}
+                    </div>
+                    <div className="text-[10px] text-gray-400">{remaining > 0 ? 'יתרה' : 'שולם'}</div>
+                  </div>
+                </div>
+                {/* Card actions */}
+                <div className="px-5 pb-4 flex gap-2">
+                  <button
+                    onClick={() => openLedger(c)}
+                    className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  >
+                    כרטסת
+                  </button>
+                  <button
+                    onClick={() => setModalClient(c)}
+                    className="flex-1 py-1.5 rounded-xl text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    עריכה
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto rounded-2xl border border-gray-200 bg-white min-h-0">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
-              <th className="px-5 py-3 text-right font-semibold">שם לקוח</th>
-              <th className="px-5 py-3 text-right font-semibold">חשבוניות</th>
-              <th className="px-5 py-3 text-right font-semibold">סה״כ מחויב</th>
-              <th className="px-5 py-3 text-right font-semibold">שולם</th>
-              <th className="px-5 py-3 text-right font-semibold">יתרה</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-12 text-gray-400">לא נמצאו לקוחות</td>
-              </tr>
-            ) : filtered.map((c, i) => {
-              const remaining = c.totalAmount - c.paidAmount
-              return (
-                <tr key={c.name} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
-                  <td className="px-5 py-3 font-semibold text-gray-800">{c.name}</td>
-                  <td className="px-5 py-3 text-gray-500">{c.invoiceCount}</td>
-                  <td className="px-5 py-3 text-gray-700 font-medium">{fmt(c.totalAmount)}</td>
-                  <td className="px-5 py-3 text-emerald-600 font-medium">{fmt(c.paidAmount)}</td>
-                  <td className="px-5 py-3">
-                    {remaining > 0 ? (
-                      <span className="text-red-500 font-semibold">{fmt(remaining)}</span>
-                    ) : remaining < 0 ? (
-                      <span className="text-gray-400 text-xs">—</span>
-                    ) : (
-                      <span className="text-emerald-500 text-xs font-medium">שולם במלואו</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-          {filtered.length > 0 && (
-            <tfoot>
-              <tr className="bg-gray-50 border-t-2 border-gray-200">
-                <td className="px-5 py-3 font-bold text-gray-700 text-xs uppercase tracking-wide">סה״כ</td>
-                <td className="px-5 py-3 font-bold text-gray-700">{totalInvoices}</td>
-                <td className="px-5 py-3 font-bold text-gray-800">{fmt(totalAmount)}</td>
-                <td className="px-5 py-3 font-bold text-emerald-600">{fmt(totalPaid)}</td>
-                <td className="px-5 py-3 font-bold text-red-500">{fmt(totalAmount - totalPaid)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+      {/* Client Modal (add / edit) */}
+      {modalClient !== null && (
+        <ClientModal
+          initial={modalClient === 'new' ? EMPTY_CLIENT : {
+            name: (modalClient as ClientRecord).name,
+            tax_id: (modalClient as ClientRecord).tax_id,
+            tax_status: (modalClient as ClientRecord).tax_status,
+            contact_name: (modalClient as ClientRecord).contact_name,
+            contact_email: (modalClient as ClientRecord).contact_email,
+            notes: (modalClient as ClientRecord).notes,
+          }}
+          onSave={handleSaveClient}
+          onClose={() => setModalClient(null)}
+          saving={saving}
+        />
+      )}
+
+      {/* Ledger drawer */}
+      {ledgerClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setLedgerClient(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-gray-900 text-lg">{ledgerClient.name}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">כרטסת לקוח</p>
+              </div>
+              <button onClick={() => setLedgerClient(null)} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              {ledgerLoading ? (
+                <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
+              ) : ledgerInvoices.length === 0 ? (
+                <div className="text-center py-12 text-gray-400 text-sm">אין חשבוניות ללקוח זה</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
+                      <th className="px-3 py-2 text-right">מס׳</th>
+                      <th className="px-3 py-2 text-right">תאריך</th>
+                      <th className="px-3 py-2 text-right">סוג</th>
+                      <th className="px-3 py-2 text-right">מי הוציא</th>
+                      <th className="px-3 py-2 text-right">סכום</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledgerInvoices.map((inv, i) => (
+                      <tr key={inv.id} className={`border-b border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                        <td className="px-3 py-2 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500 text-xs">{inv.date || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">{inv.issued_by || '—'}</td>
+                        <td className="px-3 py-2 font-semibold text-gray-800">{fmt(inv.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
+                      <td colSpan={4} className="px-3 py-2 text-xs text-gray-500">סה״כ ({ledgerInvoices.length} חשבוניות)</td>
+                      <td className="px-3 py-2 text-gray-800">{fmt(ledgerInvoices.reduce((s, i) => s + i.total, 0))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
