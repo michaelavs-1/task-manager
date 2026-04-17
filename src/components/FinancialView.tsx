@@ -440,7 +440,7 @@ function InvoiceModal({
               {['מיכאל','דן','דעיה'].map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          <ModalField label="סכום ₪" value={form.total} onChange={set('total')} type="number" />
+          <ModalField label='סכום לפני מע"מ ₪' value={form.before_vat} onChange={set('before_vat')} type="number" />
 
           {/* payment_date picker */}
           <div>
