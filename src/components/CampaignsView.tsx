@@ -1122,7 +1122,12 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   return (
     <div className={`rounded-2xl border overflow-hidden shadow-sm transition-shadow hover:shadow-md ${muted ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-75' : isSoldOut ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20' : 'border-pink-100 dark:border-pink-900 bg-white dark:bg-gray-800'}`}>
       <button onClick={() => setExpanded(!expanded)} className="w-full text-right focus:outline-none">
-        {localMediaUrl && isImage && (
+                    {campaign.show_time && (
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                מופע {campaign.show_time}
+              </span>
+            )}
+            {localMediaUrl && isImage && (
           <div className="relative w-full overflow-hidden" style={{height:'180px'}}>
             <img src={localMediaUrl} alt="" className="w-full h-full object-cover" />
             {isSoldOut && (
