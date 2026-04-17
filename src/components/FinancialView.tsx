@@ -262,6 +262,352 @@ function SuppliersTab() {
   )
 }
 
+// ── Financial Dashboard ───────────────────────────────────────────────────────
+const MONTH_NAMES_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+
+function fmt(n: number) {
+  return '₪' + Math.round(n).toLocaleString('he-IL')
+}
+
+function FinancialDashboard() {
+  const [invoices, setInvoices] = useState<FinDashInvoice[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/invoices')
+      .then(r => r.json())
+      .then(d => { setInvoices(d.invoices || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>טוען נתונים...</div>
+    </div>
+  )
+
+  // ── KPIs ──
+  const totalRevenue = invoices.reduce((s, i) => s + (i.total || 0), 0)
+  const totalPaid    = invoices.reduce((s, i) => s + (i.paid  || 0), 0)
+  const totalRemain  = totalRevenue - totalPaid
+  const openCount    = invoices.filter(i => (i.total - i.paid) > 0).length
+
+  // ── Monthly breakdown ──
+  type MonthData = { label: string; sortKey: string; revenue: number; paid: number; count: number }
+  const monthMap: Record<string, MonthData> = {}
+  invoices.forEach(inv => {
+    if (!inv.date) return
+    const d = new Date(inv.date)
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, count: 0 }
+    monthMap[key].revenue += inv.total || 0
+    monthMap[key].paid    += inv.paid  || 0
+    monthMap[key].count   += 1
+  })
+  const months = Object.values(monthMap).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12)
+
+  // ── Top clients ──
+  const clientMap: Record<string, { name: string; revenue: number; paid: number }> = {}
+  invoices.forEach(inv => {
+    const name = inv.client || 'לא מוגדר'
+    if (!clientMap[name]) clientMap[name] = { name, revenue: 0, paid: 0 }
+    clientMap[name].revenue += inv.total || 0
+    clientMap[name].paid    += inv.paid  || 0
+  })
+  const topClients = Object.values(clientMap).sort((a,b) => b.revenue - a.revenue).slice(0, 8)
+
+  // ── Bar chart helpers ──
+  const maxRev = Math.max(...months.map(m => m.revenue), 1)
+
+  // ── Donut helper ──
+  function DonutArc({ pct, color, r = 44, stroke = 10 }: { pct: number; color: string; r?: number; stroke?: number }) {
+    const circ = 2 * Math.PI * r
+    const dash = pct * circ
+    return (
+      <circle
+        cx="56" cy="56" r={r}
+        fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeDashoffset={circ * 0.25}
+        strokeLinecap="round"
+      />
+    )
+  }
+
+  const paidPct    = totalRevenue > 0 ? totalPaid / totalRevenue : 0
+  const remainPct  = 1 - paidPct
+
+  return (
+    <div className="flex-1 overflow-auto p-6 space-y-6" dir="rtl">
+
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'סה"כ הכנסות', value: fmt(totalRevenue), icon: '💰', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: 'שולם', value: fmt(totalPaid), icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+          { label: 'נותר לגבייה', value: fmt(totalRemain), icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+          { label: 'חשבוניות פתוחות', value: String(openCount), icon: '📄', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+        ].map(card => (
+          <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: card.bg }}>
+                {card.icon}
+              </div>
+            </div>
+            <div className="text-2xl font-bold tracking-tight" style={{ color: card.color }}>{card.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Charts row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Bar chart - monthly revenue */}
+        <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>הכנסות לפי חודש</h3>
+          {months.length === 0 ? (
+            <div className="text-sm text-center py-8" style={{ color: 'var(--text-secondary)' }}>אין נתונים</div>
+          ) : (
+            <div className="flex items-end gap-2 h-40 overflow-x-auto">
+              {months.map(m => {
+                const revH = Math.round((m.revenue / maxRev) * 130)
+                const paidH = Math.round((m.paid / maxRev) * 130)
+                return (
+                  <div key={m.sortKey} className="flex flex-col items-center gap-1 flex-1 min-w-[36px] group">
+                    <div className="relative w-full flex flex-col justify-end" style={{ height: 130 }}>
+                      {/* Revenue bar */}
+                      <div className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all" style={{ height: revH, background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.3)' }} />
+                      {/* Paid bar */}
+                      <div className="absolute bottom-0 left-1 right-1 rounded-t-lg transition-all" style={{ height: paidH, background: 'linear-gradient(to top, #6366f1, #818cf8)' }} />
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: 10 }}>
+                        {fmt(m.revenue)}
+                      </div>
+                    </div>
+                    <span className="text-center leading-tight" style={{ color: 'var(--text-secondary)', fontSize: 9 }}>{m.label.split(' ')[0]}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div className="flex gap-4 mt-3">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.4)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>שולם</span></div>
+          </div>
+        </div>
+
+        {/* Donut - paid vs remaining */}
+        <div className="rounded-2xl p-5 flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <h3 className="text-sm font-semibold self-start" style={{ color: 'var(--text-primary)' }}>סטטוס גבייה</h3>
+          <svg viewBox="0 0 112 112" className="w-28 h-28">
+            <DonutArc pct={1}         color="rgba(239,68,68,0.15)"  r={44} stroke={12} />
+            <DonutArc pct={paidPct}   color="#10b981"                r={44} stroke={12} />
+            <text x="56" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="#10b981">{Math.round(paidPct * 100)}%</text>
+            <text x="56" y="66" textAnchor="middle" fontSize="8" fill="var(--text-secondary)">שולם</text>
+          </svg>
+          <div className="w-full space-y-2">
+            <div className="flex justify-between text-xs">
+              <span style={{ color: 'var(--text-secondary)' }}>שולם</span>
+              <span className="font-semibold" style={{ color: '#10b981' }}>{fmt(totalPaid)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span style={{ color: 'var(--text-secondary)' }}>נותר</span>
+              <span className="font-semibold" style={{ color: '#ef4444' }}>{fmt(totalRemain)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Monthly table */}
+        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>פירוט חודשי</h3>
+          </div>
+          <div className="overflow-auto max-h-72">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)' }}>
+                  {['חודש','הכנסות','שולם','נותר','חשבוניות'].map(h => (
+                    <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[...months].reverse().map((m, i) => {
+                  const rem = m.revenue - m.paid
+                  return (
+                    <tr key={m.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.label}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(m.revenue)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(m.paid)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{fmt(rem)}</td>
+                      <td className="px-4 py-2.5 text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{m.count}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Top clients */}
+        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>לקוחות מובילים</h3>
+          </div>
+          <div className="overflow-auto max-h-72">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)' }}>
+                  {['לקוח','הכנסות','שולם','נותר'].map(h => (
+                    <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {topClients.map((c, i) => {
+                  const rem = c.revenue - c.paid
+                  const pct = c.revenue > 0 ? (c.paid / c.revenue) * 100 : 0
+                  return (
+                    <tr key={c.name} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      <td className="px-4 py-2.5">
+                        <div className="text-xs font-medium truncate max-w-[140px]" style={{ color: 'var(--text-primary)' }}>{c.name}</div>
+                        <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--border-color)', width: 80 }}>
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: '#10b981' }} />
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(c.revenue)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(c.paid)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{fmt(rem)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Monthly Accordion ── */}
+      <MonthlyAccordion invoices={invoices} />
+
+    </div>
+  )
+}
+
+function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
+  const [open, setOpen] = useState<string | null>(null)
+
+  // Group invoices by year-month
+  const monthMap: Record<string, { label: string; invoices: FinDashInvoice[] }> = {}
+  invoices.forEach(inv => {
+    if (!inv.date) return
+    const d = new Date(inv.date)
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
+    if (!monthMap[key]) monthMap[key] = { label, invoices: [] }
+    monthMap[key].invoices.push(inv)
+  })
+  const months = Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0]))
+
+  if (months.length === 0) return null
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold px-1" style={{ color: 'var(--text-primary)' }}>חשבוניות לפי חודש</h3>
+      {months.map(([key, { label, invoices: invs }]) => {
+        const totalRev  = invs.reduce((s,i) => s + (i.total     || 0), 0)
+        const totalVat  = invs.reduce((s,i) => s + ((i.total - i.before_vat) || 0), 0)
+        const totalPaid = invs.reduce((s,i) => s + (i.paid      || 0), 0)
+        const totalRem  = totalRev - totalPaid
+        const isOpen    = open === key
+
+        return (
+          <div key={key} className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            {/* Header */}
+            <button
+              onClick={() => setOpen(isOpen ? null : key)}
+              className="w-full flex items-center gap-4 px-5 py-4 text-right transition-colors hover:bg-black/5"
+            >
+              {/* Arrow */}
+              <span className="flex-shrink-0 text-xs transition-transform duration-200" style={{ color: 'var(--text-secondary)', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+
+              {/* Month label */}
+              <span className="font-semibold text-sm w-36 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>{label}</span>
+              <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>{invs.length} חשבוניות</span>
+
+              {/* Summary pills */}
+              <div className="flex-1 flex gap-3 justify-end flex-wrap">
+                <div className="flex flex-col items-end">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>סה"כ</span>
+                  <span className="text-xs font-bold" style={{ color: '#6366f1' }}>{fmt(totalRev)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>מע"מ</span>
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{fmt(totalVat)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>שולם</span>
+                  <span className="text-xs font-bold" style={{ color: '#10b981' }}>{fmt(totalPaid)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>נותר</span>
+                  <span className="text-xs font-bold" style={{ color: totalRem > 0 ? '#f59e0b' : '#10b981' }}>{fmt(totalRem)}</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Invoice rows */}
+            {isOpen && (
+              <div className="border-t" style={{ borderColor: 'var(--border-color)' }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)' }}>
+                      {['מס׳','לקוח','סוג','לפני מע"מ','סה"כ','שולם','נותר','סטטוס'].map(h => (
+                        <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invs.map((inv, i) => {
+                      const rem = (inv.total || 0) - (inv.paid || 0)
+                      const status = rem <= 0 ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
+                      const statusLabel = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }[status]
+                      const statusStyle = { paid: { bg: '#d1fae5', color: '#065f46' }, partial: { bg: '#fef3c7', color: '#92400e' }, unpaid: { bg: '#fee2e2', color: '#991b1b' } }[status]
+                      return (
+                        <tr key={inv.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                          <td className="px-4 py-2.5 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num}</td>
+                          <td className="px-4 py-2.5 text-xs max-w-[160px] truncate" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmt(inv.before_vat)}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(inv.total)}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(inv.paid)}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{fmt(rem)}</td>
+                          <td className="px-4 py-2.5">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: statusStyle.bg, color: statusStyle.color }}>{statusLabel}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Helper type for dashboard (subset of InvoiceRow)
+interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; client: string; doc_type: string }
+
 // ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
   id: number
@@ -1526,31 +1872,7 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
 
       {activeTab === 'invoices' && <InvoicesTab />}
 
-      {activeTab === 'dashboard' && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 p-12">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div className="text-center">
-            <h2 className="text-lg font-semibold text-gray-800">מודול פיננסי בבנייה</h2>
-            <p className="text-sm text-gray-500 mt-1 max-w-xs">דוחות הכנסות, הוצאות ונתונים פיננסיים יוצגו כאן בקרוב</p>
-          </div>
-          <div className="grid grid-cols-3 gap-4 w-full max-w-lg mt-4">
-            {[
-              { label: 'הכנסות', icon: '↑', color: 'bg-emerald-50 text-emerald-600' },
-              { label: 'הוצאות', icon: '↓', color: 'bg-red-50 text-red-500' },
-              { label: 'דוחות', icon: '▦', color: 'bg-indigo-50 text-indigo-600' },
-            ].map((item) => (
-              <div key={item.label} className={`rounded-2xl p-5 ${item.color} flex flex-col items-center gap-2 opacity-50`}>
-                <span className="text-2xl">{item.icon}</span>
-                <span className="text-sm font-semibold">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {activeTab === 'dashboard' && <FinancialDashboard />}
 
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">
