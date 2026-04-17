@@ -120,6 +120,7 @@ export function CampaignsView() {
   const [rosterLinkArtist, setRosterLinkArtist] = useState<string | null>(null)
   const [collapseSignal, setCollapseSignal] = useState(0)
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
+  const [campaignSearch, setCampaignSearch] = useState('')
 
   useEffect(() => {
     try {
@@ -299,6 +300,7 @@ export function CampaignsView() {
   }
 
   const filteredCampaigns = filterCampaigns(campaigns, selectedBoard)
+    .filter(c => !campaignSearch || (c.name || '').toLowerCase().includes(campaignSearch.toLowerCase()))
   const barbyArchiveGroups = ['נגמר - בארבי','נגמר - ארכיון כל הקמפיינים']
   const _today = new Date(); _today.setHours(0,0,0,0)
   const _slotOrder = (c: Campaign) => {
@@ -408,6 +410,8 @@ export function CampaignsView() {
           <input
             type="text"
             placeholder="חפש קמפיין..."
+            value={campaignSearch}
+            onChange={e => setCampaignSearch(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
           />
           <div className="flex justify-end">
