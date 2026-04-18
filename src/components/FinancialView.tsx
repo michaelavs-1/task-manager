@@ -3402,13 +3402,28 @@ function ExpensesTab() {
                                             } else if (ev.key === 'Enter') {
                                               ev.preventDefault()
                                               ev.stopPropagation()
-                                              const pick = filteredSups[cellSupplierDropIdxRef.current]
-                                              if (pick) {
+                                              // If dropdown is open with a highlighted pick — select it
+                                              if (showCellSupplierDrop && cellSupplierDropIdxRef.current >= 0) {
+                                                const pick = filteredSups[cellSupplierDropIdxRef.current]
+                                                if (pick) {
+                                                  updCV(pick.name)
+                                                  setCellSupplierSearch('')
+                                                  setShowCellSupplierDrop(false)
+                                                  updDropIdx(-1)
+                                                  return
+                                                }
+                                              }
+                                              // If dropdown is open + user typed something — pick top match
+                                              if (showCellSupplierDrop && cellSupplierSearch && filteredSups.length > 0) {
+                                                const pick = filteredSups[0]
                                                 updCV(pick.name)
                                                 setCellSupplierSearch('')
                                                 setShowCellSupplierDrop(false)
                                                 updDropIdx(-1)
+                                                return
                                               }
+                                              // Otherwise — save the current value
+                                              saveCellEdit(e)
                                             }
                                           }}
                                           placeholder="חפש ספק..."
