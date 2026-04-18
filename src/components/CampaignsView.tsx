@@ -994,9 +994,8 @@ export function CampaignsView() {
 }
 
 function TicketsTableRow({ campaign }: { campaign: Campaign }) {
-  const [soldInput, setSoldInput] = useState<string>(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const forSale = campaign.tickets_for_sale ?? null
-  const soldNum = soldInput !== '' ? parseInt(soldInput) : null
+  const soldNum = campaign.tickets_sold ?? null
   const remaining = forSale != null && soldNum != null ? forSale - soldNum : forSale != null ? forSale : null
   return (
     <tr className="hover:bg-pink-50/30 dark:hover:bg-gray-750 transition-colors">
@@ -1009,22 +1008,8 @@ function TicketsTableRow({ campaign }: { campaign: Campaign }) {
       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">
         {forSale != null ? forSale : '—'}
       </td>
-      <td className="px-4 py-3">
-        {forSale != null ? (
-          <input
-            type="number"
-            min="0"
-            max={forSale}
-            value={soldInput}
-            onChange={e => setSoldInput(e.target.value)}
-            onBlur={async () => {
-              const val = soldInput !== '' ? parseInt(soldInput) : null
-              await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
-            }}
-            placeholder="0"
-            className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
-          />
-        ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+      <td className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+        {soldNum != null ? soldNum.toLocaleString() : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
       </td>
       <td className="px-4 py-3">
         {remaining != null ? (
