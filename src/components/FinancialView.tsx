@@ -2700,14 +2700,14 @@ function FinProjectsTab() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" dir="rtl" onClick={() => setShowAddModal(false)}>
           <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-white mb-4">הוסף {newCategory === 'artist' ? 'אומן' : 'הפקה'}</h3>
+            <h3 className="text-base font-bold text-white mb-4">הוסף {newCategory === 'artist' ? '🍤 אומן' : '🍬 הפקה'}</h3>
             <div className="space-y-3">
               <div className="flex gap-2">
                 {(['artist', 'production'] as const).map(cat => (
                   <button key={cat} onClick={() => setNewCategory(cat)}
                     className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
                     style={newCategory === cat ? { background: 'rgba(77,208,225,0.2)', color: '#4dd0e1', border: '1px solid rgba(77,208,225,0.3)' } : { background: 'transparent', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    {cat === 'artist' ? 'אומן' : 'הפקה'}
+                    {cat === 'artist' ? '🍤 אומן' : '🍬 הפקה'}
                   </button>
                 ))}
               </div>
@@ -2737,7 +2737,7 @@ function FinProjectsTab() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" dir="rtl" onClick={() => setDeleteConfirmId(null)}>
             <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 w-80" onClick={e => e.stopPropagation()}>
-              <h3 className="text-base font-bold text-white mb-2">מחיקת {target?.category === 'artist' ? 'אומן' : 'הפקה'}</h3>
+              <h3 className="text-base font-bold text-white mb-2">מחיקת {target?.category === 'artist' ? '🍤 אומן' : '🍬 הפקה'}</h3>
               <p className="text-sm text-gray-400 mb-5">למחוק את <span className="font-semibold text-white">{target?.name}</span>? הפעולה אינה ניתנת לביטול.</p>
               <div className="flex gap-2">
                 <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-2 text-sm text-gray-400 bg-gray-800 rounded-xl hover:bg-gray-700">ביטול</button>
@@ -2761,7 +2761,7 @@ function FinProjectsTab() {
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות משויכות</p>
               </div>
               <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
-                {current.category === 'artist' ? '🎤 אומן' : '🎬 הפקה'}
+                {current.category === 'artist' ? '🍤 אומן' : '🍬 הפקה'}
               </span>
             </div>
 
