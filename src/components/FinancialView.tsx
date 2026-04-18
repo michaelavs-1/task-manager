@@ -1221,13 +1221,13 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
   })
   const availableMonths = Object.values(monthMap).sort((a,b) => a.key.localeCompare(b.key))
 
-  // Available years from invoices
+  // Available years from invoices — ascending so older year (e.g. 2025) appears first (rightmost in RTL)
   const availableYears = [...new Set(invoices.map(inv => {
     if (!inv.date) return null
     const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return null
     return String(d.getFullYear())
-  }).filter(Boolean) as string[])].sort().reverse()
+  }).filter(Boolean) as string[])].sort()
 
   // Months within the selected year
   const monthsForYear = availableMonths.filter(m => m.key.startsWith(selectedYear))
