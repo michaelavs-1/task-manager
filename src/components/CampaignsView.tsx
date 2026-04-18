@@ -1054,8 +1054,22 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const artistName = campaign.requester || campaign.name
   useEsc(showMediaPopup, () => setShowMediaPopup(false))
   const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
+  // Sync local state when the parent re-fetches and campaign prop changes
+  useEffect(() => {
+    setLocalTicketsForSale(campaign.tickets_for_sale ?? null)
+    setTicketsForSaleInput(campaign.tickets_for_sale != null ? String(campaign.tickets_for_sale) : '')
+  }, [campaign.tickets_for_sale])
+  useEffect(() => {
+    setLocalTicketsSold(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
+  }, [campaign.tickets_sold])
   const ticketsSoldNum = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
-  const ticketsRemaining = localTicketsForSale != null && ticketsSoldNum != null ? localTicketsForSale - ticketsSoldNum : localTicketsForSale != null ? localTicketsForSale : null
+  // Compute remaining from the LIVE input value so it reflects the user's typing immediately
+  const liveForSale = ticketsForSaleInput !== '' ? parseInt(ticketsForSaleInput) : (localTicketsForSale ?? null)
+  const ticketsRemaining = liveForSale != null && ticketsSoldNum != null ? liveForSale - ticketsSoldNum : liveForSale
+  // Detect unsaved changes in the tickets-for-sale input
+  const forSalePending = ticketsForSaleInput !== '' && parseInt(ticketsForSaleInput) !== (localTicketsForSale ?? NaN)
+  // Detect unsaved changes in the sold input
+  const soldPending = localTicketsSold !== (campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const dateStr = localLaunchDate ? (() => {
     try { return new Date(localLaunchDate).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric'}) }
     catch { return localLaunchDate }
@@ -1278,7 +1292,15 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                     min="0"
                     value={ticketsForSaleInput}
                     onChange={e => setTicketsForSaleInput(e.target.value)}
-                    className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                    onKeyDown={async e => {
+                      if (e.key === 'Enter') {
+                        const val = ticketsForSaleInput !== '' ? parseInt(ticketsForSaleInput) : null
+                        if (val == null) return
+                        await supabase.from('campaigns').update({ tickets_for_sale: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                        setLocalTicketsForSale(val)
+                      }
+                    }}
+                    className={`w-20 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white ${forSalePending ? 'border-pink-400 ring-1 ring-pink-200' : 'border-gray-200 dark:border-gray-600'}`}
                   />
                   <button
                     onClick={async () => {
@@ -1287,9 +1309,10 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                       await supabase.from('campaigns').update({ tickets_for_sale: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
                       setLocalTicketsForSale(val)
                     }}
-                    className="px-2 py-1 text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={!forSalePending}
+                    className={`px-2 py-1 text-xs font-semibold rounded-lg transition-colors ${forSalePending ? 'bg-pink-600 text-white hover:bg-pink-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}
                   >
-                    עדכן
+                    {forSalePending ? 'עדכן' : 'נשמר'}
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1307,16 +1330,17 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                       }
                     }}
                     placeholder="0"
-                    className="w-20 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white"
+                    className={`w-20 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-700 dark:text-white ${soldPending ? 'border-pink-400 ring-1 ring-pink-200' : 'border-gray-200 dark:border-gray-600'}`}
                   />
                   <button
                     onClick={async () => {
                       const val = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
                       await supabase.from('campaigns').update({ tickets_sold: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
                     }}
-                    className="px-3 py-1 text-sm font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+                    disabled={!soldPending}
+                    className={`px-3 py-1 text-sm font-semibold rounded-lg transition-colors ${soldPending ? 'bg-pink-600 text-white hover:bg-pink-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'}`}
                   >
-                    שמור
+                    {soldPending ? 'שמור' : 'נשמר'}
                   </button>
                   {ticketsRemaining !== null && (
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ticketsRemaining <= 0 ? 'bg-red-100 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
