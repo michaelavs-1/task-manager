@@ -2939,7 +2939,7 @@ function ExpensesTab() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        {['ÃÂ¡ÃÂ¤ÃÂ§','ÃÂªÃÂÃÂÃÂÃÂ¨','ÃÂ¤ÃÂ¨ÃÂÃÂÃÂ§ÃÂ','ÃÂÃÂ¢"ÃÂ','ÃÂ¡ÃÂÃÂÃÂ','ÃÂÃÂ¢"ÃÂ Ã¢ÂÂª','ÃÂ¡ÃÂ"ÃÂ','ÃÂ©ÃÂÃÂÃÂ','ÃÂÃÂªÃÂ¨ÃÂ','ÃÂª. ÃÂªÃÂ©ÃÂÃÂÃÂ','ÃÂÃÂ©ÃÂÃÂÃÂ ÃÂÃÂª','ÃÂÃÂ¢ÃÂ¨ÃÂÃÂª',''].map(h => (
+                        {['פרויקט','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית','הערות',''].map(h => (
                           <th key={h} className="px-3 py-2 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -2951,42 +2951,38 @@ function ExpensesTab() {
                         const proj = e.project_id ? projMap[e.project_id] : null
                         return (
                           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}>
-                            <td className="px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[120px] truncate">{e.supplier || 'Ã¢ÂÂ'}</td>
-                            <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px] truncate">{e.description || 'Ã¢ÂÂ'}</td>
                             <td className="px-3 py-2 text-xs">
                               {proj ? (
                                 <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${proj.category === 'artist' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700'}`}>{proj.name}</span>
-                              ) : <span className="text-gray-300 dark:text-gray-600">Ã¢ÂÂ</span>}
+                              ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
                             </td>
-                            <td className="px-3 py-2 text-xs">
-                              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${TAX_STATUS_STYLE[e.vat_status] || 'bg-gray-100 text-gray-600'}`}>{e.vat_status}</span>
-                            </td>
+                            <td className="px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[120px] truncate">{e.supplier || '—'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px] truncate">{e.description || '—'}</td>
                             <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 text-left whitespace-nowrap">{fmtDec(e.amount)}</td>
-                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-left whitespace-nowrap">{e.vat ? fmtDec(e.vat) : 'Ã¢ÂÂ'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-left whitespace-nowrap">{e.vat ? fmtDec(e.vat) : '—'}</td>
                             <td className="px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 text-left whitespace-nowrap">{fmtDec(e.total)}</td>
-                            <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">{e.paid ? fmtDec(e.paid) : 'Ã¢ÂÂ'}</td>
+                            <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">{e.paid ? fmtDec(e.paid) : '—'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{e.payment_date || '—'}</td>
                             <td className="px-3 py-2 text-xs text-left whitespace-nowrap">
                               {balance > 0
                                 ? <span className="text-rose-500 font-semibold">{fmtDec(balance)}</span>
-                                : <span className="text-emerald-500 text-xs">Ã¢ÂÂ</span>}
+                                : <span className="text-emerald-500 text-xs">✔</span>}
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{e.payment_date || 'Ã¢ÂÂ'}</td>
                             <td className="px-3 py-2 text-center">
                               {e.has_invoice
-                                ? <span className="text-emerald-500 text-sm">Ã¢ÂÂ</span>
-                                : <span className="text-rose-400 text-xs font-bold">Ã¢ÂÂ</span>}
+                                ? <span className="text-emerald-500 text-sm">✔</span>
+                                : <span className="text-rose-400 text-xs font-bold">✗</span>}
                             </td>
                             <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px] truncate">{e.notes || ''}</td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               <div className="flex gap-1">
                                 <button onClick={() => openEdit(e)}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors">
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.5-6.5M3 21h18" /></svg>
+                                  className="p-1 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors" title="Edit">
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                 </button>
-                                <button onClick={() => handleDelete(e.id)}
-                                  disabled={deleting === e.id}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-50">
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0a1 1 0 00-1-1H8a1 1 0 00-1 1m2 0h6" /></svg>
+                                <button onClick={() => setDelId(e.id)}
+                                  className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors" title="Delete">
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                               </div>
                             </td>
