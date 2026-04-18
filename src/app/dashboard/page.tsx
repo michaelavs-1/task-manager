@@ -113,58 +113,58 @@ export default function Dashboard() {
   }
 
   async function sendRemindEmail(toEmail: string, toName: string, taskList: Task[]) {
-    const priorityMap: Record<string, string> = { urgent: 'דחוף', high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+    const priorityMap: Record<string, string> = { urgent: '××××£', high: '×××××', medium: '××× ×× ××ª', low: '× ××××' }
     const rows = taskList.map(t => `
       <tr>
         <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#1e293b;">${t.title}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;">${priorityMap[t.priority] || t.priority}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;">${t.due_date ? new Date(t.due_date).toLocaleDateString('he-IL') : '—'}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;">${t.due_date ? new Date(t.due_date).toLocaleDateString('he-IL') : 'â'}</td>
       </tr>`).join('')
     const html = `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:540px;margin:0 auto;background:#f8fafc;padding:24px;border-radius:12px;">
       <div style="background:#4f46e5;color:white;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
-        <h2 style="margin:0 0 4px 0;font-size:18px;">תזכורת: משימות פתוחות</h2>
-        <p style="margin:0;opacity:0.85;font-size:14px;">שלום ${toName}</p>
+        <h2 style="margin:0 0 4px 0;font-size:18px;">×ª××××¨×ª: ××©××××ª ×¤×ª××××ª</h2>
+        <p style="margin:0;opacity:0.85;font-size:14px;">×©××× ${toName}</p>
       </div>
       <div style="background:white;border-radius:10px;padding:20px 24px;border:1px solid #e2e8f0;">
         <table style="width:100%;border-collapse:collapse;">
           <thead><tr>
-            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">משימה</th>
-            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">עדיפות</th>
-            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">דדליין</th>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">××©×××</th>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">×¢×××¤××ª</th>
+            <th style="text-align:right;padding:6px 8px;font-size:12px;color:#94a3b8;border-bottom:2px solid #e2e8f0;">××××××</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">אלגוריתם הפקות</p>
+      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">×××××¨××ª× ××¤×§××ª</p>
     </div>`
     await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, subject: `תזכורת: ${taskList.length} משימות פתוחות`, html }),
+      body: JSON.stringify({ to: toEmail, subject: `×ª××××¨×ª: ${taskList.length} ××©××××ª ×¤×ª××××ª`, html }),
     })
   }
 
   async function sendRemindSingleEmail(toEmail: string, toName: string, task: Task) {
-    const priorityMap: Record<string, string> = { urgent: 'דחוף', high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+    const priorityMap: Record<string, string> = { urgent: '××××£', high: '×××××', medium: '××× ×× ××ª', low: '× ××××' }
     const html = `<div dir="rtl" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;padding:24px;border-radius:12px;">
       <div style="background:#4f46e5;color:white;border-radius:10px;padding:20px 24px;margin-bottom:20px;">
-        <h2 style="margin:0 0 4px 0;font-size:18px;">תזכורת: משימה ממתינה</h2>
-        <p style="margin:0;opacity:0.85;font-size:14px;">שלום ${toName}</p>
+        <h2 style="margin:0 0 4px 0;font-size:18px;">×ª××××¨×ª: ××©××× ×××ª×× ×</h2>
+        <p style="margin:0;opacity:0.85;font-size:14px;">×©××× ${toName}</p>
       </div>
       <div style="background:white;border-radius:10px;padding:20px 24px;border:1px solid #e2e8f0;">
         <h3 style="margin:0 0 12px 0;font-size:16px;color:#1e293b;">${task.title}</h3>
         ${task.description ? `<p style="color:#475569;font-size:14px;margin:0 0 12px 0;">${task.description}</p>` : ''}
         <table style="font-size:13px;color:#64748b;">
-          <tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">עדיפות:</td><td>${priorityMap[task.priority] || task.priority}</td></tr>
-          ${task.due_date ? `<tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">דדליין:</td><td>${new Date(task.due_date).toLocaleDateString('he-IL')}</td></tr>` : ''}
+          <tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">×¢×××¤××ª:</td><td>${priorityMap[task.priority] || task.priority}</td></tr>
+          ${task.due_date ? `<tr><td style="padding:3px 0;font-weight:bold;color:#374151;padding-left:16px;">××××××:</td><td>${new Date(task.due_date).toLocaleDateString('he-IL')}</td></tr>` : ''}
         </table>
       </div>
-      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">אלגוריתם הפקות</p>
+      <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:16px;">×××××¨××ª× ××¤×§××ª</p>
     </div>`
     await fetch('/api/send-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: toEmail, subject: `תזכורת: ${task.title}`, html }),
+      body: JSON.stringify({ to: toEmail, subject: `×ª××××¨×ª: ${task.title}`, html }),
     })
   }
 
@@ -180,7 +180,7 @@ export default function Dashboard() {
 
   const groupedByEmployee: Record<string, Task[]> = {}
   filteredTasks.forEach((task) => {
-    const employeeName = (task.assigned_user as any)?.name || "לא שויך"
+    const employeeName = (task.assigned_user as any)?.name || "×× ×©×××"
     if (!groupedByEmployee[employeeName]) groupedByEmployee[employeeName] = []
     groupedByEmployee[employeeName].push(task)
   })
@@ -188,14 +188,14 @@ export default function Dashboard() {
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      <div className="text-xl" style={{ color: 'var(--text-secondary)' }}>טוען...</div>
+      <div className="text-xl" style={{ color: 'var(--text-secondary)' }}>×××¢×...</div>
     </div>
   )
 
   const navItems: { tab: Tab; label: string; icon: React.ReactNode }[] = [
     {
       tab: "general",
-      label: "כללי",
+      label: "××××",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -204,7 +204,7 @@ export default function Dashboard() {
     },
     {
       tab: "tasks",
-      label: "משימות",
+      label: "××©××××ª",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -213,7 +213,7 @@ export default function Dashboard() {
     },
     {
       tab: "projects",
-      label: "פרויקטים",
+      label: "×¤×¨×××§×××",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -222,7 +222,7 @@ export default function Dashboard() {
     },
     {
       tab: "campaigns",
-      label: "שיווק",
+      label: "×©××××§",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
@@ -231,7 +231,7 @@ export default function Dashboard() {
     },
     {
       tab: "links",
-      label: "קישורים",
+      label: "×§××©××¨××",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -240,7 +240,7 @@ export default function Dashboard() {
     },
     {
       tab: "artists",
-      label: "אומנים",
+      label: "×××× ××",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -249,7 +249,7 @@ export default function Dashboard() {
     },
     {
       tab: "meetings" as Tab,
-      label: "פגישות",
+      label: "×¤×××©××ª",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -258,7 +258,7 @@ export default function Dashboard() {
     },
     ...(userRole === "manager" ? [{
       tab: "users" as Tab,
-      label: "משתמשים",
+      label: "××©×ª××©××",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -282,8 +282,8 @@ export default function Dashboard() {
               <img src="/logo.svg" alt="Algorithm" className="w-12 h-12 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-bold leading-tight tracking-tight" style={{ color: 'rgba(255,255,255,0.95)' }}>אלגוריתם הפקות</h1>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>מערכת ניהול</p>
+              <h1 className="text-sm font-bold leading-tight tracking-tight" style={{ color: 'rgba(255,255,255,0.95)' }}>×××××¨××ª× ××¤×§××ª</h1>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>××¢×¨××ª × ××××</p>
             </div>
           </div>
 
@@ -294,7 +294,7 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{userName}</p>
-              <p className="text-xs" style={{ color: activeSection === 'financial' ? 'rgba(45,212,191,0.8)' : 'rgba(56,189,248,0.8)', transition: 'color 0.4s ease' }}>{userRole === 'manager' ? 'מנהל' : 'עובד'}</p>
+              <p className="text-xs" style={{ color: activeSection === 'financial' ? 'rgba(45,212,191,0.8)' : 'rgba(56,189,248,0.8)', transition: 'color 0.4s ease' }}>{userRole === 'manager' ? '×× ××' : '×¢×××'}</p>
             </div>
           </div>
 
@@ -305,14 +305,14 @@ export default function Dashboard() {
               className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
               style={activeSection === "management" ? { background: 'linear-gradient(135deg, #1565c0, #0d47a1)', color: 'white', boxShadow: '0 2px 10px rgba(21,101,192,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
-              ניהול
+              × ××××
             </button>
             <button
               onClick={() => setActiveSection("financial")}
               className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
               style={activeSection === "financial" ? { background: 'linear-gradient(135deg, #14b8a6, #059669)', color: 'white', boxShadow: '0 2px 10px rgba(20,184,166,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
-              פיננסי
+              ×¤×× × ×¡×
             </button>
           </div>
         </div>
@@ -320,25 +320,25 @@ export default function Dashboard() {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {activeSection === "financial" ? ([
-            { tab: 'dashboard' as FinTab, label: 'דשבורד', icon: (
+            { tab: 'dashboard' as FinTab, label: '××©×××¨×', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             )},
-            { tab: 'old_table' as FinTab, label: 'ראשית', icon: (
+            { tab: 'old_table' as FinTab, label: '×¨××©××ª', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 3h18v18H3z" /></svg>
             )},
-            { tab: 'invoices' as FinTab, label: 'חשבוניות', icon: (
+            { tab: 'invoices' as FinTab, label: '××©××× ×××ª', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             )},
-            { tab: 'clients' as FinTab, label: 'לקוחות', icon: (
+            { tab: 'clients' as FinTab, label: '××§××××ª', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             )},
-            { tab: 'suppliers' as FinTab, label: 'ספקים', icon: (
+            { tab: 'suppliers' as FinTab, label: '×¡×¤×§××', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
             )},
-            { tab: 'projects' as FinTab, label: 'פרויקטים', icon: (
+            { tab: 'productions' as FinTab, label: '×¤×¨×××§×××', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
             )},
-            { tab: 'expenses' as FinTab, label: 'הוצאות / תשלומים', icon: (
+            { tab: 'expenses' as FinTab, label: '×××¦×××ª / ×ª×©×××××', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
             )},
           ] as { tab: FinTab; label: string; icon: React.ReactNode }[]).map(({ tab, label, icon }) => {
@@ -396,13 +396,13 @@ export default function Dashboard() {
               className="w-full px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
               style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: 'white', boxShadow: '0 4px 14px rgba(2,132,199,0.4)' }}
             >
-              + משימה חדשה
+              + ××©××× ×××©×
             </button>
           )}
 
           {/* Theme Toggle */}
           <div className="rounded-xl p-3" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <p className="text-xs mb-2 font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>ערכת נושא</p>
+            <p className="text-xs mb-2 font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>×¢×¨××ª × ××©×</p>
             <div className="flex gap-1.5">
               {(['light', 'middle', 'dark'] as const).map((t, i) => (
                 <button
@@ -411,7 +411,7 @@ export default function Dashboard() {
                   className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={theme === t ? { background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.35)' } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}
                 >
-                  {['בהיר', 'בינוני', 'כהה'][i]}
+                  {['××××¨', '××× ×× ×', '×××'][i]}
                 </button>
               ))}
             </div>
@@ -428,7 +428,7 @@ export default function Dashboard() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>יציאה</span>
+            <span>××¦×××</span>
           </button>
         </div>
       </aside>
@@ -454,7 +454,7 @@ export default function Dashboard() {
           <div className="max-w-6xl mx-auto px-8 py-8">
             {/* Page Title */}
             <h2 className="text-2xl font-bold tracking-tight mb-8" style={{ color: 'var(--text-primary)' }}>
-              משימות שלי
+              ××©××××ª ×©××
             </h2>
 
             {/* Stats Cards */}
@@ -469,7 +469,7 @@ export default function Dashboard() {
                 }}
               >
                 <div className="text-2xl font-bold" style={{ color: '#4F46E5' }}>{tasks.length}</div>
-                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>סה״כ</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>×¡××´×</div>
               </button>
 
               <button
@@ -482,7 +482,7 @@ export default function Dashboard() {
                 }}
               >
                 <div className="text-2xl font-bold" style={{ color: '#F59E0B' }}>{pendingCount}</div>
-                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>ממתינות</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>×××ª×× ××ª</div>
               </button>
 
               <button
@@ -495,7 +495,7 @@ export default function Dashboard() {
                 }}
               >
                 <div className="text-2xl font-bold" style={{ color: '#3B82F6' }}>{inProgressCount}</div>
-                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>בביצוע</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>××××¦××¢</div>
               </button>
 
               <button
@@ -508,7 +508,7 @@ export default function Dashboard() {
                 }}
               >
                 <div className="text-2xl font-bold" style={{ color: '#10B981' }}>{completedCount}</div>
-                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>הושלמו</div>
+                <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>×××©×××</div>
               </button>
             </div>
 
@@ -527,14 +527,14 @@ export default function Dashboard() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <span>{selectedEmployee || 'בחר עובד'}</span>
+                  <span>{selectedEmployee || '×××¨ ×¢×××'}</span>
                   {selectedEmployee && (
                     <span
                       onClick={(e) => { e.stopPropagation(); setSelectedEmployee(null); setShowEmployeePicker(false) }}
                       className="text-indigo-200 hover:text-white cursor-pointer text-xs ml-1"
-                    >✕</span>
+                    >â</span>
                   )}
-                  <span className="text-xs opacity-60 mr-1">{showEmployeePicker ? '▲' : '▼'}</span>
+                  <span className="text-xs opacity-60 mr-1">{showEmployeePicker ? 'â²' : 'â¼'}</span>
                 </button>
 
                 {showEmployeePicker && (
@@ -567,7 +567,7 @@ export default function Dashboard() {
                   <svg className="w-12 h-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--text-secondary)' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  <p style={{ color: 'var(--text-secondary)' }}>אין משימות {filter !== "all" ? "בקטגוריה זו" : ""}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>××× ××©××××ª {filter !== "all" ? "××§××××¨×× ××" : ""}</p>
                 </div>
               ) : selectedEmployee ? (
                 (() => {
@@ -585,14 +585,14 @@ export default function Dashboard() {
                       onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
                       userEmail={empUser?.email}
                       onRemindAll={() => {
-                        if (!empUser?.email) return alert("אין מייל מוגדר לעובד זה")
+                        if (!empUser?.email) return alert("××× ×××× ×××××¨ ××¢××× ××")
                         const open = empTasks.filter(t => t.status !== 'completed' && t.status !== 'archived')
-                        if (!open.length) return alert("אין משימות פתוחות לעובד זה")
-                        sendRemindEmail(empUser.email, empUser.name, open).then(() => alert("תזכורת נשלחה!"))
+                        if (!open.length) return alert("××× ××©××××ª ×¤×ª××××ª ××¢××× ××")
+                        sendRemindEmail(empUser.email, empUser.name, open).then(() => alert("×ª××××¨×ª × ×©×××!"))
                       }}
                       onRemindTask={(task) => {
-                        if (!empUser?.email) return alert("אין מייל מוגדר לעובד זה")
-                        sendRemindSingleEmail(empUser.email, empUser.name, task).then(() => alert("תזכורת נשלחה!"))
+                        if (!empUser?.email) return alert("××× ×××× ×××××¨ ××¢××× ××")
+                        sendRemindSingleEmail(empUser.email, empUser.name, task).then(() => alert("×ª××××¨×ª × ×©×××!"))
                       }}
                     />
                   )
@@ -709,15 +709,15 @@ function EmployeeSection({
         <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-3 flex-1 text-right">
           <span className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>{employeeName}</span>
           <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>({tasks.length})</span>
-          <span style={{ color: 'var(--text-secondary)' }} className="text-xs">{expanded ? "▼" : "▶"}</span>
+          <span style={{ color: 'var(--text-secondary)' }} className="text-xs">{expanded ? "â¼" : "â¶"}</span>
         </button>
         {isManager && onRemindAll && (
           <button
             onClick={onRemindAll}
-            title={userEmail ? "שלח תזכורת על כל המשימות הפתוחות" : "אין מייל מוגדר לעובד זה"}
+            title={userEmail ? "×©×× ×ª××××¨×ª ×¢× ×× ×××©××××ª ××¤×ª××××ª" : "××× ×××× ×××××¨ ××¢××× ××"}
             className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors ${userEmail ? 'border-indigo-200 text-indigo-600 hover:bg-indigo-50' : 'border-slate-200 text-slate-400 cursor-not-allowed'}`}
           >
-            הזכר הכל
+            ××××¨ ×××
           </button>
         )}
       </div>
