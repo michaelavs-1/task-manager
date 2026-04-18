@@ -1032,7 +1032,8 @@ function InvoicesTab() {
   const docTypes = [...new Set(invoices.map(i => i.doc_type).filter(Boolean))].sort()
 
   // Build sorted month list from invoices
-  const monthMap: Record<string, { key: string; label: string; count: number }> = {}
+  const monthMap: Record<string, { key: string;
+  const [filterYear, setFilterYear] = useState<'2025' | '2026' | null>(null); label: string; count: number }> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(israeliToISO(inv.date))
@@ -1136,72 +1137,43 @@ function InvoicesTab() {
       </div>
 
       {/* Month selector â grouped by year */}
-      {availableMonths.length > 0 && (
-        <div className="space-y-2 flex-shrink-0">
-          <div>
+      {availableMonths.length > 0 && ((
+        <div className="space-y-4">
+          {/* Year Tabs */}
+          <div className="flex gap-2 mb-4">
             <button
-              onClick={() => setFilterMonth('')}
-              className={`px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+              onClick={() => { setFilterYear('2025'); setFilterMonth(null); }}
+              className={'px-3 py-1 rounded text-sm font-medium transition ' + (
+                filterYear === '2025' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              )}
             >
-              ×× ×××××©××
+              2025
+            </button>
+            <button
+              onClick={() => { setFilterYear('2026'); setFilterMonth(null); }}
+              className={'px-3 py-1 rounded text-sm font-medium transition ' + (
+                filterYear === '2026' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              )}
+            >
+              2026
+            </button>
+            <button
+              onClick={() => { setFilterYear(null); setFilterMonth(null); }}
+              className={'px-3 py-1 rounded text-sm font-medium transition ' + (
+                filterYear === null 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              )}
+            >
+              כל השנים
             </button>
           </div>
-          {(['2026', '2025'] as const).map(year => {
-            const yearMonths = year === '2026'
-              ? Array.from({ length: 12 }, (_, i) => {
-                  const key = `${year}-${String(i + 1).padStart(2, '0')}`
-                  const found = availableMonths.find(m => m.key === key)
-                  return { key, label: `${MONTH_NAMES_HE[i]} ${year}`, count: found?.count || 0 }
-                })
-              : availableMonths.filter(m => m.key.startsWith(year))
-            if (yearMonths.length === 0) return null
-            return (
-              <div key={year}>
-                <div className="text-xs font-bold text-gray-400 mb-1.5 mr-1">{year}</div>
-                {year === '2026' ? (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div className="flex flex-col gap-1.5">
-                      {yearMonths.slice(0, 6).map(m => (
-                        <button
-                          key={m.key}
-                          onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
-                          className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : m.count > 0 ? 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600' : 'bg-gray-50 text-gray-300 border-gray-100'}`}
-                        >
-                          <span>{m.label}</span>
-                          <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      {yearMonths.slice(6, 12).map(m => (
-                        <button
-                          key={m.key}
-                          onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
-                          className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : m.count > 0 ? 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600' : 'bg-gray-50 text-gray-300 border-gray-100'}`}
-                        >
-                          <span>{m.label}</span>
-                          <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-1.5 flex-wrap">
-                    {yearMonths.map(m => (
-                      <button
-                        key={m.key}
-                        onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
-                        className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
-                      >
-                        {m.label}
-                        <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        </div>
+      )}
         </div>
       )}
 
