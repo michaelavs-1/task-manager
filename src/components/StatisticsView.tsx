@@ -232,15 +232,17 @@ export function StatisticsView() {
     pokeCampaigns.map(c => Math.abs(pokes.byCampaign[c.id]?.[d] || 0))
   ))
 
-  function pokeCellClass(v: number | undefined): string {
-    if (v === undefined) return 'bg-gray-50 dark:bg-gray-900/40 text-gray-300'
-    if (v === 0) return 'bg-white dark:bg-gray-800 text-gray-300'
-    if (v < 0) return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 font-bold'
-    const intensity = Math.min(1, Math.abs(v) / maxPokeValue)
-    if (intensity >= 0.75) return 'bg-emerald-500 text-white font-bold'
-    if (intensity >= 0.5) return 'bg-emerald-400 text-white font-bold'
-    if (intensity >= 0.25) return 'bg-emerald-200 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 font-semibold'
-    return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-medium'
+  function pokeCellClass(hasAbs: boolean, delta: number | undefined): string {
+    // Cell background: light wash when we have an absolute value; stronger when there's a positive delta
+    if (!hasAbs) return 'bg-gray-50 dark:bg-gray-900/40 text-gray-300'
+    if (delta === undefined) return 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+    if (delta < 0) return 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
+    if (delta === 0) return 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'
+    const intensity = Math.min(1, Math.abs(delta) / maxPokeValue)
+    if (intensity >= 0.75) return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100'
+    if (intensity >= 0.5) return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
+    if (intensity >= 0.25) return 'bg-emerald-50/60 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-200'
+    return 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100'
   }
 
   // Best selling day across all campaigns
@@ -273,10 +275,10 @@ export function StatisticsView() {
               <svg className="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              דקירות יומיות — כמה כרטיסים נמכרו בין עדכון לעדכון
+              דקירות יומיות — כמות כרטיסים במופע בכל תאריך
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              מחושב אוטומטית מעדכוני "מעקב כרטיסים" שלך · הפרש בין כל שמירה לקודמתה
+              המספר הגדול = סה"כ כרטיסים שנמכרו עד אותו יום · המספר הקטן מתחתיו = כמה נמכרו באותה דקירה
             </p>
           </div>
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
@@ -359,13 +361,22 @@ export function StatisticsView() {
                         const abs = pokes.absValueByCampaign[c.id]?.[d]
                         const prev = pokes.prevValueByCampaign[c.id]?.[d]
                         const title = v !== undefined
-                          ? `${fmtDate(d)} — נמכרו ${v >= 0 ? '+' : ''}${v} (מ-${prev} ל-${abs})`
+                          ? `${fmtDate(d)} — ${abs} כרטיסים (נמכרו ${v >= 0 ? '+' : ''}${v} מאז ${prev})`
                           : abs !== undefined
-                            ? `${fmtDate(d)} — נקודת בסיס: ${abs}`
+                            ? `${fmtDate(d)} — ${abs} כרטיסים (נקודת בסיס)`
                             : `${fmtDate(d)} — ללא עדכון`
                         return (
-                          <td key={d} title={title} className={'px-2 py-2 text-center whitespace-nowrap ' + pokeCellClass(v)}>
-                            {v !== undefined ? (v > 0 ? '+' : '') + v : abs !== undefined ? <span className="text-gray-300 text-[10px]">·{abs}</span> : <span className="text-gray-200">—</span>}
+                          <td key={d} title={title} className={'px-2 py-2 text-center whitespace-nowrap ' + pokeCellClass(abs !== undefined, v)}>
+                            {abs !== undefined ? (
+                              <div className="flex flex-col items-center leading-tight">
+                                <span className="text-sm font-bold">{abs.toLocaleString()}</span>
+                                {v !== undefined && v !== 0 && (
+                                  <span className={'text-[10px] font-medium ' + (v > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400')}>
+                                    {v > 0 ? '+' : ''}{v}
+                                  </span>
+                                )}
+                              </div>
+                            ) : <span className="text-gray-200">—</span>}
                           </td>
                         )
                       })}
@@ -378,20 +389,33 @@ export function StatisticsView() {
                 {/* Totals row */}
                 <tr className="bg-pink-50 dark:bg-pink-950/30 border-t-2 border-pink-200 dark:border-pink-900">
                   <td className="sticky right-0 z-10 bg-pink-50 dark:bg-pink-950/30 px-4 py-3 text-right font-bold text-pink-700 dark:text-pink-300 border-l border-pink-200 dark:border-pink-900">
-                    סה"כ נמכר ביום
+                    סה"כ בתאריך
                   </td>
                   {pokeDates.map(d => {
-                    const v = pokes.totalsByDate[d] || 0
+                    const delta = pokes.totalsByDate[d] || 0
+                    // Sum absolute values across campaigns that have an absolute value for this date
+                    let absSum = 0
+                    let campsWithAbs = 0
+                    Object.keys(pokes.absValueByCampaign).forEach(cid => {
+                      const a = pokes.absValueByCampaign[cid]?.[d]
+                      if (a !== undefined) { absSum += a; campsWithAbs++ }
+                    })
                     const cnt = pokes.campaignCountByDate[d] || 0
                     return (
                       <td key={d} className="px-2 py-3 text-center font-bold text-pink-700 dark:text-pink-300 whitespace-nowrap">
-                        <div>{v > 0 ? '+' : ''}{v}</div>
-                        <div className="text-[9px] font-normal text-pink-500/70">{cnt} מופעים</div>
+                        <div className="text-sm">{absSum.toLocaleString()}</div>
+                        {delta !== 0 && (
+                          <div className={'text-[10px] font-semibold ' + (delta > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400')}>
+                            {delta > 0 ? '+' : ''}{delta}
+                          </div>
+                        )}
+                        <div className="text-[9px] font-normal text-pink-500/70">{campsWithAbs} מופעים</div>
                       </td>
                     )
                   })}
                   <td className="sticky left-0 z-10 bg-pink-100 dark:bg-pink-950/50 px-3 py-3 text-center font-black text-pink-800 dark:text-pink-200 border-r border-pink-300 dark:border-pink-900">
                     {pokeDates.reduce((s, d) => s + (pokes.totalsByDate[d] || 0), 0).toLocaleString()}
+                    <div className="text-[9px] font-normal text-pink-500/70">סה"כ שינוי</div>
                   </td>
                 </tr>
               </tbody>
@@ -400,11 +424,9 @@ export function StatisticsView() {
         )}
 
         <div className="px-5 py-2.5 bg-gray-50 dark:bg-gray-900/40 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-4 flex-wrap">
-          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-emerald-500" /> מכירה גבוהה</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-emerald-200" /> מכירה רגילה</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-red-100" /> ירידה</span>
-          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200" /> ללא עדכון</span>
-          <span className="text-gray-400 mr-auto">הרחף מעל תא כדי לראות את הערך המוחלט</span>
+          <span><b className="text-gray-700 dark:text-gray-200">מספר גדול</b> = סה"כ כרטיסים שנמכרו למופע עד התאריך</span>
+          <span><b className="text-emerald-600">+20</b> / <b className="text-red-500">-5</b> = כמה נמכרו באותה דקירה מאז הקודמת</span>
+          <span className="flex items-center gap-1 mr-auto"><span className="inline-block w-3 h-3 rounded bg-gray-50 border border-gray-200" /> ללא עדכון</span>
         </div>
       </div>
 
