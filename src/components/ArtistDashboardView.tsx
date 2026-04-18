@@ -157,10 +157,10 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
   const saveMeta = async () => {
     if (!selectedArtist) return
-    const updates = { genre: metaGenre, audience: metaAudience, contact_name: metaContactName, contact_phone: metaContactPhone, monthly_revenue_target: metaRevenueTarget ? parseInt(metaRevenueTarget) : null }
+    const updates = { genre: metaGenre, audience: metaAudience, contact_name: metaContactName, contact_phone: metaContactPhone, monthly_revenue_target: metaRevenueTarget ? parseInt(metaRevenueTarget) : undefined }
     await supabase.from('projects').update(updates).eq('id', selectedArtist.id)
-    setProjects(prev => prev.map(p => p.id === selectedArtist.id ? { ...p, ...updates } : p))
-    setSelectedArtist(prev => prev ? { ...prev, ...updates } : prev)
+    setProjects(prev => prev.map(p => p.id === selectedArtist.id ? { ...p, ...updates } as Project : p))
+    setSelectedArtist(prev => prev ? { ...prev, ...updates } as Project : prev)
     setEditingMeta(false)
   }
 
@@ -871,16 +871,6 @@ function Empty({ msg, sub }: { icon?: string; msg: string; sub?: string }) {
 function EventRow({ event, showFinancials=false }: { event: ArtistEvent; showFinancials?: boolean }) {
   const sc = STATUS_COLORS[event.status||''] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
   
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      setShowAddArtistModal && setShowAddArtistModal(false)
-      setShowEditModal && setShowEditModal(false)
-      setShowDeleteConfirm && setShowDeleteConfirm(false)
-    }
-    window.addEventListener('keydown', handleEsc)
-    return () => window.removeEventListener('keydown', handleEsc)
-  }, [])
   
   return (
     <div className={`bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3 ${event.status==='××¨×'?'opacity-50':''}`}>

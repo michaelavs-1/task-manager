@@ -42,8 +42,8 @@ async function fetchAllSuppliers(token: string): Promise<MondayItem[]> {
   let cursor: string | null = null
 
   do {
-    const cursorArg = cursor ? `, cursor: "${cursor}"` : ''
-    const query = `
+    const cursorArg: string = cursor ? `, cursor: "${cursor}"` : ''
+    const query: string = `
       query {
         boards(ids: [${BOARD_ID}]) {
           items_page(limit: 100${cursorArg}) {
@@ -63,7 +63,7 @@ async function fetchAllSuppliers(token: string): Promise<MondayItem[]> {
       }
     `
 
-    const response = await fetch('https://api.monday.com/v2', {
+    const response: Response = await fetch('https://api.monday.com/v2', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,8 +77,10 @@ async function fetchAllSuppliers(token: string): Promise<MondayItem[]> {
       throw new Error(`Monday API error: ${response.status}`)
     }
 
-    const data = await response.json()
-    const page = data?.data?.boards?.[0]?.items_page
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await response.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const page: any = data?.data?.boards?.[0]?.items_page
     if (!page) break
 
     allItems.push(...(page.items || []))

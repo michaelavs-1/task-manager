@@ -28,10 +28,10 @@ interface Supplier {
 }
 
 const TAX_STATUS_STYLE: Record<string, string> = {
-  ÃÂÃÂÃÂ¨ÃÂ©ÃÂ: 'bg-emerald-100 text-emerald-700',
-  ÃÂ¤ÃÂÃÂÃÂ¨: 'bg-lime-100 text-lime-700',
-  ÃÂÃÂÃÂ¨ÃÂ: 'bg-teal-100 text-teal-700',
-  ÃÂ¢ÃÂÃÂÃÂªÃÂ: 'bg-sky-100 text-sky-700',
+  'taxable': 'bg-emerald-100 text-emerald-700',
+  'exempt': 'bg-lime-100 text-lime-700',
+  'מורשה': 'bg-teal-100 text-teal-700',
+  'פטור': 'bg-sky-100 text-sky-700',
 }
 
 function SuppliersTab() {
