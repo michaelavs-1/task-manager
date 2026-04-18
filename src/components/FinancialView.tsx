@@ -36,6 +36,7 @@ const TAX_STATUS_STYLE: Record<string, string> = {
 
 function SuppliersTab() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [expenses, setExpenses] = useState<{ supplier: string; total: number; paid: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -45,15 +46,31 @@ function SuppliersTab() {
   const [selected, setSelected] = useState<Supplier | null>(null)
 
   useEffect(() => {
-    fetch('/api/monday-suppliers')
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) setError(d.error)
-        else setSuppliers(d.suppliers || [])
-      })
-      .catch(() => setError('שגיאה בטעינת ספקים'))
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/monday-suppliers').then(r => r.json()),
+      fetch('/api/expenses').then(r => r.json()),
+    ]).then(([supData, expData]) => {
+      if (supData.error) setError(supData.error)
+      else setSuppliers(supData.suppliers || [])
+      setExpenses((expData.expenses || []).map((ex: { supplier: string; total: number; paid: number }) => ({
+        supplier: ex.supplier,
+        total: ex.total || 0,
+        paid: ex.paid || 0,
+      })))
+    })
+    .catch(() => setError('שגיאה בטעינת נתונים'))
+    .finally(() => setLoading(false))
   }, [])
+
+  const supTotals = (name: string) => {
+    const rows = expenses.filter(ex => ex.supplier === name)
+    return {
+      total: rows.reduce((s, ex) => s + ex.total, 0),
+      paid: rows.reduce((s, ex) => s + ex.paid, 0),
+      count: rows.length,
+    }
+  }
+  const fmtS = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
 
   const roles = [...new Set(suppliers.map(s => s.role).filter(Boolean))].sort()
   const depts = [...new Set(suppliers.map(s => s.department).filter(Boolean))].sort()
@@ -248,6 +265,34 @@ function SuppliersTab() {
             {selected.notes && (
               <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{selected.notes}</div>
             )}
+
+            {/* Payment summary from expenses */}
+            {(() => {
+              const t = supTotals(selected.name)
+              if (t.count === 0) return null
+              const balance = t.total - t.paid
+              return (
+                <div className="bg-violet-50 rounded-xl p-3 space-y-1.5">
+                  <div className="text-xs font-bold text-violet-700 mb-2">מעקב תשלומים ({t.count} הוצאות)</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-xs text-gray-500">סה"כ חויב</div>
+                      <div className="text-sm font-bold text-indigo-600">{fmtS(t.total)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">שולם</div>
+                      <div className="text-sm font-bold text-emerald-600">{fmtS(t.paid)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">יתרה</div>
+                      <div className={`text-sm font-bold ${balance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                        {balance > 0 ? fmtS(balance) : '✔ שולם'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             <button
               onClick={() => setSelected(null)}
@@ -2719,11 +2764,11 @@ function ExpensesTab() {
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editingData, setEditingData] = useState<(Omit<Expense, 'id'> & { id: number }) | null>(null)
-  const [inlineSaving, setInlineSaving] = useState(false)
-  const [inlineSupplierSearch, setInlineSupplierSearch] = useState('')
-  const [showInlineSupplierDrop, setShowInlineSupplierDrop] = useState(false)
+  const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null)
+  const [cellValue, setCellValue] = useState<unknown>(null)
+  const [cellSaving, setCellSaving] = useState(false)
+  const [cellSupplierSearch, setCellSupplierSearch] = useState('')
+  const [showCellSupplierDrop, setShowCellSupplierDrop] = useState(false)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
@@ -2788,61 +2833,58 @@ function ExpensesTab() {
     setModal({ mode: 'add', expense: { ...EMPTY_EXPENSE, month: defaultMonth } })
   }
 
-  const openEdit = (e: Expense) => {
-    setModal({ mode: 'edit', expense: { ...e } })
+  const startCellEdit = (id: number, field: string, value: unknown) => {
+    setEditingCell({ id, field })
+    setCellValue(value)
+    if (field === 'supplier') { setCellSupplierSearch(''); setShowCellSupplierDrop(true) }
   }
 
-  const startInlineEdit = (expense: Expense) => {
-    setEditingId(expense.id)
-    setEditingData({ ...expense })
-    setInlineSupplierSearch('')
-    setShowInlineSupplierDrop(false)
+  const cancelCellEdit = () => {
+    setEditingCell(null)
+    setCellValue(null)
+    setCellSupplierSearch('')
+    setShowCellSupplierDrop(false)
   }
 
-  const cancelInlineEdit = () => {
-    setEditingId(null)
-    setEditingData(null)
-    setInlineSupplierSearch('')
-    setShowInlineSupplierDrop(false)
-  }
-
-  const saveInlineEdit = async () => {
-    if (!editingData || editingId === null) return
-    setInlineSaving(true)
+  const saveCellEdit = async (expense: Expense) => {
+    if (!editingCell) return
+    setCellSaving(true)
+    const updates: Record<string, unknown> = { [editingCell.field]: cellValue }
+    // Auto-recalculate dependent fields
+    if (editingCell.field === 'amount') {
+      const amt = Number(cellValue)
+      const status = expense.vat_status
+      if (status === 'מורשה' || status === 'חברה') {
+        updates.vat = roundCents(amt * VAT_RATE)
+        updates.total = roundCents(amt + (updates.vat as number))
+      } else { updates.vat = 0; updates.total = roundCents(amt) }
+    } else if (editingCell.field === 'vat') {
+      updates.total = roundCents(expense.amount + Number(cellValue))
+    } else if (editingCell.field === 'vat_status') {
+      const status = String(cellValue)
+      if (status === 'מורשה' || status === 'חברה') {
+        updates.vat = roundCents(expense.amount * VAT_RATE)
+        updates.total = roundCents(expense.amount + (updates.vat as number))
+      } else { updates.vat = 0; updates.total = roundCents(expense.amount) }
+    }
     try {
-      await fetch(`/api/expenses/${editingId}`, {
+      const res = await fetch(`/api/expenses/${editingCell.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingData),
+        body: JSON.stringify(updates),
       })
-      await loadAll()
-      setEditingId(null)
-      setEditingData(null)
-    } catch {
-      alert('שגיאה בשמירה')
-    } finally {
-      setInlineSaving(false)
-    }
-  }
-
-  const updInline = (field: string, val: unknown) => {
-    if (!editingData) return
-    const next = { ...editingData, [field]: val } as typeof editingData
-    if (field === 'amount' || field === 'vat_status') {
-      const amt = field === 'amount' ? Number(val) : next.amount
-      const status = field === 'vat_status' ? String(val) : next.vat_status
-      if (status === 'מורשה' || status === 'חברה') {
-        next.vat = roundCents(amt * VAT_RATE)
-        next.total = roundCents(amt + next.vat)
-      } else {
-        next.vat = 0
-        next.total = roundCents(amt)
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error || `HTTP ${res.status}`)
       }
+      await loadAll()
+      setEditingCell(null)
+      setCellValue(null)
+    } catch (err) {
+      alert(`שגיאה בשמירה: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setCellSaving(false)
     }
-    if (field === 'vat') {
-      next.total = roundCents(next.amount + Number(val))
-    }
-    setEditingData(next)
   }
 
   const upd = (field: string, val: unknown) => {
@@ -3004,174 +3046,262 @@ function ExpensesTab() {
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                       {rows.map((e, i) => {
-                        const isEditing = editingId === e.id
-                        const ed = isEditing ? editingData! : null
                         const balance = Math.max(0, roundCents(e.total - e.paid))
-                        const editBalance = ed ? Math.max(0, roundCents((ed.total || 0) - (ed.paid || 0))) : 0
                         const proj = e.project_id ? projMap[e.project_id] : null
 
-                        if (isEditing && ed) {
-                          const inCls = 'text-xs border border-violet-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-violet-400 bg-white dark:bg-gray-700 dark:text-white w-full'
-                          const numCls = inCls + ' text-left'
-                          return (
-                            <tr key={e.id} className="bg-violet-50/60 dark:bg-violet-900/20 outline outline-1 outline-violet-300">
-                              {/* Project */}
-                              <td className="px-2 py-1.5">
-                                <select value={ed.project_id || ''} onChange={ev => updInline('project_id', ev.target.value || null)}
-                                  className={inCls}>
-                                  <option value="">—</option>
-                                  {['artist','production'].map(cat => (
-                                    <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
-                                      {projects.filter(p => p.category === cat).map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                      ))}
-                                    </optgroup>
-                                  ))}
-                                </select>
-                              </td>
-                              {/* Supplier — dropdown picker */}
-                              <td className="px-2 py-1.5 relative">
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    value={showInlineSupplierDrop ? inlineSupplierSearch : (ed.supplier || '')}
-                                    onChange={ev => { setInlineSupplierSearch(ev.target.value); setShowInlineSupplierDrop(true) }}
-                                    onFocus={() => { setInlineSupplierSearch(''); setShowInlineSupplierDrop(true) }}
-                                    onBlur={() => setTimeout(() => setShowInlineSupplierDrop(false), 150)}
-                                    placeholder="חפש ספק..."
-                                    className={inCls + ' w-32 pl-1'}
-                                  />
-                                  {showInlineSupplierDrop && (
-                                    <div className="absolute z-[100] top-full mt-0.5 right-0 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto min-w-[180px]">
-                                      {suppliers
-                                        .filter(s => !inlineSupplierSearch || s.name.toLowerCase().includes(inlineSupplierSearch.toLowerCase()))
-                                        .map(s => (
-                                          <button
-                                            key={s.id}
-                                            type="button"
-                                            onMouseDown={() => {
-                                              updInline('supplier', s.name)
-                                              if (s.taxStatus) updInline('vat_status', s.taxStatus)
-                                              setInlineSupplierSearch('')
-                                              setShowInlineSupplierDrop(false)
-                                            }}
-                                            className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors text-right"
-                                          >
-                                            <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
-                                            {s.taxStatus && (
-                                              <span className={`mr-2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>
-                                            )}
-                                          </button>
-                                        ))}
-                                      {suppliers.filter(s => !inlineSupplierSearch || s.name.toLowerCase().includes(inlineSupplierSearch.toLowerCase())).length === 0 && (
-                                        <div className="px-3 py-2 text-xs text-gray-400">לא נמצאו ספקים</div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                              {/* Description */}
-                              <td className="px-2 py-1.5">
-                                <input type="text" value={ed.description} onChange={ev => updInline('description', ev.target.value)}
-                                  className={inCls + ' w-36'} />
-                              </td>
-                              {/* Amount */}
-                              <td className="px-2 py-1.5">
-                                <input type="number" step="0.01" value={ed.amount || ''} onChange={ev => updInline('amount', parseFloat(ev.target.value) || 0)}
-                                  className={numCls + ' w-20'} />
-                              </td>
-                              {/* VAT */}
-                              <td className="px-2 py-1.5">
-                                <input type="number" step="0.01" value={ed.vat || ''} onChange={ev => updInline('vat', parseFloat(ev.target.value) || 0)}
-                                  className={numCls + ' w-20'} />
-                              </td>
-                              {/* Total */}
-                              <td className="px-2 py-1.5">
-                                <input type="number" step="0.01" value={ed.total || ''} onChange={ev => updInline('total', parseFloat(ev.target.value) || 0)}
-                                  className={numCls + ' w-20 font-semibold text-indigo-600'} />
-                              </td>
-                              {/* Paid */}
-                              <td className="px-2 py-1.5">
-                                <input type="number" step="0.01" value={ed.paid || ''} onChange={ev => updInline('paid', parseFloat(ev.target.value) || 0)}
-                                  className={numCls + ' w-20 font-semibold text-emerald-600'} />
-                              </td>
-                              {/* Payment date */}
-                              <td className="px-2 py-1.5">
-                                <input type="text" value={ed.payment_date} onChange={ev => updInline('payment_date', ev.target.value)} placeholder="DD.MM.YY"
-                                  className={inCls + ' w-24'} />
-                              </td>
-                              {/* Balance — computed, read-only */}
-                              <td className="px-2 py-1.5 text-xs text-left whitespace-nowrap">
-                                {editBalance > 0
-                                  ? <span className="text-rose-500 font-semibold">{fmtDec(editBalance)}</span>
-                                  : <span className="text-emerald-500">✔</span>}
-                              </td>
-                              {/* Invoice */}
-                              <td className="px-2 py-1.5 text-center">
-                                <input type="checkbox" checked={ed.has_invoice} onChange={ev => updInline('has_invoice', ev.target.checked)}
-                                  className="w-4 h-4 rounded text-violet-600 cursor-pointer" />
-                              </td>
-                              {/* Notes */}
-                              <td className="px-2 py-1.5">
-                                <input type="text" value={ed.notes} onChange={ev => updInline('notes', ev.target.value)}
-                                  className={inCls + ' w-28'} />
-                              </td>
-                              {/* Save / Cancel */}
-                              <td className="px-2 py-1.5 whitespace-nowrap">
-                                <div className="flex gap-1">
-                                  <button onClick={saveInlineEdit} disabled={inlineSaving}
-                                    className="p-1 rounded-lg text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 transition-colors" title="שמור">
-                                    {inlineSaving
-                                      ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                                      : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                                  </button>
-                                  <button onClick={cancelInlineEdit}
-                                    className="p-1 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors" title="ביטול">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        }
+                        // helpers for this row
+                        const isEC = (f: string) => editingCell?.id === e.id && editingCell?.field === f
+                        const inCls = 'text-xs border border-violet-400 rounded px-1 py-0.5 bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-violet-500'
+                        const pencilBtn = (field: string, val: unknown) => (
+                          <button
+                            onClick={() => startCellEdit(e.id, field, val)}
+                            className="opacity-0 group-hover:opacity-50 hover:!opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-opacity shrink-0 ml-0.5"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                          </button>
+                        )
+                        const sc = (
+                          <span className="flex gap-0.5 shrink-0 ml-0.5">
+                            <button onClick={() => saveCellEdit(e)} disabled={cellSaving}
+                              className="p-0.5 rounded text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 transition-colors">
+                              {cellSaving
+                                ? <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                            </button>
+                            <button onClick={cancelCellEdit}
+                              className="p-0.5 rounded text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                          </span>
+                        )
 
                         return (
-                          <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}>
+                          <tr key={e.id} className={`group ${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
+
+                            {/* פרויקט */}
                             <td className="px-3 py-2 text-xs">
-                              {proj ? (
-                                <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${proj.category === 'artist' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700'}`}>{proj.name}</span>
-                              ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              {isEC('project_id') ? (
+                                <div className="flex items-center gap-1">
+                                  <select autoFocus value={String(cellValue || '')} onChange={ev => setCellValue(ev.target.value || null)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' max-w-[120px]'}>
+                                    <option value="">—</option>
+                                    {['artist','production'].map(cat => (
+                                      <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
+                                        {projects.filter(p => p.category === cat).map(p => (
+                                          <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                      </optgroup>
+                                    ))}
+                                  </select>
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  {proj
+                                    ? <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${proj.category === 'artist' ? 'bg-pink-100 text-pink-700' : 'bg-indigo-100 text-indigo-700'}`}>{proj.name}</span>
+                                    : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                                  {pencilBtn('project_id', e.project_id)}
+                                </div>
+                              )}
                             </td>
-                            <td className="px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap max-w-[120px] truncate">{e.supplier || '—'}</td>
-                            <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px] truncate">{e.description || '—'}</td>
-                            <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 text-left whitespace-nowrap">{fmtDec(e.amount)}</td>
-                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-left whitespace-nowrap">{e.vat ? fmtDec(e.vat) : '—'}</td>
-                            <td className="px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 text-left whitespace-nowrap">{fmtDec(e.total)}</td>
-                            <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">{e.paid ? fmtDec(e.paid) : '—'}</td>
-                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{e.payment_date || '—'}</td>
+
+                            {/* שם הספק */}
+                            <td className="px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                              {isEC('supplier') ? (
+                                <div className="relative flex items-center gap-1">
+                                  <div className="relative">
+                                    <input autoFocus type="text"
+                                      value={showCellSupplierDrop ? cellSupplierSearch : String(cellValue || '')}
+                                      onChange={ev => { setCellSupplierSearch(ev.target.value); setShowCellSupplierDrop(true) }}
+                                      onFocus={() => { setCellSupplierSearch(''); setShowCellSupplierDrop(true) }}
+                                      onBlur={() => setTimeout(() => setShowCellSupplierDrop(false), 150)}
+                                      onKeyDown={ev => { if (ev.key === 'Escape') cancelCellEdit() }}
+                                      placeholder="חפש ספק..."
+                                      className={inCls + ' w-32'}
+                                    />
+                                    {showCellSupplierDrop && (
+                                      <div className="absolute z-[200] top-full mt-0.5 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto min-w-[200px]">
+                                        {suppliers
+                                          .filter(s => !cellSupplierSearch || s.name.toLowerCase().includes(cellSupplierSearch.toLowerCase()))
+                                          .map(s => (
+                                            <button key={s.id} type="button"
+                                              onMouseDown={() => {
+                                                setCellValue(s.name)
+                                                setCellSupplierSearch('')
+                                                setShowCellSupplierDrop(false)
+                                              }}
+                                              className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors text-right">
+                                              <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
+                                              {s.taxStatus && <span className={`mr-2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>}
+                                            </button>
+                                          ))}
+                                        {suppliers.filter(s => !cellSupplierSearch || s.name.toLowerCase().includes(cellSupplierSearch.toLowerCase())).length === 0 && (
+                                          <div className="px-3 py-2 text-xs text-gray-400">לא נמצאו ספקים</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5 max-w-[120px]">
+                                  <span className="truncate">{e.supplier || '—'}</span>
+                                  {pencilBtn('supplier', e.supplier)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* תיאור */}
+                            <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px]">
+                              {isEC('description') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-36'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span className="truncate">{e.description || '—'}</span>
+                                  {pencilBtn('description', e.description)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* סכום */}
+                            <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 text-left whitespace-nowrap">
+                              {isEC('amount') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-20 text-left'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span>{fmtDec(e.amount)}</span>
+                                  {pencilBtn('amount', e.amount)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* מע"מ */}
+                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-left whitespace-nowrap">
+                              {isEC('vat') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-20 text-left'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span>{e.vat ? fmtDec(e.vat) : '—'}</span>
+                                  {pencilBtn('vat', e.vat)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* סה"כ */}
+                            <td className="px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 text-left whitespace-nowrap">
+                              {isEC('total') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-20 text-left'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span>{fmtDec(e.total)}</span>
+                                  {pencilBtn('total', e.total)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* שולם */}
+                            <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">
+                              {isEC('paid') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-20 text-left'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span>{e.paid ? fmtDec(e.paid) : '—'}</span>
+                                  {pencilBtn('paid', e.paid)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* תאריך תשלום */}
+                            <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                              {isEC('payment_date') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)} placeholder="DD.MM.YY"
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-24'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span>{e.payment_date || '—'}</span>
+                                  {pencilBtn('payment_date', e.payment_date)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* יתרה לתשלום - computed, read-only */}
                             <td className="px-3 py-2 text-xs text-left whitespace-nowrap">
                               {balance > 0
                                 ? <span className="text-rose-500 font-semibold">{fmtDec(balance)}</span>
                                 : <span className="text-emerald-500 text-xs">✔</span>}
                             </td>
+
+                            {/* חשבונית - toggle on click */}
                             <td className="px-3 py-2 text-center">
-                              {e.has_invoice
-                                ? <span className="text-emerald-500 text-sm">✔</span>
-                                : <span className="text-rose-400 text-xs font-bold">✗</span>}
+                              <button
+                                onClick={async () => {
+                                  await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ has_invoice: !e.has_invoice }) })
+                                  await loadAll()
+                                }}
+                                title={e.has_invoice ? 'יש חשבונית — לחץ להסרה' : 'אין חשבונית — לחץ להוספה'}
+                                className="hover:scale-110 transition-transform"
+                              >
+                                {e.has_invoice
+                                  ? <span className="text-emerald-500 text-sm">✔</span>
+                                  : <span className="text-rose-400 text-xs font-bold">✗</span>}
+                              </button>
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px] truncate">{e.notes || ''}</td>
+
+                            {/* הערות */}
+                            <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px]">
+                              {isEC('notes') ? (
+                                <div className="flex items-center gap-1">
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)}
+                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                    className={inCls + ' w-28'} />
+                                  {sc}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5">
+                                  <span className="truncate">{e.notes || ''}</span>
+                                  {pencilBtn('notes', e.notes)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Delete only */}
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <div className="flex gap-1">
-                                <button onClick={() => startInlineEdit(e)}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors" title="ערוך">
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                </button>
-                                <button onClick={() => handleDelete(e.id)}
-                                  disabled={deleting === e.id}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="מחק">
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                              </div>
+                              <button onClick={() => handleDelete(e.id)} disabled={deleting === e.id}
+                                className="p-1 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100" title="מחק">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
                             </td>
                           </tr>
                         )
