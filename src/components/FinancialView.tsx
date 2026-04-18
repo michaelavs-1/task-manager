@@ -484,7 +484,7 @@ function FinancialDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {[...months].reverse().map((m, i) => {
+                {[...months].map((m, i) => {
                   const rem = m.revenue - m.paid
                   return (
                     <tr key={m.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
@@ -589,7 +589,7 @@ function FinancialDashboard() {
           const expData = expenseMonthMap[`${y}-${mo}`] || { net: 0, vat: 0, total: 0 }
           const profit = m.revenue - expData.net
           return { month: m.label, revenue: m.revenue, expenses: expData.net, profit, sortKey: m.sortKey }
-        }).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+        }).sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
         return monthlyComparison.length > 0 ? (
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
@@ -649,7 +649,7 @@ function FinancialDashboard() {
           const label = `${MONTH_NAMES_HE[parseInt(mo) - 1]} ${y}`
           const balance = data.incomeVat - data.expenseVat
           return { month: label, incomeVat: data.incomeVat, expenseVat: data.expenseVat, balance, sortKey: key }
-        }).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+        }).sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
         return vatReport.length > 0 ? (
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
