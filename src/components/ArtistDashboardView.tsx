@@ -81,6 +81,11 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [linkUrl, setLinkUrl] = useState('')
   const [linkCategory, setLinkCategory] = useState(LINK_CATS[0])
   const [savingLink, setSavingLink] = useState(false)
+  const [showSocialModal, setShowSocialModal] = useState(false)
+  const [socialFb, setSocialFb] = useState('')
+  const [socialIg, setSocialIg] = useState('')
+  const [socialTiktok, setSocialTiktok] = useState('')
+  const [savingSocial, setSavingSocial] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
@@ -191,6 +196,48 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setSavingLink(false)
   }
 
+  const openSocialModal = () => {
+    const fb = links.find(l => l.category === 'פייסבוק')
+    const ig = links.find(l => l.category === 'אינסטגרם')
+    const tt = links.find(l => l.category === 'טיקטוק')
+    setSocialFb(fb?.url || '')
+    setSocialIg(ig?.url || '')
+    setSocialTiktok(tt?.url || '')
+    setShowSocialModal(true)
+  }
+
+  const saveSocials = async () => {
+    if (!selectedArtist) return
+    setSavingSocial(true)
+    const normalize = (u: string) => {
+      const t = u.trim()
+      if (!t) return ''
+      return t.startsWith('http') ? t : 'https://' + t
+    }
+    const pairs: { cat: string; url: string; defaultTitle: string }[] = [
+      { cat: 'פייסבוק',    url: normalize(socialFb),     defaultTitle: 'Facebook' },
+      { cat: 'אינסטגרם',   url: normalize(socialIg),     defaultTitle: 'Instagram' },
+      { cat: 'טיקטוק',     url: normalize(socialTiktok), defaultTitle: 'TikTok' },
+    ]
+    for (const p of pairs) {
+      const existing = links.find(l => l.category === p.cat)
+      if (p.url) {
+        if (existing) {
+          if (existing.url !== p.url) {
+            await supabase.from('artist_links').update({ url: p.url }).eq('id', existing.id)
+          }
+        } else {
+          await supabase.from('artist_links').insert({ artist_name: selectedArtist.name, title: p.defaultTitle, url: p.url, category: p.cat })
+        }
+      } else if (existing) {
+        await supabase.from('artist_links').delete().eq('id', existing.id)
+      }
+    }
+    await loadLinks(selectedArtist)
+    setShowSocialModal(false)
+    setSavingSocial(false)
+  }
+
   const addArtist = async () => {
     if (!newName.trim()) return
     setSavingNew(true)
@@ -283,10 +330,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedArtist.category === 'artist' && (
-                    <select value={selectedArtist.status || 'prospect'} onChange={e => updateArtistStatus(selectedArtist, e.target.value)}
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-300 ${getArtistStatus(selectedArtist.status).color}`}>
-                      {ARTIST_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                    </select>
+                    <button onClick={() => openSocialModal()} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors" title="רשתות חברתיות">⚙️</button>
                   )}
                   <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">✏️ ערוך</button>
                 </div>
@@ -707,6 +751,52 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             <div className="flex gap-2 mt-5 justify-end">
               <button onClick={() => { setShowAddModal(false); setNewName('') }} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">ביטול</button>
               <button onClick={addArtist} disabled={savingNew || !newName.trim()} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors">{savingNew ? '...' : 'הוסף'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Social links modal */}
+      {showSocialModal && selectedArtist && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => !savingSocial && setShowSocialModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-96 text-right" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">רשתות חברתיות</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{selectedArtist.name}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">פייסבוק</label>
+                <input
+                  value={socialFb}
+                  onChange={e => setSocialFb(e.target.value)}
+                  placeholder="https://facebook.com/..."
+                  dir="ltr"
+                  className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">אינסטגרם</label>
+                <input
+                  value={socialIg}
+                  onChange={e => setSocialIg(e.target.value)}
+                  placeholder="https://instagram.com/..."
+                  dir="ltr"
+                  className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">טיקטוק</label>
+                <input
+                  value={socialTiktok}
+                  onChange={e => setSocialTiktok(e.target.value)}
+                  placeholder="https://tiktok.com/@..."
+                  dir="ltr"
+                  className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5 justify-end">
+              <button onClick={() => setShowSocialModal(false)} disabled={savingSocial} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50">ביטול</button>
+              <button onClick={saveSocials} disabled={savingSocial} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-50">{savingSocial ? '...' : 'שמור'}</button>
             </div>
           </div>
         </div>

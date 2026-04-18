@@ -2651,16 +2651,18 @@ function FinProjectsTab() {
     return true
   })
 
-  const totalRev  = invoices.reduce((s, i) => s + i.total, 0)
+  // Before-VAT totals (for the main KPIs — income & expenses are compared on a like-for-like net basis)
+  const totalRev  = invoices.reduce((s, i) => s + (i.before_vat || 0), 0)
   const totalPaid = invoices.reduce((s, i) => s + i.paid,  0)
-  const totalRem  = Math.max(0, totalRev - totalPaid)
+  const totalRem  = Math.max(0, invoices.reduce((s, i) => s + i.total, 0) - totalPaid)
   const openCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
   const paidCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
-  const totalExp        = expenses.reduce((s, e) => s + (e.total || 0), 0)
-  const totalExpPaid    = expenses.reduce((s, e) => s + (e.paid  || 0), 0)
-  const totalExpRem     = Math.max(0, totalExp - totalExpPaid)
-  const netProfit       = totalRev - totalExp
+  const totalExp             = expenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const totalExpPaid         = expenses.reduce((s, e) => s + (e.paid   || 0), 0)
+  const totalExpTotalInclVat = expenses.reduce((s, e) => s + (e.total  || 0), 0)
+  const totalExpRem          = Math.max(0, totalExpTotalInclVat - totalExpPaid)
+  const netProfit            = totalRev - totalExp
 
   function ProjectList({ label, category, items }: { label: string; category: string; items: Project[] }) {
     const isOpen = expanded[category] !== false
@@ -2915,7 +2917,7 @@ function FinProjectsTab() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      {['ספק', 'תיאור', 'חודש', 'תאריך תשלום', 'סה"כ', 'שולם', 'יתרה', 'חשבונית'].map(h => (
+                      {['ספק', 'תיאור', 'חודש', 'תאריך תשלום', 'לפני מע״מ', 'שולם', 'יתרה', 'חשבונית'].map(h => (
                         <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                       ))}
                     </tr>
@@ -2931,7 +2933,7 @@ function FinProjectsTab() {
                             <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.description || '—'}</td>
                             <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.month || '—'}</td>
                             <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.payment_date || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#ef4444' }}>{fmtP(ex.total || 0)}</td>
+                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#ef4444' }}>{fmtP(ex.amount || 0)}</td>
                             <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(ex.paid || 0)}</td>
                             <td className="px-4 py-2.5 text-xs" style={{ color: rem >= 1 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem >= 1 ? fmtP(rem) : '—'}</td>
                             <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.has_invoice ? '✓' : '—'}</td>
