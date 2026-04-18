@@ -2590,28 +2590,39 @@ function FinProjectsTab() {
       .catch(() => {})
   }, [])
 
-  // When project selected — fetch matching invoices (project_id FK first, then fuzzy name fallback)
+  // When project selected — fetch matching invoices + expenses (project_id FK first, then fuzzy name fallback)
   useEffect(() => {
     if (!sel) return
     const project = projects.find(p => p.id === sel)
     if (!project) return
     setLoadingInv(true)
     setLedgerFilter('all')
-    fetch('/api/invoices')
-      .then(r => r.json())
-      .then(d => {
-        const all: InvoiceRow[] = d.invoices || []
+    Promise.all([
+      fetch('/api/invoices').then(r => r.json()).catch(() => ({ invoices: [] })),
+      fetch('/api/expenses').then(r => r.json()).catch(() => ({ expenses: [] })),
+    ])
+      .then(([invData, expData]) => {
+        const allInv: InvoiceRow[] = invData.invoices || []
+        const allExp: Expense[] = expData.expenses || []
         const q = project.name.toLowerCase()
-        const matched = all.filter(inv =>
+        const matchedInv = allInv.filter(inv =>
           inv.project_id === sel ||
           (!inv.project_id && (
             inv.client?.toLowerCase().includes(q) ||
             q.includes(inv.client?.toLowerCase() || '__nomatch__')
           ))
         )
-        setInvoices(matched)
+        const matchedExp = allExp.filter(ex =>
+          ex.project_id === sel ||
+          (!ex.project_id && (
+            ex.supplier?.toLowerCase().includes(q) ||
+            q.includes(ex.supplier?.toLowerCase() || '__nomatch__')
+          ))
+        )
+        setInvoices(matchedInv)
+        setExpenses(matchedExp)
       })
-      .catch(() => setInvoices([]))
+      .catch(() => { setInvoices([]); setExpenses([]) })
       .finally(() => setLoadingInv(false))
   }, [sel, projects])
 
@@ -2645,6 +2656,11 @@ function FinProjectsTab() {
   const totalRem  = Math.max(0, totalRev - totalPaid)
   const openCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
   const paidCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
+
+  const totalExp        = expenses.reduce((s, e) => s + (e.total || 0), 0)
+  const totalExpPaid    = expenses.reduce((s, e) => s + (e.paid  || 0), 0)
+  const totalExpRem     = Math.max(0, totalExp - totalExpPaid)
+  const netProfit       = totalRev - totalExp
 
   function ProjectList({ label, category, items }: { label: string; category: string; items: Project[] }) {
     const isOpen = expanded[category] !== false
@@ -2763,7 +2779,7 @@ function FinProjectsTab() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{current.name}</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות משויכות</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות · {expenses.length} הוצאות</p>
               </div>
               <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
                 {current.category === 'artist' ? '🍤 אומן' : '🍬 הפקה'}
@@ -2773,10 +2789,10 @@ function FinProjectsTab() {
             {/* KPI cards */}
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'סה"כ הכנסות', value: fmtP(totalRev),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-                { label: 'שולם',         value: fmtP(totalPaid), color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-                { label: 'נותר לגבייה', value: fmtP(totalRem),  color: totalRem > 0 ? '#f59e0b' : '#10b981', bg: totalRem > 0 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)' },
-                { label: 'חשבוניות',    value: String(invoices.length), color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+                { label: 'סה"כ הכנסות', value: fmtP(totalRev),    color: '#6366f1' },
+                { label: 'סה"כ הוצאות', value: fmtP(totalExp),    color: '#ef4444' },
+                { label: 'רווח נטו',    value: fmtP(netProfit),   color: netProfit >= 0 ? '#10b981' : '#ef4444' },
+                { label: 'נותר לגבייה', value: fmtP(totalRem),    color: totalRem > 0 ? '#f59e0b' : '#10b981' },
               ].map(card => (
                 <div key={card.label} className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                   <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>{card.label}</div>
@@ -2785,22 +2801,42 @@ function FinProjectsTab() {
               ))}
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-              {([
-                { key: 'all',  label: 'הכל',    count: invoices.length },
-                { key: 'open', label: 'פתוחות', count: openCount },
-                { key: 'paid', label: 'שולם',   count: paidCount },
-              ] as const).map(({ key, label, count }) => (
-                <button
-                  key={key}
-                  onClick={() => setLedgerFilter(key)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all`}
-                  style={ledgerFilter === key ? { background: '#6366f1', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' } : { background: 'transparent', color: 'var(--text-secondary)' }}
-                >
-                  {label} <span style={{ opacity: 0.6, fontSize: 11 }}>({count})</span>
-                </button>
+            {/* Secondary income/expense mini-stats */}
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label: 'נגבה (הכנסות)',  value: fmtP(totalPaid),    color: '#10b981' },
+                { label: 'שולם (הוצאות)',  value: fmtP(totalExpPaid), color: '#10b981' },
+                { label: 'פתוח לתשלום',    value: fmtP(totalExpRem),  color: totalExpRem > 0 ? '#f59e0b' : '#10b981' },
+                { label: 'מס׳ חשבוניות/הוצאות', value: `${invoices.length} / ${expenses.length}`, color: '#3b82f6' },
+              ].map(card => (
+                <div key={card.label} className="rounded-2xl p-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                  <div className="text-[11px] mb-1" style={{ color: 'var(--text-secondary)' }}>{card.label}</div>
+                  <div className="text-base font-bold" style={{ color: card.color }}>{card.value}</div>
+                </div>
               ))}
+            </div>
+
+            {/* Section: Invoices */}
+            <div className="flex items-center justify-between pt-2">
+              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                📈 חשבוניות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({invoices.length})</span>
+              </h3>
+              <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                {([
+                  { key: 'all',  label: 'הכל',    count: invoices.length },
+                  { key: 'open', label: 'פתוחות', count: openCount },
+                  { key: 'paid', label: 'שולם',   count: paidCount },
+                ] as const).map(({ key, label, count }) => (
+                  <button
+                    key={key}
+                    onClick={() => setLedgerFilter(key)}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all`}
+                    style={ledgerFilter === key ? { background: '#6366f1', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' } : { background: 'transparent', color: 'var(--text-secondary)' }}
+                  >
+                    {label} <span style={{ opacity: 0.6, fontSize: 11 }}>({count})</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Invoice table */}
@@ -2854,6 +2890,61 @@ function FinProjectsTab() {
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
                       <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(displayed.reduce((s,i) => s+Math.max(0, roundCents(i.total-i.paid)),0))}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </div>
+
+            {/* Section: Expenses */}
+            <div className="flex items-center justify-between pt-6">
+              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                📉 הוצאות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({expenses.length})</span>
+              </h3>
+            </div>
+
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              {loadingInv ? (
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען הוצאות...</div>
+              ) : expenses.length === 0 ? (
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  לא נמצאו הוצאות לפרויקט זה
+                </div>
+              ) : (
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      {['ספק', 'תיאור', 'חודש', 'תאריך תשלום', 'סה"כ', 'שולם', 'יתרה', 'חשבונית'].map(h => (
+                        <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...expenses]
+                      .sort((a, b) => (b.month || '').localeCompare(a.month || ''))
+                      .map((ex, i) => {
+                        const rem = Math.max(0, roundCents((ex.total || 0) - (ex.paid || 0)))
+                        return (
+                          <tr key={ex.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
+                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{ex.supplier || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.description || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.month || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.payment_date || '—'}</td>
+                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#ef4444' }}>{fmtP(ex.total || 0)}</td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(ex.paid || 0)}</td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: rem >= 1 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem >= 1 ? fmtP(rem) : '—'}</td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.has_invoice ? '✓' : '—'}</td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({expenses.length})</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#ef4444' }}>{fmtP(totalExp)}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(totalExpPaid)}</td>
+                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(totalExpRem)}</td>
                       <td />
                     </tr>
                   </tfoot>
