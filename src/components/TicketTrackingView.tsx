@@ -25,6 +25,8 @@ export function TicketTrackingView() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [snapshotDate, setSnapshotDate] = useState(new Date().toISOString().split('T')[0])
+  const [activeSubTab, setActiveSubTab] = useState<'update' | 'stats'>('update')
+  const [statsSelectedId, setStatsSelectedId] = useState<string | null>(null)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => { loadData() }, [])
@@ -120,6 +122,32 @@ export function TicketTrackingView() {
     return showDate >= today
   })
 
+  // ── Stats helpers ──
+  const allCampaigns = campaigns
+  const statsTarget = statsSelectedId
+    ? campaigns.find(c => c.id === statsSelectedId) ?? campaigns[0] ?? null
+    : campaigns[0] ?? null
+
+  const statsSnaps = statsTarget
+    ? snapshots.filter(s => s.campaign_id === statsTarget.id).sort((a,b) => a.snapshot_date.localeCompare(b.snapshot_date))
+    : []
+
+  const statsTotalSold   = statsTarget?.tickets_sold ?? 0
+  const statsTotalCap    = statsTarget?.tickets_for_sale ?? 0
+  const statsRemaining   = statsTotalCap > 0 ? statsTotalCap - statsTotalSold : null
+  const statsPct         = statsTotalCap > 0 ? Math.round(statsTotalSold / statsTotalCap * 100) : null
+
+  let statsDailyRate: number | null = null
+  if (statsSnaps.length >= 2) {
+    const first = statsSnaps[0]
+    const last  = statsSnaps[statsSnaps.length - 1]
+    const days  = Math.max(1, Math.round((new Date(last.snapshot_date).getTime() - new Date(first.snapshot_date).getTime()) / 86400000))
+    statsDailyRate = parseFloat(((last.tickets_sold - first.tickets_sold) / days).toFixed(1))
+  }
+
+  const chartMax = Math.max(statsTotalCap, ...statsSnaps.map(s => s.tickets_sold), 1)
+  const fmtDateShort = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })
+
   if (loading) return (
     <div className="p-8 text-center text-gray-400">
       <div className="inline-block w-6 h-6 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin" />
@@ -127,6 +155,154 @@ export function TicketTrackingView() {
   )
 
   return (
+    <div dir="rtl" className="space-y-6">
+
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 w-fit border border-gray-200 dark:border-gray-700">
+        {([
+          { key: 'update', label: '📋 עדכון כרטיסים' },
+          { key: 'stats',  label: '📊 סטטיסטיקות' },
+        ] as const).map(({ key, label }) => (
+          <button key={key} onClick={() => setActiveSubTab(key)}
+            className="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={activeSubTab === key
+              ? { background: '#ec4899', color: 'white', boxShadow: '0 2px 8px rgba(236,72,153,0.35)' }
+              : { background: 'transparent', color: 'var(--text-secondary, #6b7280)' }}
+          >{label}</button>
+        ))}
+      </div>
+
+      {/* Stats tab */}
+      {activeSubTab === 'stats' && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">מופע:</span>
+            {allCampaigns.map(c => (
+              <button key={c.id} onClick={() => setStatsSelectedId(c.id)}
+                className="px-4 py-1.5 rounded-xl text-sm font-medium transition-all border"
+                style={(statsTarget?.id === c.id)
+                  ? { background: '#ec4899', color: 'white', borderColor: '#ec4899' }
+                  : { background: 'transparent', color: '#6b7280', borderColor: '#e5e7eb' }}
+              >{c.name}</button>
+            ))}
+          </div>
+          {statsTarget ? (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { label: 'כרטיסים למכירה', value: statsTotalCap > 0 ? statsTotalCap.toLocaleString() : '—', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', icon: '🎫' },
+                  { label: 'נמכרו', value: statsTotalSold.toLocaleString(), color: '#10b981', bg: 'rgba(16,185,129,0.08)', icon: '✅' },
+                  { label: 'נותרו', value: statsRemaining !== null ? statsRemaining.toLocaleString() : '—', color: statsRemaining !== null && statsRemaining <= 50 ? '#ef4444' : '#f59e0b', bg: statsRemaining !== null && statsRemaining <= 50 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)', icon: '⏳' },
+                  { label: 'ממוצע יומי', value: statsDailyRate !== null ? '+' + statsDailyRate + '/י' : '—', color: '#ec4899', bg: 'rgba(236,72,153,0.08)', icon: '📈' },
+                ].map(card => (
+                  <div key={card.label} className="rounded-2xl p-4 flex flex-col gap-2" style={{ background: 'var(--bg-card, white)', border: '1px solid var(--border-color, #e5e7eb)' }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary, #6b7280)' }}>{card.label}</span>
+                      <span className="text-base">{card.icon}</span>
+                    </div>
+                    <div className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</div>
+                    {card.label === 'נמכרו' && statsPct !== null && (
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#e5e7eb' }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: Math.min(statsPct, 100) + '%', background: statsPct >= 90 ? '#ef4444' : statsPct >= 70 ? '#f59e0b' : '#10b981' }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {statsPct !== null && (
+                <div className="rounded-2xl p-5" style={{ background: 'var(--bg-card, white)', border: '1px solid var(--border-color, #e5e7eb)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text-primary, #111827)' }}>אחוז מכירה כולל</span>
+                    <span className="text-xl font-bold" style={{ color: statsPct >= 90 ? '#ef4444' : statsPct >= 70 ? '#f59e0b' : '#10b981' }}>{statsPct}%</span>
+                  </div>
+                  <div className="h-4 rounded-full overflow-hidden" style={{ background: '#f3f4f6' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: Math.min(statsPct, 100) + '%', background: statsPct >= 90 ? 'linear-gradient(to left, #ef4444, #f87171)' : statsPct >= 70 ? 'linear-gradient(to left, #f59e0b, #fbbf24)' : 'linear-gradient(to left, #10b981, #34d399)' }} />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs" style={{ color: 'var(--text-secondary, #6b7280)' }}>0</span>
+                    <span className="text-xs" style={{ color: 'var(--text-secondary, #6b7280)' }}>{statsTotalCap.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+              {statsSnaps.length > 0 && (
+                <div className="rounded-2xl p-5" style={{ background: 'var(--bg-card, white)', border: '1px solid var(--border-color, #e5e7eb)' }}>
+                  <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary, #111827)' }}>מכירות לאורך זמן — {statsTarget.name}</h3>
+                  <div className="flex items-end gap-2 overflow-x-auto" style={{ height: 160, paddingTop: 24 }}>
+                    {statsSnaps.map((snap, i) => {
+                      const h = Math.round((snap.tickets_sold / chartMax) * 130)
+                      const capH = statsTotalCap > 0 ? Math.round((statsTotalCap / chartMax) * 130) : 0
+                      const prev = i > 0 ? statsSnaps[i - 1].tickets_sold : 0
+                      const delta = snap.tickets_sold - prev
+                      return (
+                        <div key={snap.id} className="flex flex-col items-center gap-1 flex-1 min-w-[40px] group relative">
+                          <div className="relative w-full flex flex-col justify-end" style={{ height: 130 }}>
+                            {statsTotalCap > 0 && (
+                              <div className="absolute left-0 right-0" style={{ bottom: capH, borderTop: '1px dashed rgba(239,68,68,0.4)', zIndex: 1 }} />
+                            )}
+                            <div className="absolute bottom-0 left-1 right-1 rounded-t-lg transition-all"
+                              style={{ height: h, background: 'linear-gradient(to top, #ec4899, #f9a8d4)' }} />
+                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+                              style={{ background: '#1f2937', color: 'white', fontSize: 10 }}>
+                              {snap.tickets_sold.toLocaleString()} {delta > 0 ? '(+' + delta + ')' : ''}
+                            </div>
+                          </div>
+                          <span className="text-center" style={{ color: '#9ca3af', fontSize: 9 }}>{fmtDateShort(snap.snapshot_date)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex gap-4 mt-2">
+                    <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#ec4899' }} /><span className="text-xs" style={{ color: '#6b7280' }}>כרטיסים מכורים</span></div>
+                  </div>
+                </div>
+              )}
+              {statsSnaps.length > 0 && (
+                <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card, white)', border: '1px solid var(--border-color, #e5e7eb)' }}>
+                  <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border-color, #e5e7eb)' }}>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text-primary, #111827)' }}>היסטוריית עדכונים</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ background: 'var(--bg-secondary, #f9fafb)' }}>
+                        {['תאריך', 'כרטיסים מכורים', 'שינוי', 'אחוז'].map(h => (
+                          <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: '#6b7280' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...statsSnaps].reverse().map((snap, i) => {
+                        const idx = statsSnaps.length - 1 - i
+                        const prevSnap = idx > 0 ? statsSnaps[idx - 1] : null
+                        const delta = prevSnap ? snap.tickets_sold - prevSnap.tickets_sold : null
+                        const pct = statsTotalCap > 0 ? Math.round(snap.tickets_sold / statsTotalCap * 100) : null
+                        return (
+                          <tr key={snap.id} style={{ borderBottom: '1px solid var(--border-color, #e5e7eb)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary, #f9fafb)' }}>
+                            <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary, #111827)' }}>{fmtDateShort(snap.snapshot_date)}</td>
+                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#ec4899' }}>{snap.tickets_sold.toLocaleString()}</td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: delta !== null ? (delta > 0 ? '#10b981' : delta < 0 ? '#ef4444' : '#6b7280') : '#6b7280' }}>
+                              {delta !== null ? (delta > 0 ? '+' + delta : String(delta)) : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs" style={{ color: '#6b7280' }}>{pct !== null ? pct + '%' : '—'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {statsSnaps.length === 0 && (
+                <div className="text-center py-12 text-sm" style={{ color: '#9ca3af' }}>אין עדיין נתוני היסטוריה למופע זה</div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12 text-sm" style={{ color: '#9ca3af' }}>אין מופעים</div>
+          )}
+        </div>
+      )}
+
+      {/* Update tab */}
+      {activeSubTab === 'update' && (
+      <div className="space-y-10">
     <div dir="rtl" className="space-y-10">
 
       <div className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 shadow-sm">
@@ -299,6 +475,9 @@ export function TicketTrackingView() {
           </div>
           <p className="mt-2 text-xs text-gray-400 text-right">כל לחיצה על שמור מתועדת כנקודת זמן בטבלה</p>
         </div>
+      )}
+
+      </div>
       )}
 
     </div>
