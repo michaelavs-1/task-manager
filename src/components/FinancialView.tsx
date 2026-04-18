@@ -2719,6 +2719,11 @@ function ExpensesTab() {
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingData, setEditingData] = useState<(Omit<Expense, 'id'> & { id: number }) | null>(null)
+  const [inlineSaving, setInlineSaving] = useState(false)
+  const [inlineSupplierSearch, setInlineSupplierSearch] = useState('')
+  const [showInlineSupplierDrop, setShowInlineSupplierDrop] = useState(false)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
@@ -2785,6 +2790,59 @@ function ExpensesTab() {
 
   const openEdit = (e: Expense) => {
     setModal({ mode: 'edit', expense: { ...e } })
+  }
+
+  const startInlineEdit = (expense: Expense) => {
+    setEditingId(expense.id)
+    setEditingData({ ...expense })
+    setInlineSupplierSearch('')
+    setShowInlineSupplierDrop(false)
+  }
+
+  const cancelInlineEdit = () => {
+    setEditingId(null)
+    setEditingData(null)
+    setInlineSupplierSearch('')
+    setShowInlineSupplierDrop(false)
+  }
+
+  const saveInlineEdit = async () => {
+    if (!editingData || editingId === null) return
+    setInlineSaving(true)
+    try {
+      await fetch(`/api/expenses/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingData),
+      })
+      await loadAll()
+      setEditingId(null)
+      setEditingData(null)
+    } catch {
+      alert('שגיאה בשמירה')
+    } finally {
+      setInlineSaving(false)
+    }
+  }
+
+  const updInline = (field: string, val: unknown) => {
+    if (!editingData) return
+    const next = { ...editingData, [field]: val } as typeof editingData
+    if (field === 'amount' || field === 'vat_status') {
+      const amt = field === 'amount' ? Number(val) : next.amount
+      const status = field === 'vat_status' ? String(val) : next.vat_status
+      if (status === 'מורשה' || status === 'חברה') {
+        next.vat = roundCents(amt * VAT_RATE)
+        next.total = roundCents(amt + next.vat)
+      } else {
+        next.vat = 0
+        next.total = roundCents(amt)
+      }
+    }
+    if (field === 'vat') {
+      next.total = roundCents(next.amount + Number(val))
+    }
+    setEditingData(next)
   }
 
   const upd = (field: string, val: unknown) => {
@@ -2946,9 +3004,137 @@ function ExpensesTab() {
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                       {rows.map((e, i) => {
+                        const isEditing = editingId === e.id
+                        const ed = isEditing ? editingData! : null
                         const balance = Math.max(0, roundCents(e.total - e.paid))
-                        const isPaid = balance === 0
+                        const editBalance = ed ? Math.max(0, roundCents((ed.total || 0) - (ed.paid || 0))) : 0
                         const proj = e.project_id ? projMap[e.project_id] : null
+
+                        if (isEditing && ed) {
+                          const inCls = 'text-xs border border-violet-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-violet-400 bg-white dark:bg-gray-700 dark:text-white w-full'
+                          const numCls = inCls + ' text-left'
+                          return (
+                            <tr key={e.id} className="bg-violet-50/60 dark:bg-violet-900/20 outline outline-1 outline-violet-300">
+                              {/* Project */}
+                              <td className="px-2 py-1.5">
+                                <select value={ed.project_id || ''} onChange={ev => updInline('project_id', ev.target.value || null)}
+                                  className={inCls}>
+                                  <option value="">—</option>
+                                  {['artist','production'].map(cat => (
+                                    <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
+                                      {projects.filter(p => p.category === cat).map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+                              </td>
+                              {/* Supplier — dropdown picker */}
+                              <td className="px-2 py-1.5 relative">
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    value={showInlineSupplierDrop ? inlineSupplierSearch : (ed.supplier || '')}
+                                    onChange={ev => { setInlineSupplierSearch(ev.target.value); setShowInlineSupplierDrop(true) }}
+                                    onFocus={() => { setInlineSupplierSearch(''); setShowInlineSupplierDrop(true) }}
+                                    onBlur={() => setTimeout(() => setShowInlineSupplierDrop(false), 150)}
+                                    placeholder="חפש ספק..."
+                                    className={inCls + ' w-32 pl-1'}
+                                  />
+                                  {showInlineSupplierDrop && (
+                                    <div className="absolute z-[100] top-full mt-0.5 right-0 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto min-w-[180px]">
+                                      {suppliers
+                                        .filter(s => !inlineSupplierSearch || s.name.toLowerCase().includes(inlineSupplierSearch.toLowerCase()))
+                                        .map(s => (
+                                          <button
+                                            key={s.id}
+                                            type="button"
+                                            onMouseDown={() => {
+                                              updInline('supplier', s.name)
+                                              if (s.taxStatus) updInline('vat_status', s.taxStatus)
+                                              setInlineSupplierSearch('')
+                                              setShowInlineSupplierDrop(false)
+                                            }}
+                                            className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors text-right"
+                                          >
+                                            <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
+                                            {s.taxStatus && (
+                                              <span className={`mr-2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>
+                                            )}
+                                          </button>
+                                        ))}
+                                      {suppliers.filter(s => !inlineSupplierSearch || s.name.toLowerCase().includes(inlineSupplierSearch.toLowerCase())).length === 0 && (
+                                        <div className="px-3 py-2 text-xs text-gray-400">לא נמצאו ספקים</div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              {/* Description */}
+                              <td className="px-2 py-1.5">
+                                <input type="text" value={ed.description} onChange={ev => updInline('description', ev.target.value)}
+                                  className={inCls + ' w-36'} />
+                              </td>
+                              {/* Amount */}
+                              <td className="px-2 py-1.5">
+                                <input type="number" step="0.01" value={ed.amount || ''} onChange={ev => updInline('amount', parseFloat(ev.target.value) || 0)}
+                                  className={numCls + ' w-20'} />
+                              </td>
+                              {/* VAT */}
+                              <td className="px-2 py-1.5">
+                                <input type="number" step="0.01" value={ed.vat || ''} onChange={ev => updInline('vat', parseFloat(ev.target.value) || 0)}
+                                  className={numCls + ' w-20'} />
+                              </td>
+                              {/* Total */}
+                              <td className="px-2 py-1.5">
+                                <input type="number" step="0.01" value={ed.total || ''} onChange={ev => updInline('total', parseFloat(ev.target.value) || 0)}
+                                  className={numCls + ' w-20 font-semibold text-indigo-600'} />
+                              </td>
+                              {/* Paid */}
+                              <td className="px-2 py-1.5">
+                                <input type="number" step="0.01" value={ed.paid || ''} onChange={ev => updInline('paid', parseFloat(ev.target.value) || 0)}
+                                  className={numCls + ' w-20 font-semibold text-emerald-600'} />
+                              </td>
+                              {/* Payment date */}
+                              <td className="px-2 py-1.5">
+                                <input type="text" value={ed.payment_date} onChange={ev => updInline('payment_date', ev.target.value)} placeholder="DD.MM.YY"
+                                  className={inCls + ' w-24'} />
+                              </td>
+                              {/* Balance — computed, read-only */}
+                              <td className="px-2 py-1.5 text-xs text-left whitespace-nowrap">
+                                {editBalance > 0
+                                  ? <span className="text-rose-500 font-semibold">{fmtDec(editBalance)}</span>
+                                  : <span className="text-emerald-500">✔</span>}
+                              </td>
+                              {/* Invoice */}
+                              <td className="px-2 py-1.5 text-center">
+                                <input type="checkbox" checked={ed.has_invoice} onChange={ev => updInline('has_invoice', ev.target.checked)}
+                                  className="w-4 h-4 rounded text-violet-600 cursor-pointer" />
+                              </td>
+                              {/* Notes */}
+                              <td className="px-2 py-1.5">
+                                <input type="text" value={ed.notes} onChange={ev => updInline('notes', ev.target.value)}
+                                  className={inCls + ' w-28'} />
+                              </td>
+                              {/* Save / Cancel */}
+                              <td className="px-2 py-1.5 whitespace-nowrap">
+                                <div className="flex gap-1">
+                                  <button onClick={saveInlineEdit} disabled={inlineSaving}
+                                    className="p-1 rounded-lg text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 transition-colors" title="שמור">
+                                    {inlineSaving
+                                      ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                      : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                  </button>
+                                  <button onClick={cancelInlineEdit}
+                                    className="p-1 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors" title="ביטול">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        }
+
                         return (
                           <tr key={e.id} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}>
                             <td className="px-3 py-2 text-xs">
@@ -2976,13 +3162,13 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px] truncate">{e.notes || ''}</td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               <div className="flex gap-1">
-                                <button onClick={() => openEdit(e)}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors" title="Edit">
+                                <button onClick={() => startInlineEdit(e)}
+                                  className="p-1 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors" title="ערוך">
                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                 </button>
                                 <button onClick={() => handleDelete(e.id)}
                                   disabled={deleting === e.id}
-                                  className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="Delete">
+                                  className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="מחק">
                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                               </div>
