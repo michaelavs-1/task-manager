@@ -2928,6 +2928,8 @@ function ExpensesTab() {
   const toggleMonth = (m: string) => setOpenMonths(prev => ({ ...prev, [m]: !prev[m] }))
 
   // summary
+  const totalNet = filtered.reduce((s, e) => s + (e.amount || 0), 0)
+  const totalVatSum = filtered.reduce((s, e) => s + (e.vat || 0), 0)
   const totalExp = filtered.reduce((s, e) => s + e.total, 0)
   const totalPaid = filtered.reduce((s, e) => s + e.paid, 0)
   const totalBalance = filtered.reduce((s, e) => s + Math.max(0, roundCents(e.total - e.paid)), 0)
@@ -2950,9 +2952,11 @@ function ExpensesTab() {
     <div className="flex-1 overflow-y-auto p-4 space-y-4" dir="rtl">
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'סה"כ הוצאות', val: fmt(totalExp), color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-900/20' },
+          { label: 'שירותים (נטו)', val: fmt(totalNet), color: 'text-gray-700 dark:text-gray-200', bg: 'bg-gray-50 dark:bg-gray-800' },
+          { label: 'מע"מ', val: fmt(totalVatSum), color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'סה"כ לתשלום', val: fmt(totalExp), color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-900/20' },
           { label: 'שולם', val: fmt(totalPaid), color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: 'יתרה לתשלום', val: fmt(totalBalance), color: totalBalance > 0 ? 'text-rose-600' : 'text-gray-400', bg: 'bg-rose-50 dark:bg-rose-900/20' },
           { label: 'ללא חשבונית', val: String(noInvoice), color: noInvoice > 0 ? 'text-amber-600' : 'text-gray-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
@@ -3009,6 +3013,8 @@ function ExpensesTab() {
       ) : (
         months.map(month => {
           const rows = filtered.filter(e => e.month === month).sort((a, b) => a.id - b.id)
+          const mNet = rows.reduce((s, e) => s + (e.amount || 0), 0)
+          const mVat = rows.reduce((s, e) => s + (e.vat || 0), 0)
           const mTotal = rows.reduce((s, e) => s + e.total, 0)
           const mPaid = rows.reduce((s, e) => s + e.paid, 0)
           const mBalance = rows.reduce((s, e) => s + Math.max(0, roundCents(e.total - e.paid)), 0)
@@ -3026,7 +3032,9 @@ function ExpensesTab() {
                 <span className="font-bold text-gray-800 dark:text-white text-sm">{heMonth(month)}</span>
                 <span className="text-xs text-gray-400 mr-1">({rows.length})</span>
                 <div className="flex-1" />
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">סה"כ: <span className="font-semibold text-violet-600">{fmt(mTotal)}</span></span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">שירותים: <span className="font-semibold text-gray-700 dark:text-gray-200">{fmt(mNet)}</span></span>
+                {mVat > 0 && <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">מע&quot;מ: <span className="font-semibold text-blue-600">{fmt(mVat)}</span></span>}
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">סה&quot;כ: <span className="font-semibold text-violet-600">{fmt(mTotal)}</span></span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">שולם: <span className="font-semibold text-emerald-600">{fmt(mPaid)}</span></span>
                 {mBalance > 0 && <span className="text-xs text-rose-500 font-semibold ml-4">יתרה: {fmt(mBalance)}</span>}
                 <button onClick={e => { e.stopPropagation(); openAdd(month) }}
