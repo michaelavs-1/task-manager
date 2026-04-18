@@ -16,16 +16,16 @@ type ArtistLink = { id: string; artist_name: string; title: string; url: string;
 type ArtistCampaign = { id: string; name: string; status: string | null; group_title: string | null; launch_date: string | null; platforms: string | null }
 
 const STATUS_COLORS: Record<string, string> = {
-  'קורה': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  'אופציה חזקה': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  'אופציה': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200',
-  'חדש - לבחינה': 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200',
-  'ירד': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
+  '×§××¨×': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  '×××¤×¦×× ×××§×': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  '×××¤×¦××': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200',
+  '×××© - ××××× ×': 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200',
+  '××¨×': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
 }
 
 const ARTIST_STATUSES: { key: string; label: string; color: string; dot: string }[] = [
-  { key: 'prospect',   label: 'Prospect / בפיתוח',      color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',       dot: 'bg-slate-400' },
-  { key: 'signing',    label: 'חתימה / משא ומתן',       color: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',       dot: 'bg-amber-400' },
+  { key: 'prospect',   label: 'Prospect / ××¤××ª××',      color: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',       dot: 'bg-slate-400' },
+  { key: 'signing',    label: '××ª××× / ××©× ×××ª×',       color: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',       dot: 'bg-amber-400' },
   { key: 'active',     label: 'Active',                  color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',       dot: 'bg-green-500' },
   { key: 'growth',     label: 'Growth Mode',             color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',          dot: 'bg-blue-500' },
   { key: 'release',    label: 'Album / Release Cycle',   color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',  dot: 'bg-purple-500' },
@@ -34,21 +34,21 @@ const ARTIST_STATUSES: { key: string; label: string; color: string; dot: string 
 ]
 function getArtistStatus(key?: string) { return ARTIST_STATUSES.find(s => s.key === key) || ARTIST_STATUSES[0] }
 
-const LINK_CATS = ['כללי', 'חוזה', 'רידר', 'מדיה', 'פייסבוק', 'אינסטרגרם', 'ספוטיפיי', 'יוטיוב', 'אחר']
+const LINK_CATS = ['××××', '××××', '×¨×××¨', '××××', '×¤×××¡×××§', '××× ×¡××¨××¨×', '×¡×¤××××¤××', '××××××', '×××¨']
 
 const TAB_DEFS: { id: ArtistTab; label: string }[] = [
-  { id: 'overview',   label: 'סקירה כללית' },
-  { id: 'shows',      label: 'הופעות' },
-  { id: 'tasks',      label: 'משימות' },
-  { id: 'campaigns',  label: 'קמפיינים' },
-  { id: 'meetings',   label: 'פגישות' },
-  { id: 'links',      label: 'קישורים' },
-  { id: 'financial',  label: 'הצעות מחיר' },
-  { id: 'media',      label: 'מדיה' },
+  { id: 'overview',   label: '×¡×§××¨× ×××××ª' },
+  { id: 'shows',      label: '×××¤×¢××ª' },
+  { id: 'tasks',      label: '××©××××ª' },
+  { id: 'campaigns',  label: '×§××¤××× ××' },
+  { id: 'meetings',   label: '×¤×××©××ª' },
+  { id: 'links',      label: '×§××©××¨××' },
+  { id: 'financial',  label: '××¦×¢××ª ××××¨' },
+  { id: 'media',      label: '××××' },
 ]
 
-function fmtNum(v: string | null) { if (!v) return '—'; const n = parseFloat(v); return isNaN(n) ? '—' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
-function fmtDate(v: string | null) { if (!v) return '—'; try { return new Date(v).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' }) } catch { return v } }
+function fmtNum(v: string | null) { if (!v) return 'â'; const n = parseFloat(v); return isNaN(n) ? 'â' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
+function fmtDate(v: string | null) { if (!v) return 'â'; try { return new Date(v).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' }) } catch { return v } }
 function isUpcoming(d: string | null) { return !!d && d >= new Date().toISOString().split('T')[0] }
 
 export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; initialArtist?: string }) {
@@ -217,9 +217,9 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const productions = projects.filter(p => p.category === 'production')
   const hasBoardData = selectedArtist ? !!ARTIST_BOARD_MAP[selectedArtist.name] : false
   const artistTasks = selectedArtist ? tasks.filter(t => ((t as any).project_name === selectedArtist.name || (t as any).project === selectedArtist.name)) : []
-  const upcomingEvents = events.filter(e => isUpcoming(e.date) && e.status !== 'ירד')
-  const pastEvents = events.filter(e => !isUpcoming(e.date) && e.status !== 'ירד')
-  const confirmedEvents = upcomingEvents.filter(e => e.status === 'קורה')
+  const upcomingEvents = events.filter(e => isUpcoming(e.date) && e.status !== '××¨×')
+  const pastEvents = events.filter(e => !isUpcoming(e.date) && e.status !== '××¨×')
+  const confirmedEvents = upcomingEvents.filter(e => e.status === '×§××¨×')
   const totalRevenue = pastEvents.reduce((s, e) => s + parseFloat(e.total_revenue || '0'), 0)
   const artistTotal = pastEvents.reduce((s, e) => s + parseFloat(e.artist_share || '0'), 0)
   const groupedLinks = links.reduce((acc, l) => { if (!acc[l.category]) acc[l.category] = []; acc[l.category].push(l); return acc }, {} as Record<string, ArtistLink[]>)
@@ -229,8 +229,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
       <div className="w-52 flex-shrink-0 bg-slate-50 dark:bg-gray-900 border-l border-slate-200 dark:border-gray-700 overflow-y-auto p-3">
         <div className="mb-4">
           <div className="flex items-center justify-between px-2 mb-2">
-            <button onClick={() => setShowAddModal(true)} className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-xs font-bold transition-colors" title="הוסף אומן/הפקה">+</button>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">אומנים</p>
+            <button onClick={() => setShowAddModal(true)} className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-xs font-bold transition-colors" title="×××¡×£ ××××/××¤×§×">+</button>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">×××× ××</p>
           </div>
           {artists.map(a => {
             const st = getArtistStatus(a.status)
@@ -244,15 +244,15 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 <button
                   onClick={e => { e.stopPropagation(); setDeleteConfirmId(a.id) }}
                   className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
-                  title="מחק"
-                >✕</button>
+                  title="×××§"
+                >â</button>
               </div>
             )
           })}
         </div>
         {productions.length > 0 && (
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">הפקות</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">××¤×§××ª</p>
             {productions.map(p => (
               <div key={p.id} className="relative group mb-0.5">
                 <button onClick={() => { setSelectedArtist(p); setTab('tasks') }}
@@ -262,8 +262,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 <button
                   onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id) }}
                   className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
-                  title="מחק"
-                >✕</button>
+                  title="×××§"
+                >â</button>
               </div>
             ))}
           </div>
@@ -278,7 +278,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedArtist.name}</h2>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     {selectedArtist.genre && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300">{selectedArtist.genre}</span>}
-                    {selectedArtist.audience && <span className="text-xs text-slate-400 dark:text-slate-500">· {selectedArtist.audience}</span>}
+                    {selectedArtist.audience && <span className="text-xs text-slate-400 dark:text-slate-500">Â· {selectedArtist.audience}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -288,21 +288,21 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                       {ARTIST_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
                     </select>
                   )}
-                  <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">✏️ עריכה</button>
+                  <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">âï¸ ×¢×¨×××</button>
                 </div>
               </div>
               {editingMeta && (
                 <div className="mt-3 p-4 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl shadow-sm">
                   <div className="grid grid-cols-2 gap-3">
-                    <input value={metaGenre} onChange={e => setMetaGenre(e.target.value)} placeholder="ז'אנר..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <input value={metaAudience} onChange={e => setMetaAudience(e.target.value)} placeholder="קהל יעד..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <input value={metaContactName} onChange={e => setMetaContactName(e.target.value)} placeholder="איש קשר..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <input value={metaContactPhone} onChange={e => setMetaContactPhone(e.target.value)} placeholder="טלפון..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <input value={metaRevenueTarget} onChange={e => setMetaRevenueTarget(e.target.value)} placeholder="יעד הכנסה חודשי (₪)..." type="number" className="col-span-2 px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaGenre} onChange={e => setMetaGenre(e.target.value)} placeholder="×'×× ×¨..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaAudience} onChange={e => setMetaAudience(e.target.value)} placeholder="×§×× ××¢×..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaContactName} onChange={e => setMetaContactName(e.target.value)} placeholder="×××© ×§×©×¨..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaContactPhone} onChange={e => setMetaContactPhone(e.target.value)} placeholder="×××¤××..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <input value={metaRevenueTarget} onChange={e => setMetaRevenueTarget(e.target.value)} placeholder="××¢× ××× ×¡× ××××©× (âª)..." type="number" className="col-span-2 px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                   <div className="flex gap-2 mt-3">
-                    <button onClick={saveMeta} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">שמור</button>
-                    <button onClick={() => setEditingMeta(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">ביטול</button>
+                    <button onClick={saveMeta} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">×©×××¨</button>
+                    <button onClick={() => setEditingMeta(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">×××××</button>
                   </div>
                 </div>
               )}
@@ -310,10 +310,10 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             {hasBoardData && (
               <div className="grid grid-cols-4 gap-3 mb-5">
                 {[
-                  { val: upcomingEvents.length, label: 'הופעות קרובות', color: 'text-slate-800 dark:text-white' },
-                  { val: confirmedEvents.length, label: 'מאושרות', color: 'text-green-600' },
-                  { val: `₪${fmtNum(String(totalRevenue))}`, label: 'הכנסות (עבר)', color: 'text-blue-600' },
-                  { val: `₪${fmtNum(String(artistTotal))}`, label: 'רווח אומן (עבר)', color: 'text-indigo-600' },
+                  { val: upcomingEvents.length, label: '×××¤×¢××ª ×§×¨××××ª', color: 'text-slate-800 dark:text-white' },
+                  { val: confirmedEvents.length, label: '××××©×¨××ª', color: 'text-green-600' },
+                  { val: `âª${fmtNum(String(totalRevenue))}`, label: '××× ×¡××ª (×¢××¨)', color: 'text-blue-600' },
+                  { val: `âª${fmtNum(String(artistTotal))}`, label: '×¨××× ×××× (×¢××¨)', color: 'text-indigo-600' },
                 ].map(({ val, label, color }) => (
                   <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 text-right">
                     <div className={`text-2xl font-bold ${color}`}>{val}</div>
@@ -340,10 +340,10 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Status + KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { val: upcomingEvents.length, label: 'הופעות קרובות', color: 'text-slate-800 dark:text-white' },
-                    { val: confirmedEvents.length, label: 'מאושרות', color: 'text-green-600' },
-                    { val: campaigns.filter(c => c.status === 'פעיל' || c.status === 'חדש').length, label: 'קמפיינים פעילים', color: 'text-purple-600' },
-                    { val: artistTasks.filter(t => t.status !== 'completed').length, label: 'משימות פתוחות', color: 'text-indigo-600' },
+                    { val: upcomingEvents.length, label: '×××¤×¢××ª ×§×¨××××ª', color: 'text-slate-800 dark:text-white' },
+                    { val: confirmedEvents.length, label: '××××©×¨××ª', color: 'text-green-600' },
+                    { val: campaigns.filter(c => c.status === '×¤×¢××' || c.status === '×××©').length, label: '×§××¤××× ×× ×¤×¢××××', color: 'text-purple-600' },
+                    { val: artistTasks.filter(t => t.status !== 'completed').length, label: '××©××××ª ×¤×ª××××ª', color: 'text-indigo-600' },
                   ].map(({ val, label, color }) => (
                     <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 text-right">
                       <div className={`text-2xl font-bold ${color} mb-1`}>{val}</div>
@@ -355,12 +355,12 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Revenue */}
                 {hasBoardData && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">פיננסים</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">×¤×× × ×¡××</p>
                     <div className="flex gap-6 flex-wrap">
-                      <div><p className="text-xs text-slate-400">הכנסות כולל</p><p className="text-xl font-bold text-blue-600">₪{fmtNum(String(totalRevenue))}</p></div>
-                      <div><p className="text-xs text-slate-400">רווח אומן</p><p className="text-xl font-bold text-indigo-600">₪{fmtNum(String(artistTotal))}</p></div>
+                      <div><p className="text-xs text-slate-400">××× ×¡××ª ××××</p><p className="text-xl font-bold text-blue-600">âª{fmtNum(String(totalRevenue))}</p></div>
+                      <div><p className="text-xs text-slate-400">×¨××× ××××</p><p className="text-xl font-bold text-indigo-600">âª{fmtNum(String(artistTotal))}</p></div>
                       {selectedArtist.monthly_revenue_target ? (
-                        <div><p className="text-xs text-slate-400">יעד חודשי</p><p className="text-xl font-bold text-slate-700 dark:text-white">₪{fmtNum(String(selectedArtist.monthly_revenue_target))}</p></div>
+                        <div><p className="text-xs text-slate-400">××¢× ××××©×</p><p className="text-xl font-bold text-slate-700 dark:text-white">âª{fmtNum(String(selectedArtist.monthly_revenue_target))}</p></div>
                       ) : null}
                     </div>
                   </div>
@@ -369,7 +369,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Next show */}
                 {upcomingEvents.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">הופעה הקרובה</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">×××¤×¢× ××§×¨×××</p>
                     <EventRow event={upcomingEvents[0]} />
                   </div>
                 )}
@@ -377,11 +377,11 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Critical tasks */}
                 {artistTasks.filter(t => t.status !== 'completed').length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">משימות פתוחות</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">××©××××ª ×¤×ª××××ª</p>
                     <div className="space-y-2">
                       {artistTasks.filter(t => t.status !== 'completed').slice(0, 5).map(task => (
                         <div key={task.id} className="flex items-center justify-between py-1.5 border-b border-slate-50 dark:border-gray-700 last:border-0">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${task.priority === 'urgent' ? 'bg-red-100 text-red-600' : task.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'}`}>{task.priority === 'urgent' ? 'דחוף' : task.priority === 'high' ? 'גבוהה' : 'בינוני'}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${task.priority === 'urgent' ? 'bg-red-100 text-red-600' : task.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'}`}>{task.priority === 'urgent' ? '××××£' : task.priority === 'high' ? '×××××' : '××× ×× ×'}</span>
                           <p className="text-sm text-slate-700 dark:text-slate-200 font-medium flex-1 text-right px-3">{task.title}</p>
                         </div>
                       ))}
@@ -392,11 +392,11 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Active campaigns */}
                 {campaigns.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">קמפיינים אחרונים</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">×§××¤××× ×× ×××¨×× ××</p>
                     <div className="space-y-2">
                       {campaigns.slice(0, 3).map(c => (
                         <div key={c.id} className="flex items-center justify-between py-1.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === 'פעיל' ? 'bg-green-100 text-green-700' : c.status === 'נגמר' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>{c.status || '—'}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${c.status === '×¤×¢××' ? 'bg-green-100 text-green-700' : c.status === '× ×××¨' ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>{c.status || 'â'}</span>
                           <p className="text-sm text-slate-700 dark:text-slate-200 font-medium flex-1 text-right px-3">{c.name}</p>
                           {c.launch_date && <span className="text-xs text-slate-400">{fmtDate(c.launch_date)}</span>}
                         </div>
@@ -408,7 +408,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Contact */}
                 {(selectedArtist.contact_name || selectedArtist.contact_phone) && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">איש קשר</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">×××© ×§×©×¨</p>
                     {selectedArtist.contact_name && <p className="text-sm font-medium text-slate-800 dark:text-white">{selectedArtist.contact_name}</p>}
                     {selectedArtist.contact_phone && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{selectedArtist.contact_phone}</p>}
                   </div>
@@ -417,7 +417,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 {/* Last meeting */}
                 {meetings.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">פגישה אחרונה</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">×¤×××©× ×××¨×× ×</p>
                     <p className="font-semibold text-slate-800 dark:text-white text-sm">{meetings[0].title}</p>
                     <p className="text-xs text-slate-400 mb-2">{fmtDate(meetings[0].meeting_date)}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 whitespace-pre-wrap">{meetings[0].content}</p>
@@ -428,36 +428,36 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
             {tab === 'shows' && (
               <div>
-                {!hasBoardData ? <Empty icon="🎤" msg="אין נתוני הופעות לאומן זה" sub="לוח אירועים לא מוגדר" /> :
-                loadingEvents ? <div className="text-center py-10 text-slate-400">טוען...</div> :
+                {!hasBoardData ? <Empty icon="ð¤" msg="××× × ×ª×× × ×××¤×¢××ª ××××× ××" sub="××× ×××¨××¢×× ×× ×××××¨" /> :
+                loadingEvents ? <div className="text-center py-10 text-slate-400">×××¢×...</div> :
                 eventsError ? <div className="text-center py-10 text-red-500 text-sm">{eventsError}</div> : (
                   <>
                     {upcomingEvents.length > 0 && <section className="mb-6">
-                      <SHead>הופעות קרובות</SHead>
+                      <SHead>×××¤×¢××ª ×§×¨××××ª</SHead>
                       <div className="space-y-2">{upcomingEvents.map(e => <EventRow key={e.id} event={e} />)}</div>
                     </section>}
                     {pastEvents.length > 0 && <section>
                       <div className="flex items-center gap-3 mb-3">
-                        <SHead>הופעות עבר ({pastEvents.length})</SHead>
-                        <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? 'הסתר' : 'הצג'}</button>
+                        <SHead>×××¤×¢××ª ×¢××¨ ({pastEvents.length})</SHead>
+                        <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? '××¡×ª×¨' : '××¦×'}</button>
                       </div>
                       {showPastEvents && <div className="space-y-2">{pastEvents.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>}
                     </section>}
-                    {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="🎤" msg="אין הופעות" />}
+                    {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="ð¤" msg="××× ×××¤×¢××ª" />}
                   </>
                 )}
               </div>
             )}
             {tab === 'tasks' && (
               <div>
-                {artistTasks.length === 0 ? <Empty icon="✅" msg="אין משימות לאומן זה" /> : (
+                {artistTasks.length === 0 ? <Empty icon="â" msg="××× ××©××××ª ××××× ××" /> : (
                   <div className="space-y-2">
                     {artistTasks.map(task => (
                       <div key={task.id} className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3">
                         <div className="flex items-center justify-between">
                           <p className="font-medium text-slate-800 dark:text-white text-sm">{task.title}</p>
                           <span className={`text-xs px-2 py-1 rounded-lg ${task.status==='completed'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200':task.status==='in_progress'?'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200':'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200'}`}>
-                            {task.status==='completed'?'הושלמה':task.status==='in_progress'?'בביצוע':'ממתינה'}
+                            {task.status==='completed'?'×××©×××':task.status==='in_progress'?'××××¦××¢':'×××ª×× ×'}
                           </span>
                         </div>
                         {task.description && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{task.description}</p>}
@@ -469,14 +469,14 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             )}
             {tab === 'campaigns' && (
               <div>
-                <SHead>קמפיינים ({campaigns.length})</SHead>
-                {campaigns.length === 0 ? <Empty icon="📣" msg="אין קמפיינים לאומן זה" sub="קמפיינים מקושרים לפי שם האומן" /> : (
+                <SHead>×§××¤××× ×× ({campaigns.length})</SHead>
+                {campaigns.length === 0 ? <Empty icon="ð£" msg="××× ×§××¤××× ×× ××××× ××" sub="×§××¤××× ×× ××§××©×¨×× ××¤× ×©× ×××××" /> : (
                   <div className="space-y-2">
                     {campaigns.map(c => (
                       <div key={c.id} className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'פעיל' ? 'bg-green-100 text-green-700' : c.status === 'נגמר' ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{c.status || '—'}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === '×¤×¢××' ? 'bg-green-100 text-green-700' : c.status === '× ×××¨' ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{c.status || 'â'}</span>
                             {c.group_title && <span className="text-xs text-slate-400">{c.group_title}</span>}
                           </div>
                           <div className="text-right flex-1">
@@ -497,32 +497,32 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             {tab === 'meetings' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <SHead>סיכומי פגישה</SHead>
+                  <SHead>×¡××××× ×¤×××©×</SHead>
                   <button onClick={() => setShowMeetingForm(!showMeetingForm)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700">
-                    <span>+</span><span> פגישה חדשה</span>
+                    <span>+</span><span> ×¤×××©× ×××©×</span>
                   </button>
                 </div>
                 {showMeetingForm && (
                   <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
                     <div className="space-y-3">
-                      <input type="text" value={meetingTitle} onChange={e=>setMeetingTitle(e.target.value)} placeholder="כותרת הפגישה..." className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <input type="text" value={meetingTitle} onChange={e=>setMeetingTitle(e.target.value)} placeholder="×××ª×¨×ª ××¤×××©×..." className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                       <input type="date" value={meetingDate} onChange={e=>setMeetingDate(e.target.value)} className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                      <textarea value={meetingContent} onChange={e=>setMeetingContent(e.target.value)} placeholder="סיכום הפגישה..." rows={4} className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+                      <textarea value={meetingContent} onChange={e=>setMeetingContent(e.target.value)} placeholder="×¡×××× ××¤×××©×..." rows={4} className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
                       <div className="flex gap-2">
-                        <button onClick={saveMeeting} disabled={savingMeeting||!meetingTitle.trim()||!meetingContent.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{savingMeeting?'שומר...':'שמור'}</button>
-                        <button onClick={()=>setShowMeetingForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">ביטול</button>
+                        <button onClick={saveMeeting} disabled={savingMeeting||!meetingTitle.trim()||!meetingContent.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{savingMeeting?'×©×××¨...':'×©×××¨'}</button>
+                        <button onClick={()=>setShowMeetingForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">×××××</button>
                       </div>
                     </div>
                   </div>
                 )}
-                {loadingMeetings ? <div className="text-center py-10 text-slate-400">טוען...</div> :
-                meetings.length === 0 ? <Empty icon="📝" msg="אין סיכומי פגישה עדיין" sub='לחץ על "פגישה חדשה" להוספה' /> : (
+                {loadingMeetings ? <div className="text-center py-10 text-slate-400">×××¢×...</div> :
+                meetings.length === 0 ? <Empty icon="ð" msg="××× ×¡××××× ×¤×××©× ×¢××××" sub='×××¥ ×¢× "×¤×××©× ×××©×" ××××¡×¤×' /> : (
                   <div className="space-y-3">
                     {meetings.map(m => (
                       <div key={m.id} className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
                         <button onClick={()=>setExpandedMeeting(expandedMeeting===m.id?null:m.id)} className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-gray-750 transition-colors text-right">
                           <div className="flex items-center gap-3">
-                            <span className="text-slate-300 text-xs">{expandedMeeting===m.id?'▼':'▶'}</span>
+                            <span className="text-slate-300 text-xs">{expandedMeeting===m.id?'â¼':'â¶'}</span>
                             <div><p className="font-semibold text-slate-800 dark:text-white text-sm">{m.title}</p><p className="text-xs text-slate-400 mt-0.5">{fmtDate(m.meeting_date)}</p></div>
                           </div>
                           <button onClick={async e=>{e.stopPropagation();await supabase.from('artist_meeting_notes').delete().eq('id',m.id);setMeetings(prev=>prev.filter(x=>x.id!==m.id))}} className="text-slate-300 hover:text-red-400 p-1 rounded">
@@ -540,26 +540,26 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             {tab === 'links' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <SHead>קישורים</SHead>
-                  <button onClick={()=>setShowLinkForm(!showLinkForm)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"><span>+</span><span> קישור חדש</span></button>
+                  <SHead>×§××©××¨××</SHead>
+                  <button onClick={()=>setShowLinkForm(!showLinkForm)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700"><span>+</span><span> ×§××©××¨ ×××©</span></button>
                 </div>
                 {showLinkForm && (
                   <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
                     <div className="grid grid-cols-2 gap-3">
-                      <input type="text" value={linkTitle} onChange={e=>setLinkTitle(e.target.value)} placeholder="שם הקישור..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <input type="text" value={linkTitle} onChange={e=>setLinkTitle(e.target.value)} placeholder="×©× ××§××©××¨..." className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                       <select value={linkCategory} onChange={e=>setLinkCategory(e.target.value)} className="px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                         {LINK_CATS.map(c=><option key={c} value={c}>{c}</option>)}
                       </select>
                       <input type="url" value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} placeholder="https://..." className="col-span-2 px-3 py-2 text-sm border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                     </div>
                     <div className="flex gap-2 mt-3">
-                      <button onClick={saveLink} disabled={savingLink||!linkTitle.trim()||!linkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{savingLink?'שומר...':'הוסף'}</button>
-                      <button onClick={()=>setShowLinkForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">ביטול</button>
+                      <button onClick={saveLink} disabled={savingLink||!linkTitle.trim()||!linkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">{savingLink?'×©×××¨...':'×××¡×£'}</button>
+                      <button onClick={()=>setShowLinkForm(false)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-slate-300">×××××</button>
                     </div>
                   </div>
                 )}
-                {loadingLinks ? <div className="text-center py-10 text-slate-400">טוען...</div> :
-                links.length===0 ? <Empty icon="🔗" msg="אין קישורים עדיין" sub='לחץ על "קישור חדש" להוספה' /> : (
+                {loadingLinks ? <div className="text-center py-10 text-slate-400">×××¢×...</div> :
+                links.length===0 ? <Empty icon="ð" msg="××× ×§××©××¨×× ×¢××××" sub='×××¥ ×¢× "×§××©××¨ ×××©" ××××¡×¤×' /> : (
                   <div className="space-y-4">
                     {Object.entries(groupedLinks).map(([cat,catLinks])=>(
                       <div key={cat}>
@@ -597,10 +597,10 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             {tab === 'media' && selectedArtist && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{mediaFiles.length} קבצים</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{mediaFiles.length} ×§××¦××</p>
                   <label className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-colors ${uploadingMedia ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    {uploadingMedia ? 'מעלה...' : 'העלה קבצים'}
+                    {uploadingMedia ? '××¢××...' : '××¢×× ×§××¦××'}
                     <input type="file" accept="image/*,video/*" multiple className="hidden" disabled={uploadingMedia} onChange={async e => {
                       if (!e.target.files?.length) return
                       setUploadingMedia(true)
@@ -618,8 +618,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 ) : mediaFiles.length === 0 ? (
                   <div className="text-center py-16 text-slate-400">
                     <svg className="w-12 h-12 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    <p>אין קבצי מדיה</p>
-                    <p className="text-xs mt-1">לחץ על "העלה קבצים" להוספת מדיה</p>
+                    <p>××× ×§××¦× ××××</p>
+                    <p className="text-xs mt-1">×××¥ ×¢× "××¢×× ×§××¦××" ××××¡×¤×ª ××××</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -639,7 +639,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                             }}
                             className="bg-white/90 text-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white transition-colors shadow"
                           >
-                            הורד
+                            ×××¨×
                           </button>
                         </div>
                         <div className="px-2 py-1.5 border-t border-slate-100 dark:border-gray-700">
@@ -653,7 +653,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">בחר אומן</div>
+          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">×××¨ ××××</div>
         )}
       </div>
 
@@ -663,11 +663,11 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
         return (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setDeleteConfirmId(null)}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">מחיקת {target?.category === 'artist' ? 'אומן' : 'הפקה'}</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">למחוק את <span className="font-semibold text-slate-800 dark:text-white">{target?.name}</span>? פעולה זו אינה ניתנת לביטול.</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">××××§×ª {target?.category === 'artist' ? '××××' : '××¤×§×'}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">×××××§ ××ª <span className="font-semibold text-slate-800 dark:text-white">{target?.name}</span>? ×¤×¢××× ×× ××× × × ××ª× ×ª ××××××.</p>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">ביטול</button>
-                <button onClick={() => deleteArtist(deleteConfirmId)} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors">מחק</button>
+                <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">×××××</button>
+                <button onClick={() => deleteArtist(deleteConfirmId)} className="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors">×××§</button>
               </div>
             </div>
           </div>
@@ -678,13 +678,13 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAddModal(false)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">הוסף אומן / הפקה</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">×××¡×£ ×××× / ××¤×§×</h3>
             <div className="space-y-3">
               <input
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addArtist()}
-                placeholder="שם..."
+                placeholder="×©×..."
                 autoFocus
                 className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
@@ -693,8 +693,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 onChange={e => setNewCategory(e.target.value as 'artist' | 'production')}
                 className="w-full border border-slate-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-slate-50 dark:bg-gray-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               >
-                <option value="artist">אומן</option>
-                <option value="production">הפקה</option>
+                <option value="artist">××××</option>
+                <option value="production">××¤×§×</option>
               </select>
               <select
                 value={newStatus}
@@ -705,8 +705,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
               </select>
             </div>
             <div className="flex gap-2 mt-5 justify-end">
-              <button onClick={() => { setShowAddModal(false); setNewName('') }} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">ביטול</button>
-              <button onClick={addArtist} disabled={savingNew || !newName.trim()} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors">{savingNew ? '...' : 'הוסף'}</button>
+              <button onClick={() => { setShowAddModal(false); setNewName('') }} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-gray-700 hover:bg-slate-200 dark:hover:bg-gray-600 rounded-xl transition-colors">×××××</button>
+              <button onClick={addArtist} disabled={savingNew || !newName.trim()} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors">{savingNew ? '...' : '×××¡×£'}</button>
             </div>
           </div>
         </div>
@@ -716,12 +716,12 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 }
 
 type Quote = { id: string; artist_name: string; title: string; amount: number | null; status: string; notes: string | null; quote_date: string | null; created_at: string }
-const QUOTE_STATUSES = ['טיוטה', 'נשלח', 'אושר', 'נדחה']
+const QUOTE_STATUSES = ['×××××', '× ×©××', '×××©×¨', '× ×××']
 const QUOTE_STATUS_COLOR: Record<string, string> = {
-  'טיוטה': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-  'נשלח': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  'אושר': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  'נדחה': 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
+  '×××××': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  '× ×©××': 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  '×××©×¨': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  '× ×××': 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
 }
 const iCls = 'w-full border border-slate-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white bg-slate-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300'
 
@@ -732,7 +732,7 @@ function QuotesTab({ artistName }: { artistName: string }) {
   const [editId, setEditId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
-  const [status, setStatus] = useState('טיוטה')
+  const [status, setStatus] = useState('×××××')
   const [notes, setNotes] = useState('')
   const [quoteDate, setQuoteDate] = useState('')
   const [saving, setSaving] = useState(false)
@@ -746,7 +746,7 @@ function QuotesTab({ artistName }: { artistName: string }) {
   useEffect(() => { load() }, [load])
 
   function openNew() {
-    setEditId(null); setTitle(''); setAmount(''); setStatus('טיוטה'); setNotes(''); setQuoteDate(''); setShowForm(true)
+    setEditId(null); setTitle(''); setAmount(''); setStatus('×××××'); setNotes(''); setQuoteDate(''); setShowForm(true)
   }
   function openEdit(q: Quote) {
     setEditId(q.id); setTitle(q.title); setAmount(q.amount != null ? String(q.amount) : ''); setStatus(q.status); setNotes(q.notes || ''); setQuoteDate(q.quote_date || ''); setShowForm(true)
@@ -771,34 +771,34 @@ function QuotesTab({ artistName }: { artistName: string }) {
   }
 
   async function remove(id: string) {
-    if (!confirm('למחוק הצעת מחיר זו?')) return
+    if (!confirm('×××××§ ××¦×¢×ª ××××¨ ××?')) return
     await supabase.from('quotes').delete().eq('id', id)
     setQuotes(prev => prev.filter(q => q.id !== id))
   }
 
-  const totalApproved = quotes.filter(q => q.status === 'אושר').reduce((s, q) => s + (q.amount || 0), 0)
+  const totalApproved = quotes.filter(q => q.status === '×××©×¨').reduce((s, q) => s + (q.amount || 0), 0)
 
-  if (loading) return <div className="text-center py-16 text-slate-400">טוען...</div>
+  if (loading) return <div className="text-center py-16 text-slate-400">×××¢×...</div>
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-4">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {quotes.length} הצעות · אושרו: <span className="font-semibold text-green-600">₪{fmtNum(String(totalApproved))}</span>
+            {quotes.length} ××¦×¢××ª Â· ×××©×¨×: <span className="font-semibold text-green-600">âª{fmtNum(String(totalApproved))}</span>
           </p>
         </div>
         <button onClick={openNew} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
-          + הצעה חדשה
+          + ××¦×¢× ×××©×
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-2xl p-5 mb-5 shadow-sm">
-          <h3 className="font-semibold text-slate-800 dark:text-white mb-4 text-sm">{editId ? 'עריכת הצעה' : 'הצעת מחיר חדשה'}</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-white mb-4 text-sm">{editId ? '×¢×¨×××ª ××¦×¢×' : '××¦×¢×ª ××××¨ ×××©×'}</h3>
           <div className="grid grid-cols-2 gap-3">
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="כותרת ההצעה..." className={iCls + ' col-span-2'} />
-            <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="סכום (₪)..." className={iCls} />
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="×××ª×¨×ª ×××¦×¢×..." className={iCls + ' col-span-2'} />
+            <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="×¡××× (âª)..." className={iCls} />
             <input value={quoteDate} onChange={e => setQuoteDate(e.target.value)} type="date" className={iCls} />
             <div className="flex gap-2 col-span-2">
               {QUOTE_STATUSES.map(s => (
@@ -808,17 +808,17 @@ function QuotesTab({ artistName }: { artistName: string }) {
                 </button>
               ))}
             </div>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="הערות..." className={iCls + ' col-span-2'} rows={2} />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="××¢×¨××ª..." className={iCls + ' col-span-2'} rows={2} />
           </div>
           <div className="flex gap-2 mt-3">
-            <button onClick={cancel} className="flex-1 border border-slate-200 dark:border-gray-600 text-slate-600 dark:text-slate-300 py-2 rounded-lg text-sm font-medium">ביטול</button>
-            <button onClick={save} disabled={saving || !title.trim()} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">{saving ? 'שומר...' : 'שמור'}</button>
+            <button onClick={cancel} className="flex-1 border border-slate-200 dark:border-gray-600 text-slate-600 dark:text-slate-300 py-2 rounded-lg text-sm font-medium">×××××</button>
+            <button onClick={save} disabled={saving || !title.trim()} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">{saving ? '×©×××¨...' : '×©×××¨'}</button>
           </div>
         </div>
       )}
 
       {quotes.length === 0 ? (
-        <Empty msg="אין הצעות מחיר עדיין" sub='לחץ על "הצעה חדשה" להוספה' />
+        <Empty msg="××× ××¦×¢××ª ××××¨ ×¢××××" sub='×××¥ ×¢× "××¦×¢× ×××©×" ××××¡×¤×' />
       ) : (
         <div className="space-y-3">
           {quotes.map(q => (
@@ -835,7 +835,7 @@ function QuotesTab({ artistName }: { artistName: string }) {
                   </select>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                  {q.amount != null && <span className="font-semibold text-indigo-600 dark:text-indigo-400">₪{fmtNum(String(q.amount))}</span>}
+                  {q.amount != null && <span className="font-semibold text-indigo-600 dark:text-indigo-400">âª{fmtNum(String(q.amount))}</span>}
                   {q.quote_date && <span>{fmtDate(q.quote_date)}</span>}
                   {q.notes && <span className="truncate max-w-xs">{q.notes}</span>}
                 </div>
@@ -870,8 +870,20 @@ function Empty({ msg, sub }: { icon?: string; msg: string; sub?: string }) {
 
 function EventRow({ event, showFinancials=false }: { event: ArtistEvent; showFinancials?: boolean }) {
   const sc = STATUS_COLORS[event.status||''] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+  
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      setShowAddArtistModal && setShowAddArtistModal(false)
+      setShowEditModal && setShowEditModal(false)
+      setShowDeleteConfirm && setShowDeleteConfirm(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+  
   return (
-    <div className={`bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3 ${event.status==='ירד'?'opacity-50':''}`}>
+    <div className={`bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3 ${event.status==='××¨×'?'opacity-50':''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -883,18 +895,18 @@ function EventRow({ event, showFinancials=false }: { event: ArtistEvent; showFin
             {event.date && <span>{new Date(event.date).toLocaleDateString('he-IL')}</span>}
             {event.location && <span>{event.location}</span>}
             {event.start_time && <span>{event.start_time}</span>}
-            {event.audience_count && <span>{event.audience_count} קהל</span>}
+            {event.audience_count && <span>{event.audience_count} ×§××</span>}
           </div>
           {showFinancials && (event.total_revenue||event.net_profit) && (
             <div className="flex gap-4 mt-2 text-xs">
-              {event.total_revenue && <span className="text-blue-600">הכנסות: ₪{parseFloat(event.total_revenue).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
-              {event.net_profit && <span className="text-green-600">רווח: ₪{parseFloat(event.net_profit).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
-              {event.artist_share && <span className="text-indigo-600">אומן: ₪{parseFloat(event.artist_share).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
+              {event.total_revenue && <span className="text-blue-600">××× ×¡××ª: âª{parseFloat(event.total_revenue).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
+              {event.net_profit && <span className="text-green-600">×¨×××: âª{parseFloat(event.net_profit).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
+              {event.artist_share && <span className="text-indigo-600">××××: âª{parseFloat(event.artist_share).toLocaleString('he-IL',{maximumFractionDigits:0})}</span>}
             </div>
           )}
         </div>
         {event.contract_status && (
-          <span className={`text-xs px-2 py-1 rounded-lg flex-shrink-0 ${event.contract_status==='חוזה נחתם'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200':'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'}`}>{event.contract_status}</span>
+          <span className={`text-xs px-2 py-1 rounded-lg flex-shrink-0 ${event.contract_status==='×××× × ××ª×'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200':'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'}`}>{event.contract_status}</span>
         )}
       </div>
     </div>
