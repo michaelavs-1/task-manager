@@ -396,7 +396,7 @@ export function CampaignsView() {
       {selectedBoard === 'barbie' && (
         <div className="mb-6 space-y-3">
           <div className="flex gap-2 flex-wrap">
-            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'קמפיינים שנגמרו'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'},{key:'stats',label:'סטטיסטיקה'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
+            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'קמפיינים שנגמרו'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'עדכון כרטיסים'},{key:'stats',label:'סטטיסטיקה'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
               <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'stats'|'pixels'|'media')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 dark:text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
                 {label}
