@@ -3559,9 +3559,10 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                               {isEC('payment_date') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)} placeholder="DD.MM.YY"
+                                  <input autoFocus type="date" value={israeliToISO(String(cellValue ?? ''))}
+                                    onChange={ev => updCV(ev.target.value ? isoToIsraeli(ev.target.value) : '')}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
-                                    className={inCls + ' w-24'} />
+                                    className={inCls + ' w-36'} />
                                   {sc}
                                 </div>
                               ) : (
