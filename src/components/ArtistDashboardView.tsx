@@ -262,6 +262,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
   const artists = projects.filter(p => p.category === 'artist')
   const productions = projects.filter(p => p.category === 'production')
+  const generals = projects.filter(p => p.category === 'general')
   const hasBoardData = selectedArtist ? !!ARTIST_BOARD_MAP[selectedArtist.name] : false
   const artistTasks = selectedArtist ? tasks.filter(t => ((t as any).project_name === selectedArtist.name || (t as any).project === selectedArtist.name)) : []
   const upcomingEvents = events.filter(e => isUpcoming(e.date) && e.status !== 'בוטל')
@@ -308,6 +309,24 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 </button>
                 <button
                   onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id) }}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
+                  title="מחק"
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {generals.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-2">כללי</p>
+            {generals.map(g => (
+              <div key={g.id} className="relative group mb-0.5">
+                <button onClick={() => { setSelectedArtist(g); setTab('tasks') }}
+                  className={`w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedArtist?.id === g.id ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-700'}`}>
+                  {g.name}
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setDeleteConfirmId(g.id) }}
                   className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
                   title="מחק"
                 >✕</button>

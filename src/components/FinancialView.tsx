@@ -2643,6 +2643,7 @@ function FinProjectsTab() {
   const current = projects.find(p => p.id === sel)
   const artists     = projects.filter(p => p.category === 'artist')
   const productions = projects.filter(p => p.category === 'production')
+  const generals    = projects.filter(p => p.category === 'general')
 
   const displayed = invoices.filter(inv => {
     const rem = Math.max(0, roundCents(inv.total - inv.paid))
@@ -2658,11 +2659,11 @@ function FinProjectsTab() {
   const openCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) > 0).length
   const paidCount = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
-  const totalExp             = expenses.reduce((s, e) => s + (e.amount || 0), 0)
-  const totalExpPaid         = expenses.reduce((s, e) => s + (e.paid   || 0), 0)
-  const totalExpTotalInclVat = expenses.reduce((s, e) => s + (e.total  || 0), 0)
-  const totalExpRem          = Math.max(0, totalExpTotalInclVat - totalExpPaid)
-  const netProfit            = totalRev - totalExp
+  const totalExp        = expenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const totalExpPaid    = expenses.reduce((s, e) => s + (e.paid   || 0), 0)
+  const totalExpTotalInclVat = expenses.reduce((s, e) => s + (e.total || 0), 0)
+  const totalExpRem     = Math.max(0, totalExpTotalInclVat - totalExpPaid)
+  const netProfit       = totalRev - totalExp
 
   function ProjectList({ label, category, items }: { label: string; category: string; items: Project[] }) {
     const isOpen = expanded[category] !== false
@@ -2717,6 +2718,7 @@ function FinProjectsTab() {
         </div>
         <ProjectList label="אומנים" category="artist" items={artists} />
         <ProjectList label="הפקות" category="production" items={productions} />
+        {generals.length > 0 && <ProjectList label="כללי" category="general" items={generals} />}
       </aside>
 
       {/* Add project modal */}
