@@ -2823,7 +2823,7 @@ function FinProjectsTab() {
             {/* Section: Invoices */}
             <div className="flex items-center justify-between pt-2">
               <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                📈 חשבוניות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({invoices.length})</span>
+                📈 הכנסות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({invoices.length})</span>
               </h3>
               <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                 {([
