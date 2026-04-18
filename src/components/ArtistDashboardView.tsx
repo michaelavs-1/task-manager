@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
+import { useEsc } from '@/hooks/useEsc'
 
 type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media'
 type Project = {
@@ -95,6 +96,9 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [mediaFiles, setMediaFiles] = useState<{name: string; url: string; type: string}[]>([])
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [uploadingMedia, setUploadingMedia] = useState(false)
+  useEsc(showSocialModal,          () => { if (!savingSocial) setShowSocialModal(false) })
+  useEsc(showAddModal,             () => setShowAddModal(false))
+  useEsc(deleteConfirmId !== null, () => setDeleteConfirmId(null))
 
   useEffect(() => {
     supabase.from('projects').select('*').order('category').order('name').then(({ data }) => {

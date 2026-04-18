@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@/lib/supabase"
+import { useEsc } from "@/hooks/useEsc"
 
 interface Props {
   users: User[]
@@ -56,6 +57,7 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
   const [dueDate, setDueDate] = useState("")
   const [saving, setSaving] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
+  useEsc(true, onClose)
 
   const today = new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
 

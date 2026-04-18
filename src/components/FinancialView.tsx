@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, Fragment, useRef } from 'react'
+import { useEsc } from '../hooks/useEsc'
 
 export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses'
 
@@ -1013,6 +1014,7 @@ function InvoiceModal({
   const [form, setForm] = useState<InvoiceForm>(initial)
   const [clientQuery, setClientQuery] = useState(initial.client || '')
   const [clientOpen, setClientOpen] = useState(false)
+  useEsc(true, onClose)
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
@@ -1177,6 +1179,7 @@ function InvoicesTab() {
   const [modalInv, setModalInv] = useState<InvoiceRow | null | 'new'>(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  useEsc(deleteId !== null, () => setDeleteId(null))
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [reassignProjectId, setReassignProjectId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
@@ -1736,6 +1739,7 @@ function ClientModal({ initial, onSave, onClose, saving }: {
   saving: boolean
 }) {
   const [form, setForm] = useState(initial)
+  useEsc(true, onClose)
   const s = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
@@ -1917,6 +1921,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   fmt: (n: number) => string
 }) {
   const [filter, setFilter] = useState<'all' | 'paid' | 'open'>('all')
+  useEsc(true, onClose)
 
   const displayed = invoices.filter(inv => {
     const remaining = Math.max(0, roundCents(inv.total - inv.paid))
@@ -2061,6 +2066,7 @@ function ClientsTab() {
   const [modalClient, setModalClient] = useState<ClientRecord | 'new' | null>(null)
   const [deleteClientId, setDeleteClientId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
+  useEsc(deleteClientId !== null, () => setDeleteClientId(null))
   const [view, setView] = useState<'cards' | 'table'>('table')
   const [showCharts, setShowCharts] = useState(false)
   const [sortKey, setSortKey] = useState<'name' | 'invoiceCount' | 'totalAmount' | 'paidAmount' | 'remaining'>('name')
@@ -2574,6 +2580,8 @@ function FinProjectsTab() {
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
   const [savingNew, setSavingNew] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  useEsc(showAddModal, () => setShowAddModal(false))
+  useEsc(deleteConfirmId !== null, () => setDeleteConfirmId(null))
   const [subTab, setSubTab] = useState<'general' | 'projects'>('general')
   const fmtP = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
 
@@ -3008,6 +3016,7 @@ function ExpensesTab() {
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
+  useEsc(modal !== null, () => setModal(null))
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null)
   const [cellValue, setCellValue] = useState<unknown>(null)
   const [cellSaving, setCellSaving] = useState(false)

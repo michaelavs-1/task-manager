@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useEsc } from '../hooks/useEsc'
 import { TicketTrackingView } from './TicketTrackingView'
 import { MediaLibraryView } from './MediaLibraryView'
 import { StatisticsView } from './StatisticsView'
@@ -122,6 +123,13 @@ export function CampaignsView() {
   const [collapseSignal, setCollapseSignal] = useState(0)
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({})
   const [campaignSearch, setCampaignSearch] = useState('')
+
+  // Esc-to-close for all modals
+  useEsc(showNewModal,      () => setShowNewModal(false))
+  useEsc(showRosterModal,   () => { setShowRosterModal(false); setRosterLinkArtist(null) })
+  useEsc(showOfficesModal,  () => setShowOfficesModal(false))
+  useEsc(showContactsModal, () => setShowContactsModal(false))
+  useEsc(showMediaModal,    () => setShowMediaModal(false))
 
   useEffect(() => {
     try {
@@ -1044,6 +1052,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
   const statusClass = STATUS_CLS[campaign.status || ''] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
   const artistName = campaign.requester || campaign.name
+  useEsc(showMediaPopup, () => setShowMediaPopup(false))
   const [localLaunchDate, setLocalLaunchDate] = useState(campaign.launch_date || '')
   const ticketsSoldNum = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
   const ticketsRemaining = localTicketsForSale != null && ticketsSoldNum != null ? localTicketsForSale - ticketsSoldNum : localTicketsForSale != null ? localTicketsForSale : null
