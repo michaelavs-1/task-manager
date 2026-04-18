@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useRef } from 'react'
 
 export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses'
 
@@ -2769,6 +2769,8 @@ function ExpensesTab() {
   const [cellSaving, setCellSaving] = useState(false)
   const [cellSupplierSearch, setCellSupplierSearch] = useState('')
   const [showCellSupplierDrop, setShowCellSupplierDrop] = useState(false)
+  const cellValueRef = useRef<unknown>(null)
+  const updCV = (v: unknown) => { cellValueRef.current = v; setCellValue(v) }
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
@@ -2834,12 +2836,14 @@ function ExpensesTab() {
   }
 
   const startCellEdit = (id: number, field: string, value: unknown) => {
+    cellValueRef.current = value
     setEditingCell({ id, field })
     setCellValue(value)
     if (field === 'supplier') { setCellSupplierSearch(''); setShowCellSupplierDrop(true) }
   }
 
   const cancelCellEdit = () => {
+    cellValueRef.current = null
     setEditingCell(null)
     setCellValue(null)
     setCellSupplierSearch('')
@@ -2849,19 +2853,20 @@ function ExpensesTab() {
   const saveCellEdit = async (expense: Expense) => {
     if (!editingCell) return
     setCellSaving(true)
-    const updates: Record<string, unknown> = { [editingCell.field]: cellValue }
+    const val = cellValueRef.current
+    const updates: Record<string, unknown> = { [editingCell.field]: val }
     // Auto-recalculate dependent fields
     if (editingCell.field === 'amount') {
-      const amt = Number(cellValue)
+      const amt = Number(val)
       const status = expense.vat_status
       if (status === 'מורשה' || status === 'חברה') {
         updates.vat = roundCents(amt * VAT_RATE)
         updates.total = roundCents(amt + (updates.vat as number))
       } else { updates.vat = 0; updates.total = roundCents(amt) }
     } else if (editingCell.field === 'vat') {
-      updates.total = roundCents(expense.amount + Number(cellValue))
+      updates.total = roundCents(expense.amount + Number(val))
     } else if (editingCell.field === 'vat_status') {
-      const status = String(cellValue)
+      const status = String(val)
       if (status === 'מורשה' || status === 'חברה') {
         updates.vat = roundCents(expense.amount * VAT_RATE)
         updates.total = roundCents(expense.amount + (updates.vat as number))
@@ -2873,11 +2878,13 @@ function ExpensesTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d.error || `HTTP ${res.status}`)
+      const responseData = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(responseData?.error || `HTTP ${res.status}`)
+      // Update the single row in-place — no reload, no spinner
+      if (responseData?.expense) {
+        setExpenses(prev => prev.map(ex => ex.id === editingCell.id ? (responseData.expense as Expense) : ex))
       }
-      await loadAll()
+      cellValueRef.current = null
       setEditingCell(null)
       setCellValue(null)
     } catch (err) {
@@ -3039,7 +3046,7 @@ function ExpensesTab() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        {['פרויקט','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית','הערות',''].map(h => (
+                        {['פרויקט','ספק','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית','הערות',''].map(h => (
                           <th key={h} className="px-3 py-2 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -3084,7 +3091,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs">
                               {isEC('project_id') ? (
                                 <div className="flex items-center gap-1">
-                                  <select autoFocus value={String(cellValue || '')} onChange={ev => setCellValue(ev.target.value || null)}
+                                  <select autoFocus value={String(cellValue || '')} onChange={ev => updCV(ev.target.value || null)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' max-w-[120px]'}>
                                     <option value="">—</option>
@@ -3108,6 +3115,13 @@ function ExpensesTab() {
                               )}
                             </td>
 
+                            {/* ספק מאומת */}
+                            <td className="px-3 py-2 text-center">
+                              {suppliers.some(s => s.name === e.supplier)
+                                ? <span className="text-emerald-500 text-sm font-bold" title="ספק קיים במאגר">✔</span>
+                                : <span className="text-rose-400 text-xs font-bold" title="ספק לא קיים במאגר">✗</span>}
+                            </td>
+
                             {/* שם הספק */}
                             <td className="px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
                               {isEC('supplier') ? (
@@ -3129,7 +3143,7 @@ function ExpensesTab() {
                                           .map(s => (
                                             <button key={s.id} type="button"
                                               onMouseDown={() => {
-                                                setCellValue(s.name)
+                                                updCV(s.name)
                                                 setCellSupplierSearch('')
                                                 setShowCellSupplierDrop(false)
                                               }}
@@ -3158,7 +3172,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px]">
                               {isEC('description') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)}
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-36'} />
                                   {sc}
@@ -3175,7 +3189,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 text-left whitespace-nowrap">
                               {isEC('amount') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => updCV(parseFloat(ev.target.value) || 0)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-20 text-left'} />
                                   {sc}
@@ -3192,7 +3206,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 text-left whitespace-nowrap">
                               {isEC('vat') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => updCV(parseFloat(ev.target.value) || 0)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-20 text-left'} />
                                   {sc}
@@ -3209,7 +3223,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 text-left whitespace-nowrap">
                               {isEC('total') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => updCV(parseFloat(ev.target.value) || 0)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-20 text-left'} />
                                   {sc}
@@ -3226,7 +3240,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">
                               {isEC('paid') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => setCellValue(parseFloat(ev.target.value) || 0)}
+                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => updCV(parseFloat(ev.target.value) || 0)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-20 text-left'} />
                                   {sc}
@@ -3243,7 +3257,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                               {isEC('payment_date') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)} placeholder="DD.MM.YY"
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)} placeholder="DD.MM.YY"
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-24'} />
                                   {sc}
@@ -3267,8 +3281,10 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-center">
                               <button
                                 onClick={async () => {
-                                  await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ has_invoice: !e.has_invoice }) })
-                                  await loadAll()
+                                  const newVal = !e.has_invoice
+                                  setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, has_invoice: newVal } : ex))
+                                  const res = await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ has_invoice: newVal }) })
+                                  if (!res.ok) setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, has_invoice: !newVal } : ex))
                                 }}
                                 title={e.has_invoice ? 'יש חשבונית — לחץ להסרה' : 'אין חשבונית — לחץ להוספה'}
                                 className="hover:scale-110 transition-transform"
@@ -3283,7 +3299,7 @@ function ExpensesTab() {
                             <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px]">
                               {isEC('notes') ? (
                                 <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => setCellValue(ev.target.value)}
+                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)}
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' w-28'} />
                                   {sc}
@@ -3309,7 +3325,7 @@ function ExpensesTab() {
                     </tbody>
                     <tfoot className="border-t-2 border-gray-200 dark:border-gray-700">
                       <tr className="bg-gray-50 dark:bg-gray-900">
-                        <td colSpan={4} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
+                        <td colSpan={5} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 text-left">{fmtDec(rows.reduce((s,e)=>s+e.amount,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-500 text-left">{fmtDec(rows.reduce((s,e)=>s+e.vat,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-indigo-600 text-left">{fmtDec(mTotal)}</td>
