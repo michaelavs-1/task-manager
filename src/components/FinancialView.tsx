@@ -1413,7 +1413,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
           /* ── Flat list ── */
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+              <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide [&>th]:sticky [&>th]:top-0 [&>th]:bg-gray-50 [&>th]:z-10">
                 <th className="px-3 py-3 text-center font-semibold text-gray-400">#</th>
                 <th className="px-4 py-3 text-right font-semibold">מס'</th>
                 <th className="px-4 py-3 text-right font-semibold">לקוח</th>
@@ -1506,7 +1506,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             </tbody>
             {filtered.length > 0 && (
               <tfoot>
-                <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
+                <tr className="border-t-2 border-gray-200 font-bold [&>td]:sticky [&>td]:bottom-0 [&>td]:bg-gray-50 [&>td]:z-10">
                   <td colSpan={7} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                   <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
@@ -1538,7 +1538,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             return (
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+                  <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide [&>th]:sticky [&>th]:top-0 [&>th]:bg-gray-50 [&>th]:z-10">
                     <th className="px-3 py-3 w-8" />
                     <th className={TH}>מס'</th>
                     <th className={TH}>לקוח</th>
@@ -1666,7 +1666,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold sticky bottom-0">
+                  <tr className="border-t-2 border-gray-200 font-bold [&>td]:sticky [&>td]:bottom-0 [&>td]:bg-gray-50 [&>td]:z-10">
                     <td colSpan={9} className="px-4 py-3 text-xs text-gray-500 uppercase">סה"כ ({filtered.length})</td>
                     <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
                     <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
@@ -1998,8 +1998,8 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
             <div className="text-center py-12 text-gray-400 text-sm">אין חשבוניות להצגה</div>
           ) : (
             <table className="w-full text-sm border-collapse">
-              <thead className="sticky top-0">
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500 text-xs [&>th]:sticky [&>th]:top-0 [&>th]:bg-gray-50 [&>th]:z-10">
                   <th className="px-3 py-2.5 text-right font-semibold">מס׳</th>
                   <th className="px-3 py-2.5 text-right font-semibold">תאריך</th>
                   <th className="px-3 py-2.5 text-right font-semibold">סוג</th>
