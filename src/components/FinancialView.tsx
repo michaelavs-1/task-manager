@@ -1484,7 +1484,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
                     <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
-                    <td className="px-4 py-3">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                     <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                     <td className="px-4 py-3">
@@ -1642,7 +1642,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <td className="px-4 py-2.5 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                               <td className="px-4 py-2.5 font-semibold text-gray-800 text-xs">{fmt(inv.total)}</td>
                               <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
-                              <td className="px-4 py-2.5 text-xs">{remaining > 0 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
+                              <td className="px-4 py-2.5 text-xs">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                               <td className="px-4 py-2.5 text-center"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                               <td className="px-4 py-2.5">
