@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { TicketTrackingView } from './TicketTrackingView'
 import { MediaLibraryView } from './MediaLibraryView'
+import { StatisticsView } from './StatisticsView'
 
 type Campaign = {
   id: string; monday_item_id: string; name: string; status: string | null
@@ -83,7 +84,7 @@ export function CampaignsView() {
   const [syncError, setSyncError] = useState('')
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive' | 'tracking' | 'pixels' | 'media'>('active')
+  const [barbySubTab, setBarbySubTab] = useState<'active' | 'ended' | 'archive' | 'tracking' | 'stats' | 'pixels' | 'media'>('active')
   const [barbyViewMode, setBarbyViewMode] = useState<'cards' | 'table'>('cards')
   const [showNewModal, setShowNewModal] = useState(false)
   const [barbyArtists, setBarbyArtists] = useState<string[]>(BARBY_ARTISTS_INITIAL)
@@ -395,11 +396,11 @@ export function CampaignsView() {
       {selectedBoard === 'barbie' && (
         <div className="mb-6 space-y-3">
           <div className="flex gap-2 flex-wrap">
-            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
-              <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'pixels'|'media')}
+            {[{key:'active',label:'קמפיינים פעילים'},{key:'ended',label:'נגמר'},{key:'archive',label:'ארכיון קמפיינים'},{key:'tracking',label:'מעקב כרטיסים'},{key:'stats',label:'סטטיסטיקה'},{key:'pixels',label:'פיקסלים'}].map(({key,label}) => (
+              <button key={key} onClick={() => setBarbySubTab(key as 'active'|'ended'|'archive'|'tracking'|'stats'|'pixels'|'media')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${barbySubTab===key ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-white text-gray-500 dark:text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:bg-gray-800'}`}>
                 {label}
-                {key !== 'tracking' && key !== 'pixels' && key !== 'media' && (
+                {key !== 'tracking' && key !== 'stats' && key !== 'pixels' && key !== 'media' && (
                   <span className="ml-2 text-xs font-semibold rounded-full px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500">
                     {key==='active' ? barbyActiveCampaigns.length : key==='ended' ? barbyEndedCampaigns.length : barbyArchiveCampaigns.length}
                   </span>
@@ -439,6 +440,8 @@ export function CampaignsView() {
         <PixelsView />
       ) : selectedBoard === 'barbie' && barbySubTab === 'tracking' ? (
         <TicketTrackingView />
+      ) : selectedBoard === 'barbie' && barbySubTab === 'stats' ? (
+        <StatisticsView />
       ) : selectedBoard === 'barbie' && barbySubTab === 'media' ? (
         <MediaLibraryView />
       ) : selectedBoard === 'barbie' ? (

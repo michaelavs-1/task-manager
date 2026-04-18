@@ -8,6 +8,7 @@ type UploadItem = { id: string; name: string; progress: number; status: 'uploadi
 
 const BUCKET = 'campaigns-media'
 const ML_PREFIX = 'media-library'
+const DROPBOX_SHARED_FOLDER_URL = 'https://www.dropbox.com/scl/fo/pv4cyapt6tgcnkmkaq1b1/AHpXDdACHUTTygAN_xOP1Xs?rlkey=c9r45ykdnq6pc0eay0gykkdnh&dl=0'
 
 function uploadFileXHR(
   file: File,
@@ -104,6 +105,7 @@ export function MediaLibraryView() {
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [filterArtist, setFilterArtist] = useState('')
   const [dropboxToken, setDropboxToken] = useState('')
+  const [dropboxBasePath, setDropboxBasePath] = useState('')
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
   const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -127,6 +129,25 @@ export function MediaLibraryView() {
       } catch {}
     }
   }, [])
+
+  // Resolve Dropbox shared folder URL → actual path (so uploads go inside the shared folder, not root)
+  useEffect(() => {
+    if (!dropboxToken) return
+    fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + dropboxToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url: DROPBOX_SHARED_FOLDER_URL })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.path_lower) setDropboxBasePath(data.path_lower)
+        else if (data && data.name) setDropboxBasePath('/' + data.name)
+      })
+      .catch(e => console.error('Dropbox base path resolve error', e))
+  }, [dropboxToken])
 
   async function loadCampaigns() {
     const { data } = await supabase
@@ -190,7 +211,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     try {
       const artistSlug = selectedArtist.replace(/[/\\:*?"<>|]/g, '_').trim()
       const showSlug = (selectedCampaign.launch_date || selectedCampaign.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
-      const dbxPath = '/' + artistSlug + '/' + showSlug + '/' + safeName
+      const dbxPath = (dropboxBasePath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
       await fetch('https://content.dropboxapi.com/2/files/upload', {
         method: 'POST',
         headers: {
@@ -234,7 +255,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         if (dropboxToken) {
           const artistSlug = (camp as any).requester?.replace(/[/\\:*?"<>|]/g, '_') || 'artist'
           const showSlug = (camp.launch_date || camp.name).replace(/[/\\:*?"<>|]/g, '_')
-          const dbxPath = '/' + artistSlug + '/' + showSlug + '/' + safeName
+          const dbxPath = (dropboxBasePath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
           fetch('https://content.dropboxapi.com/2/files/upload', {
             method: 'POST',
             headers: {

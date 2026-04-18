@@ -1185,6 +1185,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     const [groupByMonth, setGroupByMonth] = useState(true)
   const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
   const [selectedYear, setSelectedYear] = useState<string>('2026')
+  const [showFilters, setShowFilters] = useState<boolean>(false)
 
   const load = () => {
     setLoading(true)
@@ -1280,124 +1281,128 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-6 gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div>
-          <h2 className="text-base font-bold text-gray-800">חשבוניות</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{invoices.length} חשבוניות סה"כ</p>
+    <div className="flex-1 flex flex-col min-h-0 p-4 gap-3" dir="rtl">
+      {/* Compact header row: title + stats + buttons in one line */}
+      <div className="flex items-center justify-between gap-4 flex-shrink-0 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
+          <h2 className="text-base font-bold text-gray-800">חשבוניות <span className="text-xs font-normal text-gray-400">({invoices.length})</span></h2>
+          {/* Inline stats — compact pill-style */}
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold">מוצגות: <b>{filtered.length}</b></span>
+            <span className="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 font-semibold">ללא מע"מ: <b>{fmt(totalBeforeVat)}</b></span>
+            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold">סה"כ: <b>{fmt(totalAmount)}</b></span>
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">שולם: <b>{fmt(totalPaid)}</b></span>
+            <span className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-semibold">יתרה: <b>{fmt(totalRemaining)}</b></span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Group by month toggle */}
           <button
             onClick={() => setGroupByMonth(g => !g)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${groupByMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${groupByMonth ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+            title="קיבוץ לפי חודש"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             לפי חודש
           </button>
           <button
-            onClick={() => setModalInv('new')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-all"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
+            onClick={() => setShowFilters(f => !f)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${showFilters ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+            title="סינונים"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            הזנת חשבונית חדשה
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+            סינון
+          </button>
+          <button
+            onClick={() => setModalInv('new')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+            חשבונית חדשה
           </button>
         </div>
       </div>
 
-      {/* Open / Closed tabs */}
-      <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
-        {([
-          { key: 'all', label: 'הכל', count: invoices.length },
-          { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
-          { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
-        ] as const).map(({ key, label, count }) => (
-          <button
-            key={key}
-            onClick={() => setPaymentFilter(key)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${paymentFilter === key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            {label} <span className={`text-xs font-normal ml-1 ${paymentFilter === key ? 'text-indigo-500' : 'text-gray-400'}`}>({count})</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Year tabs */}
-      <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
-        {availableYears.map(yr => {
-          const cnt = invoices.filter(inv => inv.date && israeliToISO(inv.date).startsWith(yr)).length
-          return (
+      {/* Combined filter row: Payment status + Years + Months — all inline */}
+      <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+        {/* Payment status tabs */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+          {([
+            { key: 'all', label: 'הכל', count: invoices.length },
+            { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
+            { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
+          ] as const).map(({ key, label, count }) => (
             <button
-              key={yr}
-              onClick={() => { setSelectedYear(yr); setFilterMonth('') }}
-              className={`px-6 py-1.5 rounded-lg text-sm font-semibold transition-all ${selectedYear === yr ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              key={key}
+              onClick={() => setPaymentFilter(key)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${paymentFilter === key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              {yr} <span className={`text-xs font-normal ml-1 ${selectedYear === yr ? 'text-indigo-500' : 'text-gray-400'}`}>({cnt})</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Month sub-tabs for selected year */}
-      {monthsForYear.length > 0 && (
-        <div className="flex gap-2 flex-shrink-0 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-          <button
-            onClick={() => setFilterMonth('')}
-            className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
-          >
-            כל {selectedYear}
-          </button>
-          {monthsForYear.map(m => (
-            <button
-              key={m.key}
-              onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
-            >
-              {m.label.replace(` ${selectedYear}`, '')}
-              <span className={`text-xs font-normal ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+              {label} <span className={`text-xs font-normal ${paymentFilter === key ? 'text-indigo-500' : 'text-gray-400'}`}>({count})</span>
             </button>
           ))}
         </div>
-      )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-5 gap-3 flex-shrink-0">
-        {[
-          { label: 'חשבוניות מוצגות', value: filtered.length, color: '#6366f1' },
-          { label: 'סכום החשבוניות', value: fmt(totalBeforeVat), color: '#64748b' },
-          { label: 'סה"כ לתשלום', value: fmt(totalAmount), color: '#3b82f6' },
-          { label: 'שולם', value: fmt(totalPaid), color: '#10b981' },
-          { label: 'יתרה לגביה', value: fmt(totalRemaining), color: '#ef4444' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
-            <div className="text-xl font-bold" style={{ color }}>{value}</div>
-            <div className="text-xs text-gray-500 mt-1">{label}</div>
+        {/* Year tabs — descending (newest year is rightmost, older on left, per user spec) */}
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+          {availableYears.map(yr => {
+            const cnt = invoices.filter(inv => inv.date && israeliToISO(inv.date).startsWith(yr)).length
+            return (
+              <button
+                key={yr}
+                onClick={() => { setSelectedYear(yr); setFilterMonth('') }}
+                className={`px-4 py-1 rounded-md text-xs font-semibold transition-all ${selectedYear === yr ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {yr} <span className={`text-xs font-normal ${selectedYear === yr ? 'text-indigo-500' : 'text-gray-400'}`}>({cnt})</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Month sub-tabs for selected year — ascending (January rightmost, latest month leftmost) */}
+        {monthsForYear.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'thin' }}>
+            <button
+              onClick={() => setFilterMonth('')}
+              className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${!filterMonth ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+            >
+              כל {selectedYear}
+            </button>
+            {monthsForYear.map(m => (
+              <button
+                key={m.key}
+                onClick={() => setFilterMonth(filterMonth === m.key ? '' : m.key)}
+                className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${filterMonth === m.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+              >
+                {m.label.replace(` ${selectedYear}`, '')}
+                <span className={`text-xs font-normal mr-1 ${filterMonth === m.key ? 'text-indigo-200' : 'text-gray-400'}`}>({m.count})</span>
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 flex-shrink-0">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="חפש לקוח, מס' חשבונית, מי הוציא..." className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
-        <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל הלקוחות</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={filterDocType} onChange={e => setFilterDocType(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל סוגי המסמך</option>{docTypes.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-          <option value="">כל הסטטוסים</option>
-          <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
-        </select>
-        {projectList.length > 0 && (
-          <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-            <option value="">כל הפרויקטים</option>
-            {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
-          </select>
         )}
       </div>
+
+      {/* Filters — hidden by default, toggleable */}
+      {showFilters && (
+        <div className="flex flex-wrap gap-2 flex-shrink-0">
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="חפש לקוח, מס' חשבונית, מי הוציא..." className="flex-1 min-w-[200px] border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+          <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
+            <option value="">כל הלקוחות</option>{clients.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={filterDocType} onChange={e => setFilterDocType(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
+            <option value="">כל סוגי המסמך</option>{docTypes.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
+            <option value="">כל הסטטוסים</option>
+            <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
+          </select>
+          {projectList.length > 0 && (
+            <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
+              <option value="">כל הפרויקטים</option>
+              {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
+            </select>
+          )}
+        </div>
+      )}
 
       {/* Table — flat or grouped by month */}
       <div className="flex-1 overflow-auto rounded-2xl border border-gray-200 bg-white min-h-0">
