@@ -241,7 +241,7 @@ function SuppliersTab() {
                           <span className="font-semibold text-emerald-600">{fmtS(t.paid)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-gray-400">יתרה:</span>
+                          <span className="text-xs text-gray-400">יתרה לתשלום:</span>
                           <span className={`font-semibold ${balance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                             {balance > 0 ? fmtS(balance) : '✔ שולם'}
                           </span>
@@ -258,7 +258,7 @@ function SuppliersTab() {
                               <th className="px-3 py-2 text-right font-semibold">תיאור</th>
                               <th className="px-3 py-2 text-right font-semibold">סכום</th>
                               <th className="px-3 py-2 text-right font-semibold">שולם</th>
-                              <th className="px-3 py-2 text-right font-semibold">יתרה</th>
+                              <th className="px-3 py-2 text-right font-semibold">יתרה לתשלום</th>
                               <th className="px-3 py-2 text-right font-semibold">תאריך תשלום</th>
                               <th className="px-3 py-2 text-center font-semibold">חשבונית</th>
                             </tr>
@@ -310,12 +310,19 @@ function fmt(n: number) {
 
 function FinancialDashboard() {
   const [invoices, setInvoices] = useState<FinDashInvoice[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/invoices')
-      .then(r => r.json())
-      .then(d => { setInvoices(d.invoices || []); setLoading(false) })
+    Promise.all([
+      fetch('/api/invoices').then(r => r.json()),
+      fetch('/api/expenses').then(r => r.json()),
+    ])
+      .then(([invData, expData]) => {
+        setInvoices(invData.invoices || [])
+        setExpenses(expData.expenses || [])
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
@@ -326,7 +333,7 @@ function FinancialDashboard() {
   )
 
   // ── KPIs ──
-  const totalRevenue = invoices.reduce((s, i) => s + (i.total || 0), 0)
+  const totalRevenue = invoices.reduce((s, i) => s + (i.before_vat || 0), 0)
   const totalPaid    = invoices.reduce((s, i) => s + (i.paid  || 0), 0)
   const totalRemain  = totalRevenue - totalPaid
   const openCount    = invoices.filter(i => (i.total - i.paid) > 0).length
@@ -340,7 +347,7 @@ function FinancialDashboard() {
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
     if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, count: 0 }
-    monthMap[key].revenue += inv.total || 0
+    monthMap[key].revenue += inv.before_vat || 0
     monthMap[key].paid    += inv.paid  || 0
     monthMap[key].count   += 1
   })
@@ -351,7 +358,7 @@ function FinancialDashboard() {
   invoices.forEach(inv => {
     const name = inv.client || 'לא מוגדר'
     if (!clientMap[name]) clientMap[name] = { name, revenue: 0, paid: 0 }
-    clientMap[name].revenue += inv.total || 0
+    clientMap[name].revenue += inv.before_vat || 0
     clientMap[name].paid    += inv.paid  || 0
   })
   const topClients = Object.values(clientMap).sort((a,b) => b.revenue - a.revenue).slice(0, 8)
@@ -383,10 +390,10 @@ function FinancialDashboard() {
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'סה"כ הכנסות', value: fmt(totalRevenue), icon: 'Ã°ÂÂÂ°', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-          { label: 'שולם', value: fmt(totalPaid), icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+          { label: 'סה"כ הכנסות', value: fmt(totalRevenue), icon: '📈', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: 'תשלומים', value: fmt(totalPaid), icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
           { label: 'נותר לגבייה', value: fmt(totalRemain), icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-          { label: 'חשבוניות פתוחות', value: String(openCount), icon: 'Ã°ÂÂÂ', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          { label: 'חשבוניות פתוחות', value: String(openCount), icon: '📋', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
         ].map(card => (
           <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <div className="flex items-center justify-between">
@@ -433,7 +440,7 @@ function FinancialDashboard() {
           )}
           <div className="flex gap-4 mt-3">
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.4)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>שולם</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>תשלומים</span></div>
           </div>
         </div>
 
@@ -444,11 +451,11 @@ function FinancialDashboard() {
             <DonutArc pct={1}         color="rgba(239,68,68,0.15)"  r={44} stroke={12} />
             <DonutArc pct={paidPct}   color="#10b981"                r={44} stroke={12} />
             <text x="56" y="52" textAnchor="middle" fontSize="13" fontWeight="700" fill="#10b981">{Math.round(paidPct * 100)}%</text>
-            <text x="56" y="66" textAnchor="middle" fontSize="8" fill="var(--text-secondary)">שולם</text>
+            <text x="56" y="66" textAnchor="middle" fontSize="8" fill="var(--text-secondary)">תשלומים</text>
           </svg>
           <div className="w-full space-y-2">
             <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--text-secondary)' }}>שולם</span>
+              <span style={{ color: 'var(--text-secondary)' }}>תשלומים</span>
               <span className="font-semibold" style={{ color: '#10b981' }}>{fmt(totalPaid)}</span>
             </div>
             <div className="flex justify-between text-xs">
@@ -471,7 +478,7 @@ function FinancialDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)' }}>
-                  {['חודש','הכנסות','שולם','נותר','חשבוניות'].map(h => (
+                  {['חודש','הכנסות','תשלומים','נותר','חשבוניות'].map(h => (
                     <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
@@ -532,6 +539,147 @@ function FinancialDashboard() {
         </div>
 
       </div>
+
+      {/* ── Expenses Section ── */}
+      {(() => {
+        const totalExpNetAmount = expenses.reduce((s, e) => s + (e.amount || 0), 0)
+        const totalExpVat = expenses.reduce((s, e) => s + (e.vat || 0), 0)
+        const totalExpTotal = expenses.reduce((s, e) => s + (e.total || 0), 0)
+
+        return (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>הוצאות (נטו)</span>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(239,68,68,0.08)' }}>💸</div>
+              </div>
+              <div className="text-2xl font-bold tracking-tight" style={{ color: '#ef4444' }}>{fmt(totalExpNetAmount)}</div>
+            </div>
+            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>מע״מ הוצאות</span>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(59,130,246,0.08)' }}>🧾</div>
+              </div>
+              <div className="text-2xl font-bold tracking-tight" style={{ color: '#3b82f6' }}>{fmt(totalExpVat)}</div>
+            </div>
+            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>סה״כ הוצאות</span>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(168,85,247,0.08)' }}>📊</div>
+              </div>
+              <div className="text-2xl font-bold tracking-tight" style={{ color: '#a855f7' }}>{fmt(totalExpTotal)}</div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Monthly Revenue vs Expenses Table ── */}
+      {(() => {
+        const expenseMonthMap: Record<string, { net: number; vat: number; total: number }> = {}
+        expenses.forEach(exp => {
+          const month = exp.month || ''
+          if (!expenseMonthMap[month]) expenseMonthMap[month] = { net: 0, vat: 0, total: 0 }
+          expenseMonthMap[month].net += exp.amount || 0
+          expenseMonthMap[month].vat += exp.vat || 0
+          expenseMonthMap[month].total += exp.total || 0
+        })
+
+        const monthlyComparison = months.map(m => {
+          const [y, mo] = m.sortKey.split('-')
+          const expData = expenseMonthMap[`${y}-${mo}`] || { net: 0, vat: 0, total: 0 }
+          const profit = m.revenue - expData.net
+          return { month: m.label, revenue: m.revenue, expenses: expData.net, profit, sortKey: m.sortKey }
+        }).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+
+        return monthlyComparison.length > 0 ? (
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>הכנסות מול הוצאות</h3>
+            </div>
+            <div className="overflow-auto max-h-72">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)' }}>
+                    {['חודש','הכנסות','הוצאות','רווח גולמי'].map(h => (
+                      <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyComparison.map((m, i) => (
+                    <tr key={m.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.month}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(m.revenue)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: '#ef4444' }}>{fmt(m.expenses)}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: m.profit > 0 ? '#10b981' : '#f59e0b' }}>{fmt(m.profit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null
+      })()}
+
+      {/* ── VAT Report Section ── */}
+      {(() => {
+        const vatMonthMap: Record<string, { incomeVat: number; expenseVat: number }> = {}
+
+        // Calculate VAT from invoices
+        invoices.forEach(inv => {
+          if (!inv.date) return
+          const d = new Date(israeliToISO(inv.date))
+          if (isNaN(d.getTime())) return
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+          if (!vatMonthMap[key]) vatMonthMap[key] = { incomeVat: 0, expenseVat: 0 }
+          vatMonthMap[key].incomeVat += (inv.total - inv.before_vat) || 0
+        })
+
+        // Calculate VAT from expenses
+        expenses.forEach(exp => {
+          const [y, mo] = (exp.month || '').split('-')
+          if (!y || !mo) return
+          const key = `${y}-${String(parseInt(mo)).padStart(2,'0')}`
+          if (!vatMonthMap[key]) vatMonthMap[key] = { incomeVat: 0, expenseVat: 0 }
+          vatMonthMap[key].expenseVat += exp.vat || 0
+        })
+
+        const vatReport = Object.entries(vatMonthMap).map(([key, data]) => {
+          const [y, mo] = key.split('-')
+          const label = `${MONTH_NAMES_HE[parseInt(mo) - 1]} ${y}`
+          const balance = data.incomeVat - data.expenseVat
+          return { month: label, incomeVat: data.incomeVat, expenseVat: data.expenseVat, balance, sortKey: key }
+        }).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+
+        return vatReport.length > 0 ? (
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>דו״ח מע״מ</h3>
+            </div>
+            <div className="overflow-auto max-h-72">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)' }}>
+                    {['חודש','מע"מ הכנסות','מע"מ הוצאות','יתרת מע"מ'].map(h => (
+                      <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {vatReport.map((r, i) => (
+                    <tr key={r.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                      <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{r.month}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(r.incomeVat)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: '#ef4444' }}>{fmt(r.expenseVat)}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: r.balance > 0 ? '#f59e0b' : '#10b981' }}>{fmt(r.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null
+      })()}
 
       {/* ── Monthly Accordion ── */}
       <MonthlyAccordion invoices={invoices} />
@@ -1178,7 +1326,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
 
       {/* Year tabs */}
       <div className="flex gap-1 flex-shrink-0 bg-gray-100 rounded-xl p-1 w-fit">
-        {(['2026', '2025'] as const).map(yr => {
+        {availableYears.map(yr => {
           const cnt = invoices.filter(inv => inv.date && israeliToISO(inv.date).startsWith(yr)).length
           return (
             <button
@@ -2413,6 +2561,7 @@ function FinProjectsTab() {
   const [sel, setSel] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ artist: true, production: true })
   const [invoices, setInvoices] = useState<InvoiceRow[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -2420,6 +2569,7 @@ function FinProjectsTab() {
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
   const [savingNew, setSavingNew] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [subTab, setSubTab] = useState<'general' | 'projects'>('general')
   const fmtP = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
 
   // Load projects from Supabase
@@ -2611,7 +2761,7 @@ function FinProjectsTab() {
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות משויכות</p>
               </div>
               <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
-                {current.category === 'artist' ? 'Ã°ÂÂÂ¤ אומן' : 'Ã°ÂÂÂ¬ הפקה'}
+                {current.category === 'artist' ? '🎤 אומן' : '🎬 הפקה'}
               </span>
             </div>
 
@@ -2764,6 +2914,8 @@ function ExpensesTab() {
   const [cellSupplierSearch, setCellSupplierSearch] = useState('')
   const [showCellSupplierDrop, setShowCellSupplierDrop] = useState(false)
   const [cellSupplierDropIdx, setCellSupplierDropIdx] = useState(-1)
+  const cellSupplierDropIdxRef = useRef(-1)
+  const updDropIdx = (i: number) => { cellSupplierDropIdxRef.current = i; setCellSupplierDropIdx(i) }
   const cellValueRef = useRef<unknown>(null)
   const updCV = (v: unknown) => { cellValueRef.current = v; setCellValue(v) }
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -3135,26 +3287,27 @@ function ExpensesTab() {
                                       return (<>
                                         <input autoFocus type="text"
                                           value={showCellSupplierDrop ? cellSupplierSearch : String(cellValue || '')}
-                                          onChange={ev => { setCellSupplierSearch(ev.target.value); setShowCellSupplierDrop(true); setCellSupplierDropIdx(-1) }}
-                                          onFocus={() => { setCellSupplierSearch(''); setShowCellSupplierDrop(true); setCellSupplierDropIdx(-1) }}
-                                          onBlur={() => setTimeout(() => setShowCellSupplierDrop(false), 150)}
+                                          onChange={ev => { setCellSupplierSearch(ev.target.value); setShowCellSupplierDrop(true); updDropIdx(-1) }}
+                                          onFocus={() => { setCellSupplierSearch(''); setShowCellSupplierDrop(true); updDropIdx(-1) }}
+                                          onBlur={() => setTimeout(() => { setShowCellSupplierDrop(false); updDropIdx(-1) }, 150)}
                                           onKeyDown={ev => {
                                             if (ev.key === 'Escape') { cancelCellEdit(); return }
-                                            if (!showCellSupplierDrop) return
                                             if (ev.key === 'ArrowDown') {
                                               ev.preventDefault()
-                                              setCellSupplierDropIdx(i => Math.min(i + 1, filteredSups.length - 1))
+                                              setShowCellSupplierDrop(true)
+                                              updDropIdx(Math.min(cellSupplierDropIdxRef.current + 1, filteredSups.length - 1))
                                             } else if (ev.key === 'ArrowUp') {
                                               ev.preventDefault()
-                                              setCellSupplierDropIdx(i => Math.max(i - 1, 0))
+                                              updDropIdx(Math.max(cellSupplierDropIdxRef.current - 1, 0))
                                             } else if (ev.key === 'Enter') {
                                               ev.preventDefault()
-                                              const pick = filteredSups[cellSupplierDropIdx]
+                                              ev.stopPropagation()
+                                              const pick = filteredSups[cellSupplierDropIdxRef.current]
                                               if (pick) {
                                                 updCV(pick.name)
                                                 setCellSupplierSearch('')
                                                 setShowCellSupplierDrop(false)
-                                                setCellSupplierDropIdx(-1)
+                                                updDropIdx(-1)
                                               }
                                             }
                                           }}
@@ -3169,7 +3322,7 @@ function ExpensesTab() {
                                                   updCV(s.name)
                                                   setCellSupplierSearch('')
                                                   setShowCellSupplierDrop(false)
-                                                  setCellSupplierDropIdx(-1)
+                                                  updDropIdx(-1)
                                                 }}
                                                 className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-right ${idx === cellSupplierDropIdx ? 'bg-violet-100 dark:bg-violet-900/40' : 'hover:bg-violet-50 dark:hover:bg-violet-900/20'}`}>
                                                 <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
@@ -3275,6 +3428,33 @@ function ExpensesTab() {
                                 <div className="flex items-center gap-0.5">
                                   <span>{e.paid ? fmtDec(e.paid) : '—'}</span>
                                   {pencilBtn('paid', e.paid)}
+                                  {balance > 0 && (
+                                    <button
+                                      title="סמן כשולם במלואו"
+                                      onClick={async () => {
+                                        const today = new Date()
+                                        const dd = String(today.getDate()).padStart(2,'0')
+                                        const mm = String(today.getMonth()+1).padStart(2,'0')
+                                        const yy = String(today.getFullYear()).slice(-2)
+                                        const todayStr = `${dd}.${mm}.${yy}`
+                                        setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: ex.total, payment_date: todayStr } : ex))
+                                        const res = await fetch(`/api/expenses/${e.id}`, {
+                                          method: 'PATCH',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ paid: e.total, payment_date: todayStr })
+                                        })
+                                        const data = await res.json().catch(() => null)
+                                        if (res.ok && data?.expense) {
+                                          setExpenses(prev => prev.map(ex => ex.id === e.id ? (data.expense as Expense) : ex))
+                                        } else {
+                                          setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: e.paid, payment_date: e.payment_date } : ex))
+                                        }
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 mr-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-all"
+                                    >
+                                      ✓ שולם
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </td>
