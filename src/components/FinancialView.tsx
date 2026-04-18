@@ -34,16 +34,18 @@ const TAX_STATUS_STYLE: Record<string, string> = {
   'פטור': 'bg-sky-100 text-sky-700',
 }
 
+type SupExpense = { supplier: string; description: string; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }
+
 function SuppliersTab() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [expenses, setExpenses] = useState<{ supplier: string; total: number; paid: number }[]>([])
+  const [expenses, setExpenses] = useState<SupExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState('')
   const [filterDept, setFilterDept] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [selected, setSelected] = useState<Supplier | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -52,10 +54,15 @@ function SuppliersTab() {
     ]).then(([supData, expData]) => {
       if (supData.error) setError(supData.error)
       else setSuppliers(supData.suppliers || [])
-      setExpenses((expData.expenses || []).map((ex: { supplier: string; total: number; paid: number }) => ({
+      setExpenses((expData.expenses || []).map((ex: { supplier: string; description: string; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }) => ({
         supplier: ex.supplier,
+        description: ex.description || '',
+        month: ex.month || '',
+        amount: ex.amount || 0,
         total: ex.total || 0,
         paid: ex.paid || 0,
+        payment_date: ex.payment_date || '',
+        has_invoice: ex.has_invoice || false,
       })))
     })
     .catch(() => setError('שגיאה בטעינת נתונים'))
@@ -68,6 +75,7 @@ function SuppliersTab() {
       total: rows.reduce((s, ex) => s + ex.total, 0),
       paid: rows.reduce((s, ex) => s + ex.paid, 0),
       count: rows.length,
+      rows,
     }
   }
   const fmtS = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
@@ -163,146 +171,132 @@ function SuppliersTab() {
               <tr>
                 <td colSpan={10} className="text-center py-12 text-gray-400">לא נמצאו ספקים</td>
               </tr>
-            ) : filtered.map((s, i) => (
-              <tr
-                key={s.id}
-                onClick={() => setSelected(s)}
-                className={`border-b border-gray-100 hover:bg-indigo-50 cursor-pointer transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}
-              >
-                <td className="px-4 py-3">
-                  <div className="font-semibold text-gray-800">{s.name}</div>
-                  {(s.firstName || s.lastName) && (
-                    <div className="text-xs text-gray-400">{s.firstName} {s.lastName}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.idNumber || '—'}</td>
-                <td className="px-4 py-3">
-                  {s.taxStatus ? (
-                    <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>
-                      {s.taxStatus}
-                    </span>
-                  ) : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{s.role || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{s.department || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs font-mono">
-                  {s.phone ? (
-                    <a href={`tel:${s.phone}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600">
-                      {s.phone}
-                    </a>
-                  ) : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">
-                  {s.email ? (
-                    <a href={`mailto:${s.email}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600 truncate block max-w-[180px]">
-                      {s.email}
-                    </a>
-                  ) : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs max-w-[140px] truncate">
-                  {s.bank ? s.bank.replace(/^\d+ — /, '') : '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.accountNumber || '—'}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1 justify-center">
-                    <span title="אישור ניהול ספרים" className={`w-2 h-2 rounded-full ${s.hasBooksCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-                    <span title="אישור ניהול חשבון" className={`w-2 h-2 rounded-full ${s.hasAccountCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-                  </div>
-                </td>
-              </tr>
-            ))}
+            ) : filtered.flatMap((s, i) => {
+              const isOpen = expandedId === s.id
+              const t = supTotals(s.name)
+              const balance = t.total - t.paid
+              return [
+                <tr
+                  key={s.id}
+                  onClick={() => setExpandedId(isOpen ? null : s.id)}
+                  className={`border-b border-gray-100 hover:bg-indigo-50 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                      <div>
+                        <div className="font-semibold text-gray-800">{s.name}</div>
+                        {(s.firstName || s.lastName) && (
+                          <div className="text-xs text-gray-400">{s.firstName} {s.lastName}</div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.idNumber || '—'}</td>
+                  <td className="px-4 py-3">
+                    {s.taxStatus ? (
+                      <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>
+                        {s.taxStatus}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{s.role || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{s.department || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs font-mono">
+                    {s.phone ? (
+                      <a href={`tel:${s.phone}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600">
+                        {s.phone}
+                      </a>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">
+                    {s.email ? (
+                      <a href={`mailto:${s.email}`} onClick={e => e.stopPropagation()} className="hover:text-indigo-600 truncate block max-w-[180px]">
+                        {s.email}
+                      </a>
+                    ) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs max-w-[140px] truncate">
+                    {s.bank ? s.bank.replace(/^\d+ — /, '') : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 font-mono text-xs">{s.accountNumber || '—'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 justify-center">
+                      <span title="אישור ניהול ספרים" className={`w-2 h-2 rounded-full ${s.hasBooksCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+                      <span title="אישור ניהול חשבון" className={`w-2 h-2 rounded-full ${s.hasAccountCert ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+                    </div>
+                  </td>
+                </tr>,
+                isOpen ? (
+                  <tr key={`${s.id}-accordion`} className="bg-indigo-50/70">
+                    <td colSpan={10} className="px-6 py-4">
+                      {/* Summary bar */}
+                      <div className="flex gap-6 mb-3 text-sm">
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <span className="text-xs text-gray-400">סה&quot;כ חויב:</span>
+                          <span className="font-semibold text-indigo-700">{fmtS(t.total)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <span className="text-xs text-gray-400">שולם:</span>
+                          <span className="font-semibold text-emerald-600">{fmtS(t.paid)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-gray-400">יתרה:</span>
+                          <span className={`font-semibold ${balance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                            {balance > 0 ? fmtS(balance) : '✔ שולם'}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Payments table */}
+                      {t.count === 0 ? (
+                        <div className="text-xs text-gray-400 py-2">אין תשלומים רשומים לספק זה</div>
+                      ) : (
+                        <table className="w-full text-xs border-collapse rounded-xl overflow-hidden">
+                          <thead>
+                            <tr className="bg-indigo-100 text-indigo-700">
+                              <th className="px-3 py-2 text-right font-semibold">חודש</th>
+                              <th className="px-3 py-2 text-right font-semibold">תיאור</th>
+                              <th className="px-3 py-2 text-right font-semibold">סכום</th>
+                              <th className="px-3 py-2 text-right font-semibold">שולם</th>
+                              <th className="px-3 py-2 text-right font-semibold">יתרה</th>
+                              <th className="px-3 py-2 text-right font-semibold">תאריך תשלום</th>
+                              <th className="px-3 py-2 text-center font-semibold">חשבונית</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {t.rows.map((ex, ri) => {
+                              const rowBal = ex.total - ex.paid
+                              return (
+                                <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-indigo-50/40'}>
+                                  <td className="px-3 py-2 text-gray-600">{ex.month || '—'}</td>
+                                  <td className="px-3 py-2 text-gray-700 max-w-[220px] truncate">{ex.description || '—'}</td>
+                                  <td className="px-3 py-2 font-mono text-gray-800">{fmtS(ex.total)}</td>
+                                  <td className="px-3 py-2 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
+                                  <td className={`px-3 py-2 font-mono font-semibold ${rowBal > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                    {rowBal > 0 ? fmtS(rowBal) : '✔'}
+                                  </td>
+                                  <td className="px-3 py-2 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    {ex.has_invoice
+                                      ? <span className="text-emerald-500 font-bold">✔</span>
+                                      : <span className="text-gray-300">—</span>
+                                    }
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </td>
+                  </tr>
+                ) : null
+              ].filter(Boolean)
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Detail Modal */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4"
-            dir="rtl"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">{selected.name}</h2>
-                <p className="text-sm text-gray-500">{selected.firstName} {selected.lastName}</p>
-              </div>
-              {selected.taxStatus && (
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${TAX_STATUS_STYLE[selected.taxStatus] || 'bg-gray-100 text-gray-600'}`}>
-                  {selected.taxStatus}
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Detail label="ת.ז / ח.פ" value={selected.idNumber} />
-              <Detail label="תפקיד" value={selected.role} />
-              <Detail label="מחלקה" value={selected.department} />
-              <Detail label="טלפון" value={selected.phone} href={`tel:${selected.phone}`} />
-              <Detail label="אימייל" value={selected.email} href={`mailto:${selected.email}`} />
-              <Detail label="מוטב" value={selected.beneficiary} />
-              <Detail label="בנק" value={selected.bank?.replace(/^\d+ — /, '')} />
-              <Detail label="סניף" value={selected.branch} />
-              <Detail label="מספר חשבון" value={selected.accountNumber} mono />
-              {selected.daily && <Detail label="יומית" value={selected.daily + ' ₪'} />}
-            </div>
-
-            <div className="flex gap-4 pt-2 border-t border-gray-100">
-              <div className={`flex items-center gap-1.5 text-xs ${selected.hasBooksCert ? 'text-emerald-600' : 'text-gray-400'}`}>
-                <span className={`w-2 h-2 rounded-full ${selected.hasBooksCert ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                אישור ניהול ספרים
-              </div>
-              <div className={`flex items-center gap-1.5 text-xs ${selected.hasAccountCert ? 'text-emerald-600' : 'text-gray-400'}`}>
-                <span className={`w-2 h-2 rounded-full ${selected.hasAccountCert ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                אישור ניהול חשבון
-              </div>
-            </div>
-
-            {selected.notes && (
-              <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{selected.notes}</div>
-            )}
-
-            {/* Payment summary from expenses */}
-            {(() => {
-              const t = supTotals(selected.name)
-              if (t.count === 0) return null
-              const balance = t.total - t.paid
-              return (
-                <div className="bg-violet-50 rounded-xl p-3 space-y-1.5">
-                  <div className="text-xs font-bold text-violet-700 mb-2">מעקב תשלומים ({t.count} הוצאות)</div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="text-xs text-gray-500">סה"כ חויב</div>
-                      <div className="text-sm font-bold text-indigo-600">{fmtS(t.total)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">שולם</div>
-                      <div className="text-sm font-bold text-emerald-600">{fmtS(t.paid)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">יתרה</div>
-                      <div className={`text-sm font-bold ${balance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                        {balance > 0 ? fmtS(balance) : '✔ שולם'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-
-            <button
-              onClick={() => setSelected(null)}
-              className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              סגור
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -2769,6 +2763,7 @@ function ExpensesTab() {
   const [cellSaving, setCellSaving] = useState(false)
   const [cellSupplierSearch, setCellSupplierSearch] = useState('')
   const [showCellSupplierDrop, setShowCellSupplierDrop] = useState(false)
+  const [cellSupplierDropIdx, setCellSupplierDropIdx] = useState(-1)
   const cellValueRef = useRef<unknown>(null)
   const updCV = (v: unknown) => { cellValueRef.current = v; setCellValue(v) }
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -3127,36 +3122,59 @@ function ExpensesTab() {
                               {isEC('supplier') ? (
                                 <div className="relative flex items-center gap-1">
                                   <div className="relative">
-                                    <input autoFocus type="text"
-                                      value={showCellSupplierDrop ? cellSupplierSearch : String(cellValue || '')}
-                                      onChange={ev => { setCellSupplierSearch(ev.target.value); setShowCellSupplierDrop(true) }}
-                                      onFocus={() => { setCellSupplierSearch(''); setShowCellSupplierDrop(true) }}
-                                      onBlur={() => setTimeout(() => setShowCellSupplierDrop(false), 150)}
-                                      onKeyDown={ev => { if (ev.key === 'Escape') cancelCellEdit() }}
-                                      placeholder="חפש ספק..."
-                                      className={inCls + ' w-32'}
-                                    />
-                                    {showCellSupplierDrop && (
-                                      <div className="absolute z-[200] top-full mt-0.5 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto min-w-[200px]">
-                                        {suppliers
-                                          .filter(s => !cellSupplierSearch || s.name.toLowerCase().includes(cellSupplierSearch.toLowerCase()))
-                                          .map(s => (
-                                            <button key={s.id} type="button"
-                                              onMouseDown={() => {
-                                                updCV(s.name)
+                                    {(() => {
+                                      const filteredSups = suppliers.filter(s => !cellSupplierSearch || s.name.toLowerCase().includes(cellSupplierSearch.toLowerCase()))
+                                      return (<>
+                                        <input autoFocus type="text"
+                                          value={showCellSupplierDrop ? cellSupplierSearch : String(cellValue || '')}
+                                          onChange={ev => { setCellSupplierSearch(ev.target.value); setShowCellSupplierDrop(true); setCellSupplierDropIdx(-1) }}
+                                          onFocus={() => { setCellSupplierSearch(''); setShowCellSupplierDrop(true); setCellSupplierDropIdx(-1) }}
+                                          onBlur={() => setTimeout(() => setShowCellSupplierDrop(false), 150)}
+                                          onKeyDown={ev => {
+                                            if (ev.key === 'Escape') { cancelCellEdit(); return }
+                                            if (!showCellSupplierDrop) return
+                                            if (ev.key === 'ArrowDown') {
+                                              ev.preventDefault()
+                                              setCellSupplierDropIdx(i => Math.min(i + 1, filteredSups.length - 1))
+                                            } else if (ev.key === 'ArrowUp') {
+                                              ev.preventDefault()
+                                              setCellSupplierDropIdx(i => Math.max(i - 1, 0))
+                                            } else if (ev.key === 'Enter') {
+                                              ev.preventDefault()
+                                              const pick = filteredSups[cellSupplierDropIdx]
+                                              if (pick) {
+                                                updCV(pick.name)
                                                 setCellSupplierSearch('')
                                                 setShowCellSupplierDrop(false)
-                                              }}
-                                              className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors text-right">
-                                              <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
-                                              {s.taxStatus && <span className={`mr-2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>}
-                                            </button>
-                                          ))}
-                                        {suppliers.filter(s => !cellSupplierSearch || s.name.toLowerCase().includes(cellSupplierSearch.toLowerCase())).length === 0 && (
-                                          <div className="px-3 py-2 text-xs text-gray-400">לא נמצאו ספקים</div>
+                                                setCellSupplierDropIdx(-1)
+                                              }
+                                            }
+                                          }}
+                                          placeholder="חפש ספק..."
+                                          className={inCls + ' w-32'}
+                                        />
+                                        {showCellSupplierDrop && (
+                                          <div className="absolute z-[200] top-full mt-0.5 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl max-h-48 overflow-y-auto min-w-[200px]">
+                                            {filteredSups.map((s, idx) => (
+                                              <button key={s.id} type="button"
+                                                onMouseDown={() => {
+                                                  updCV(s.name)
+                                                  setCellSupplierSearch('')
+                                                  setShowCellSupplierDrop(false)
+                                                  setCellSupplierDropIdx(-1)
+                                                }}
+                                                className={`w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-right ${idx === cellSupplierDropIdx ? 'bg-violet-100 dark:bg-violet-900/40' : 'hover:bg-violet-50 dark:hover:bg-violet-900/20'}`}>
+                                                <span className="font-medium text-gray-800 dark:text-white">{s.name}</span>
+                                                {s.taxStatus && <span className={`mr-2 px-1.5 py-0.5 rounded text-xs font-semibold ${TAX_STATUS_STYLE[s.taxStatus] || 'bg-gray-100 text-gray-600'}`}>{s.taxStatus}</span>}
+                                              </button>
+                                            ))}
+                                            {filteredSups.length === 0 && (
+                                              <div className="px-3 py-2 text-xs text-gray-400">לא נמצאו ספקים</div>
+                                            )}
+                                          </div>
                                         )}
-                                      </div>
-                                    )}
+                                      </>)
+                                    })()}
                                   </div>
                                   {sc}
                                 </div>
