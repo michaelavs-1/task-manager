@@ -44,7 +44,7 @@ const FIELDS: [string, keyof Campaign][] = [
   ['סטאטוס','status'],['שם המופע','requester'],['משרד ייצוג','booking_agency'],['פלטפורמה','platforms'],
   ['פרויקט','project_name'],['מטרת הקמפיין','campaign_goal'],
   ['לו"ז קמפיין','schedule_type'],['סוג קמפיין','campaign_type'],
-  ['תאריך עלייה','launch_date'],['תאריך סיום','end_date'],
+  ['תאריך מופע','launch_date'],['תאריך סיום','end_date'],
   ['תאריך שהתקבל','date_received'],['הפנייה ל','redirect_to'],
   ['ניהול תקציב','budget_type'],['עצימות תקציב','budget_intensity'],
   ['תקציב','budget_amount'],['הוספת כפתור','has_button'],
