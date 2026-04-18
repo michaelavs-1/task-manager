@@ -339,6 +339,21 @@ function FinancialDashboard() {
   const totalRemain  = totalRevenue - totalPaid
   const openCount    = invoices.filter(i => (i.total - i.paid) > 0).length
 
+  // Expenses KPIs (for top-level "everything at a glance" overview)
+  const totalExpNet = expenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const totalExpVat = expenses.reduce((s, e) => s + (e.vat || 0), 0)
+
+  // VAT owed: VAT collected on revenue minus VAT paid on expenses
+  const totalRevenueVat = invoices.reduce((s, i) => s + ((i.total || 0) - (i.before_vat || 0)), 0)
+  const vatBalance      = totalRevenueVat - totalExpVat
+
+  // Gross profit = revenue (net) − expenses (net)
+  const grossProfit    = totalRevenue - totalExpNet
+  const grossProfitPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
+
+  // Collection rate
+  const collectionPct  = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0
+
   // ── Monthly breakdown ──
   type MonthData = { label: string; sortKey: string; revenue: number; paid: number; count: number }
   const monthMap: Record<string, MonthData> = {}
@@ -388,13 +403,19 @@ function FinancialDashboard() {
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6" dir="rtl">
 
-      {/* ── KPI Cards ── */}
+      {/* ── KPI Cards — full financial snapshot ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'סה"כ הכנסות', value: fmt(totalRevenue), icon: '📈', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-          { label: 'תשלומים', value: fmt(totalPaid), icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-          { label: 'נותר לגבייה', value: fmt(totalRemain), icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-          { label: 'חשבוניות פתוחות', value: String(openCount), icon: '📋', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          // Row 1 — headline P&L picture
+          { label: 'סה"כ הכנסות',    value: fmt(totalRevenue),  icon: '📈', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: 'סה"כ הוצאות',    value: fmt(totalExpNet),   icon: '💸', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          { label: 'רווח גולמי',      value: fmt(grossProfit),   icon: '💰', color: grossProfit >= 0 ? '#10b981' : '#ef4444', bg: grossProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', sub: `${grossProfitPct.toFixed(1)}% מההכנסות` },
+          { label: 'יתרת מע"מ',       value: fmt(vatBalance),    icon: '🧾', color: vatBalance >= 0 ? '#f59e0b' : '#10b981', bg: 'rgba(245,158,11,0.08)', sub: vatBalance >= 0 ? 'לתשלום' : 'להחזר' },
+          // Row 2 — cashflow / collection picture
+          { label: 'תשלומים',          value: fmt(totalPaid),     icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)', sub: `${collectionPct.toFixed(0)}% נגבה` },
+          { label: 'נותר לגבייה',      value: fmt(totalRemain),   icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+          { label: 'חשבוניות פתוחות',  value: String(openCount),  icon: '📋', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+          { label: 'מס\' הוצאות',       value: String(expenses.length), icon: '📊', color: '#a855f7', bg: 'rgba(168,85,247,0.08)' },
         ].map(card => (
           <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <div className="flex items-center justify-between">
@@ -403,7 +424,12 @@ function FinancialDashboard() {
                 {card.icon}
               </div>
             </div>
-            <div className="text-2xl font-bold tracking-tight" style={{ color: card.color }}>{card.value}</div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold tracking-tight" style={{ color: card.color }}>{card.value}</div>
+            </div>
+            {card.sub && (
+              <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{card.sub}</div>
+            )}
           </div>
         ))}
       </div>
@@ -540,39 +566,6 @@ function FinancialDashboard() {
         </div>
 
       </div>
-
-      {/* ── Expenses Section ── */}
-      {(() => {
-        const totalExpNetAmount = expenses.reduce((s, e) => s + (e.amount || 0), 0)
-        const totalExpVat = expenses.reduce((s, e) => s + (e.vat || 0), 0)
-        const totalExpTotal = expenses.reduce((s, e) => s + (e.total || 0), 0)
-
-        return (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>הוצאות (נטו)</span>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(239,68,68,0.08)' }}>💸</div>
-              </div>
-              <div className="text-2xl font-bold tracking-tight" style={{ color: '#ef4444' }}>{fmt(totalExpNetAmount)}</div>
-            </div>
-            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>מע״מ הוצאות</span>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(59,130,246,0.08)' }}>🧾</div>
-              </div>
-              <div className="text-2xl font-bold tracking-tight" style={{ color: '#3b82f6' }}>{fmt(totalExpVat)}</div>
-            </div>
-            <div className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>סה״כ הוצאות</span>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{ background: 'rgba(168,85,247,0.08)' }}>📊</div>
-              </div>
-              <div className="text-2xl font-bold tracking-tight" style={{ color: '#a855f7' }}>{fmt(totalExpTotal)}</div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* ── Monthly Revenue vs Expenses Table ── */}
       {(() => {
@@ -3046,9 +3039,7 @@ function ExpensesTab() {
       setExpenses(list)
       setProjects(projRes.projects || [])
       setSuppliers(supRes.suppliers || [])
-      // auto-open all months
-      const months = [...new Set(list.map(e => e.month).filter(Boolean))].sort()
-      setOpenMonths(Object.fromEntries(months.map(m => [m, true])))
+      // Accordions default to closed — user opens the months they want to view
     } catch {
       // silent
     } finally {
