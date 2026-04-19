@@ -1244,6 +1244,14 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
       && (!filterDocType || inv.doc_type === filterDocType)
       && (!filterStatus || st === filterStatus)
       && (!filterProject || inv.project_id === filterProject)
+  }).sort((a, b) => {
+    // Chronological order: oldest first. Rows without a valid date sink to the bottom.
+    const ai = a.date ? israeliToISO(a.date) : ''
+    const bi = b.date ? israeliToISO(b.date) : ''
+    if (!ai && bi) return 1
+    if (ai && !bi) return -1
+    if (ai !== bi) return ai.localeCompare(bi)
+    return a.id - b.id // stable tiebreaker
   })
 
   const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
@@ -1257,7 +1265,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     if (modalInv === 'new') {
       const res = await fetch('/api/invoices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
-      if (!data.error) setInvoices(prev => [data, ...prev])
+      if (!data.error) setInvoices(prev => [...prev, data]) // rendering sorts by date, so just append
     } else if (modalInv) {
       const res = await fetch(`/api/invoices/${modalInv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
