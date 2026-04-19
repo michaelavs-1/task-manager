@@ -4,7 +4,16 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase, supabaseConfig } from '../lib/supabase'
 
 type Campaign = { id: string; name: string; requester: string | null; launch_date: string | null }
-type UploadItem = { id: string; name: string; progress: number; status: 'uploading' | 'done' | 'error' }
+type UploadItem = {
+  id: string
+  name: string
+  progress: number
+  status: 'uploading' | 'done' | 'error'
+  supaStatus?: 'pending' | 'done' | 'error'
+  dbxStatus?: 'pending' | 'done' | 'error' | 'skipped'
+  errorMsg?: string
+}
+type DropboxStatus = 'unknown' | 'checking' | 'valid' | 'invalid' | 'missing'
 
 const BUCKET = 'campaigns-media'
 const ML_PREFIX = 'media-library'
@@ -106,6 +115,10 @@ export function MediaLibraryView() {
   const [filterArtist, setFilterArtist] = useState('')
   const [dropboxToken, setDropboxToken] = useState('')
   const [dropboxBasePath, setDropboxBasePath] = useState('')
+  const [dropboxStatus, setDropboxStatus] = useState<DropboxStatus>('unknown')
+  const [dropboxStatusMsg, setDropboxStatusMsg] = useState('')
+  const [showTokenInput, setShowTokenInput] = useState(false)
+  const [tokenInputValue, setTokenInputValue] = useState('')
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
   const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -126,28 +139,73 @@ export function MediaLibraryView() {
       try {
         const t = localStorage.getItem('dropbox_token_v1')
         if (t) setDropboxToken(t)
-      } catch {}
+        else setDropboxStatus('missing')
+      } catch { setDropboxStatus('missing') }
     }
   }, [])
 
-  // Resolve Dropbox shared folder URL → actual path (so uploads go inside the shared folder, not root)
+  // Validate the Dropbox token, then resolve shared-folder path when valid
   useEffect(() => {
-    if (!dropboxToken) return
-    fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + dropboxToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url: DROPBOX_SHARED_FOLDER_URL })
-    })
-      .then(r => r.json())
-      .then(data => {
+    if (!dropboxToken) { setDropboxStatus('missing'); setDropboxBasePath(''); return }
+    setDropboxStatus('checking')
+    setDropboxStatusMsg('')
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch('https://api.dropboxapi.com/2/users/get_current_account', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + dropboxToken }
+        })
+        if (cancelled) return
+        if (!r.ok) {
+          const txt = await r.text().catch(() => '')
+          setDropboxStatus('invalid')
+          if (txt.includes('expired_access_token')) setDropboxStatusMsg('הטוקן פג תוקף. יש להזין טוקן חדש.')
+          else if (txt.includes('invalid_access_token')) setDropboxStatusMsg('טוקן לא תקין. יש להזין טוקן חדש.')
+          else setDropboxStatusMsg('הטוקן נדחה על ידי Dropbox (' + r.status + ').')
+          setDropboxBasePath('')
+          return
+        }
+        setDropboxStatus('valid')
+        // Resolve shared folder path
+        const pathRes = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + dropboxToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url: DROPBOX_SHARED_FOLDER_URL })
+        })
+        const data = await pathRes.json().catch(() => null)
+        if (cancelled) return
         if (data && data.path_lower) setDropboxBasePath(data.path_lower)
         else if (data && data.name) setDropboxBasePath('/' + data.name)
-      })
-      .catch(e => console.error('Dropbox base path resolve error', e))
+        else setDropboxBasePath('')
+      } catch (e) {
+        if (cancelled) return
+        setDropboxStatus('invalid')
+        setDropboxStatusMsg('שגיאת רשת בבדיקת Dropbox')
+      }
+    })()
+    return () => { cancelled = true }
   }, [dropboxToken])
+
+  function saveDropboxToken() {
+    const trimmed = tokenInputValue.trim()
+    if (!trimmed) return
+    try { localStorage.setItem('dropbox_token_v1', trimmed) } catch {}
+    setDropboxToken(trimmed)
+    setTokenInputValue('')
+    setShowTokenInput(false)
+  }
+
+  function clearDropboxToken() {
+    try { localStorage.removeItem('dropbox_token_v1') } catch {}
+    setDropboxToken('')
+    setDropboxBasePath('')
+    setDropboxStatus('missing')
+    setDropboxStatusMsg('')
+  }
 
   async function loadCampaigns() {
     const { data } = await supabase
@@ -228,35 +286,51 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     if (!files || !selectedCampaign) return
     setUploadError('')
     const camp = selectedCampaign
+    const dbxActive = dropboxStatus === 'valid' && !!dropboxToken
 
     // Build queue entries for all files
     const newItems: UploadItem[] = Array.from(files).map(f => ({
       id: Math.random().toString(36).slice(2),
       name: f.name,
       progress: 0,
-      status: 'uploading' as const
+      status: 'uploading' as const,
+      supaStatus: 'pending',
+      dbxStatus: dbxActive ? 'pending' : 'skipped'
     }))
     setUploadQueue(prev => [...prev, ...newItems])
 
     // Reset wizard immediately so user can continue
     setStep(1); setSelectedArtist(''); setSelectedCampaign(null)
 
+    const errorMsgs: string[] = []
+
     // Upload all files in parallel
     await Promise.all(Array.from(files).map(async (file, idx) => {
       const itemId = newItems[idx].id
       const safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
       const path = ML_PREFIX + '/' + camp.id + '/' + safeName
+
+      // --- 1. Supabase upload ---
+      let supaOk = false
       try {
         await uploadFileXHR(file, path, (pct) => {
           setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: pct } : u))
         })
-        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, status: 'done' } : u))
-        // Upload to Dropbox in background (non-blocking)
-        if (dropboxToken) {
-          const artistSlug = (camp as any).requester?.replace(/[/\\:*?"<>|]/g, '_') || 'artist'
-          const showSlug = (camp.launch_date || camp.name).replace(/[/\\:*?"<>|]/g, '_')
+        supaOk = true
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, supaStatus: 'done' } : u))
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'שגיאה בהעלאה ל-Supabase'
+        errorMsgs.push(`${file.name}: ${msg}`)
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, supaStatus: 'error', errorMsg: msg } : u))
+      }
+
+      // --- 2. Dropbox upload (only if Supabase succeeded and token is valid) ---
+      if (supaOk && dbxActive) {
+        try {
+          const artistSlug = ((camp as any).requester || camp.name || 'artist').replace(/[/\\:*?"<>|]/g, '_').trim()
+          const showSlug = (camp.launch_date || camp.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
           const dbxPath = (dropboxBasePath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
-          fetch('https://content.dropboxapi.com/2/files/upload', {
+          const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
             method: 'POST',
             headers: {
               Authorization: 'Bearer ' + dropboxToken,
@@ -264,18 +338,48 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
               'Content-Type': 'application/octet-stream'
             },
             body: file
-          }).catch(e => console.error('Dropbox error', e))
+          })
+          if (!r.ok) {
+            const txt = await r.text().catch(() => '')
+            const dbxMsg = txt.includes('expired_access_token')
+              ? 'טוקן Dropbox פג תוקף'
+              : ('שגיאת Dropbox ' + r.status)
+            errorMsgs.push(`${file.name}: ${dbxMsg}`)
+            setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'error', errorMsg: (u.errorMsg ? u.errorMsg + '; ' : '') + dbxMsg } : u))
+            // If token is expired, mark it so the banner appears
+            if (txt.includes('expired_access_token') || txt.includes('invalid_access_token')) {
+              setDropboxStatus('invalid')
+              setDropboxStatusMsg('הטוקן פג תוקף. יש להזין טוקן חדש.')
+            }
+          } else {
+            setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'done' } : u))
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'שגיאת רשת ב-Dropbox'
+          errorMsgs.push(`${file.name}: ${msg}`)
+          setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'error', errorMsg: (u.errorMsg ? u.errorMsg + '; ' : '') + msg } : u))
         }
-      } catch (err) {
-        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, status: 'error' } : u))
-        setUploadError(err instanceof Error ? err.message : 'שגיאת העלאה')
       }
+
+      // --- 3. Compute overall item status ---
+      setUploadQueue(prev => prev.map(u => {
+        if (u.id !== itemId) return u
+        const supa = u.supaStatus
+        const dbx = u.dbxStatus
+        let overall: 'uploading' | 'done' | 'error' = 'uploading'
+        if (supa === 'error') overall = 'error'
+        else if (supa === 'done' && (dbx === 'done' || dbx === 'skipped')) overall = 'done'
+        else if (supa === 'done' && dbx === 'error') overall = 'error'
+        return { ...u, status: overall }
+      }))
     }))
+
+    if (errorMsgs.length) setUploadError(errorMsgs.join(' | '))
 
     // Refresh gallery after all done
     loadGallery()
 
-    // Auto-clear done items after 4 seconds
+    // Auto-clear successful items after 4 seconds; keep errors until user dismisses
     setTimeout(() => {
       setUploadQueue(prev => prev.filter(u => u.status !== 'done'))
     }, 4000)
@@ -295,6 +399,79 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8" dir="rtl">
+      {/* Dropbox status banner */}
+      <div className={'mb-4 rounded-xl px-4 py-3 border flex items-start gap-3 ' +
+        (dropboxStatus === 'valid' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
+         dropboxStatus === 'checking' ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700' :
+         'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700')}>
+        <div className="flex-shrink-0 mt-0.5">
+          {dropboxStatus === 'valid' ? (
+            <svg className="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>
+          ) : dropboxStatus === 'checking' ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {dropboxStatus === 'valid' && 'Dropbox מחובר ומסונכרן'}
+            {dropboxStatus === 'checking' && 'בודק חיבור Dropbox...'}
+            {dropboxStatus === 'invalid' && 'Dropbox לא פעיל — ' + (dropboxStatusMsg || 'הטוקן אינו תקין')}
+            {dropboxStatus === 'missing' && 'Dropbox לא מחובר — קבצים יישמרו רק במאגר המקומי'}
+            {dropboxStatus === 'unknown' && 'בודק חיבור Dropbox...'}
+          </p>
+          {dropboxStatus === 'valid' && dropboxBasePath && (
+            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">תיקיית יעד: {dropboxBasePath}</p>
+          )}
+          {(dropboxStatus === 'invalid' || dropboxStatus === 'missing') && (
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+              יש ליצור טוקן חדש מ-
+              <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Dropbox App Console</a>
+              {' '}(הרשאות: files.content.write, sharing.read)
+            </p>
+          )}
+
+          {showTokenInput && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="password"
+                value={tokenInputValue}
+                onChange={e => setTokenInputValue(e.target.value)}
+                placeholder="הדבק כאן טוקן Dropbox חדש"
+                className="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
+                onKeyDown={e => { if (e.key === 'Enter') saveDropboxToken() }}
+              />
+              <button
+                onClick={saveDropboxToken}
+                className="px-3 py-1.5 text-xs font-semibold bg-pink-600 text-white rounded-lg hover:bg-pink-700"
+              >שמור</button>
+              <button
+                onClick={() => { setShowTokenInput(false); setTokenInputValue('') }}
+                className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+              >ביטול</button>
+            </div>
+          )}
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-1">
+          {!showTokenInput && (
+            <button
+              onClick={() => setShowTokenInput(true)}
+              className="text-xs font-semibold px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700"
+            >
+              {dropboxStatus === 'valid' ? 'החלף טוקן' : 'הזן טוקן'}
+            </button>
+          )}
+          {dropboxToken && !showTokenInput && (
+            <button
+              onClick={clearDropboxToken}
+              className="text-xs px-2 py-1 rounded-lg text-gray-400 hover:text-red-500"
+              title="נקה טוקן"
+            >×</button>
+          )}
+        </div>
+      </div>
+
       {/* Upload section */}
       <div className="mb-8 rounded-2xl border-2 border-dashed border-pink-200 dark:border-pink-900 bg-gradient-to-br from-pink-50 to-white dark:from-gray-800 dark:to-gray-850 p-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">העלאת מדיה חדשה</h2>
