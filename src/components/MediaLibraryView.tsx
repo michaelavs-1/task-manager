@@ -30,10 +30,18 @@ function asciiSafeJson(obj: any): string {
   )
 }
 
+// Returns a Dropbox-API-Path-Root header value pinning requests to the team root namespace
+// (so team-folder paths resolve correctly, rather than falling back to the user's personal root).
+function pathRootHeader(namespaceId: string | null): string | null {
+  if (!namespaceId) return null
+  return asciiSafeJson({ '.tag': 'root', root: namespaceId })
+}
+
 function uploadFileToDropboxXHR(
   file: File,
   dbxPath: string,
   token: string,
+  rootNs: string | null,
   onProgress: (pct: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -64,6 +72,8 @@ function uploadFileToDropboxXHR(
         'Dropbox-API-Arg',
         asciiSafeJson({ path: dbxPath, mode: 'add', autorename: true, mute: false })
       )
+      const prh = pathRootHeader(rootNs)
+      if (prh) xhr.setRequestHeader('Dropbox-API-Path-Root', prh)
       xhr.setRequestHeader('Content-Type', 'application/octet-stream')
       xhr.send(file)
     } catch (e) {
@@ -144,6 +154,7 @@ export function MediaLibraryView() {
   const [filterArtist, setFilterArtist] = useState('')
   const [dropboxToken, setDropboxToken] = useState('')
   const [dropboxBasePath, setDropboxBasePath] = useState('')
+  const [dropboxRootNs, setDropboxRootNs] = useState<string | null>(null)
   const [dropboxStatus, setDropboxStatus] = useState<DropboxStatus>('unknown')
   const [dropboxStatusMsg, setDropboxStatusMsg] = useState('')
   const [showTokenInput, setShowTokenInput] = useState(false)
@@ -187,7 +198,7 @@ export function MediaLibraryView() {
 
   // Validate the Dropbox token, then resolve shared-folder path when valid
   useEffect(() => {
-    if (!dropboxToken) { setDropboxStatus('missing'); setDropboxBasePath(''); return }
+    if (!dropboxToken) { setDropboxStatus('missing'); setDropboxBasePath(''); setDropboxRootNs(null); return }
     setDropboxStatus('checking')
     setDropboxStatusMsg('')
     let cancelled = false
@@ -205,9 +216,21 @@ export function MediaLibraryView() {
           else if (txt.includes('invalid_access_token')) setDropboxStatusMsg('טוקן לא תקין. יש להזין טוקן חדש.')
           else setDropboxStatusMsg('הטוקן נדחה על ידי Dropbox (' + r.status + ').')
           setDropboxBasePath('')
+          setDropboxRootNs(null)
           return
         }
         setDropboxStatus('valid')
+        // Capture the account's ROOT namespace (= team root for team members).
+        // Using this as Dropbox-API-Path-Root makes paths resolve in the team namespace
+        // rather than the user's personal home namespace.
+        try {
+          const acc = await r.json()
+          const rootNs = acc?.root_info?.root_namespace_id || null
+          const homeNs = acc?.root_info?.home_namespace_id || null
+          // Only pin to root namespace if it's different from home namespace (team member w/ separate team space)
+          if (rootNs && rootNs !== homeNs) setDropboxRootNs(rootNs)
+          else setDropboxRootNs(null)
+        } catch { setDropboxRootNs(null) }
         // Resolve shared folder path
         const pathRes = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
           method: 'POST',
@@ -266,12 +289,15 @@ export function MediaLibraryView() {
     setPickerLoading(true)
     setPickerError('')
     try {
+      const headers: Record<string, string> = {
+        Authorization: 'Bearer ' + dropboxToken,
+        'Content-Type': 'application/json'
+      }
+      const prh = pathRootHeader(dropboxRootNs)
+      if (prh) headers['Dropbox-API-Path-Root'] = prh
       const r = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
         method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + dropboxToken,
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({ path, recursive: false, include_deleted: false })
       })
       if (!r.ok) {
@@ -343,15 +369,18 @@ export function MediaLibraryView() {
     if (!dropboxToken || dropboxStatus !== 'valid') return
     const basePath = dropboxCustomPath || dropboxBasePath
     if (!basePath) { setGalleryItems([]); return }
+    const baseHeaders: Record<string, string> = {
+      Authorization: 'Bearer ' + dropboxToken,
+      'Content-Type': 'application/json'
+    }
+    const prh = pathRootHeader(dropboxRootNs)
+    if (prh) baseHeaders['Dropbox-API-Path-Root'] = prh
     setGalleryLoading(true)
     try {
       const allFiles: { path_lower: string; path_display: string; name: string }[] = []
       let resp = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
         method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + dropboxToken,
-          'Content-Type': 'application/json'
-        },
+        headers: baseHeaders,
         body: JSON.stringify({ path: basePath, recursive: true, include_deleted: false, limit: 2000 })
       })
       if (!resp.ok) {
@@ -371,10 +400,7 @@ export function MediaLibraryView() {
         if (!data.has_more) break
         const r2 = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
           method: 'POST',
-          headers: {
-            Authorization: 'Bearer ' + dropboxToken,
-            'Content-Type': 'application/json'
-          },
+          headers: baseHeaders,
           body: JSON.stringify({ cursor: data.cursor })
         })
         if (!r2.ok) break
@@ -391,10 +417,7 @@ export function MediaLibraryView() {
           try {
             const lr = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
               method: 'POST',
-              headers: {
-                Authorization: 'Bearer ' + dropboxToken,
-                'Content-Type': 'application/json'
-              },
+              headers: baseHeaders,
               body: JSON.stringify({ path: f.path_lower })
             })
             if (!lr.ok) return null
@@ -478,7 +501,7 @@ export function MediaLibraryView() {
       const dbxPath = basePath + '/' + artistSlug + '/' + showSlug + '/' + safeName
 
       try {
-        await uploadFileToDropboxXHR(file, dbxPath, dropboxToken, (pct) => {
+        await uploadFileToDropboxXHR(file, dbxPath, dropboxToken, dropboxRootNs, (pct) => {
           setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: pct } : u))
         })
         setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, status: 'done' } : u))
@@ -508,12 +531,15 @@ export function MediaLibraryView() {
   async function deleteItem(path: string) {
     if (!dropboxToken) return
     try {
+      const headers: Record<string, string> = {
+        Authorization: 'Bearer ' + dropboxToken,
+        'Content-Type': 'application/json'
+      }
+      const prh = pathRootHeader(dropboxRootNs)
+      if (prh) headers['Dropbox-API-Path-Root'] = prh
       const r = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
         method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + dropboxToken,
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({ path })
       })
       if (r.ok) {
@@ -559,6 +585,9 @@ export function MediaLibraryView() {
             <div className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5 flex items-center gap-2 flex-wrap">
               <span>תיקיית יעד:</span>
               <span className="font-mono bg-white/60 dark:bg-gray-800/60 px-1.5 py-0.5 rounded">{effectiveDbxPath || '(root)'}</span>
+              {dropboxRootNs && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" title={'Team namespace: ' + dropboxRootNs}>Team</span>
+              )}
               {dropboxCustomPath && (
                 <>
                   <span className="text-amber-600 dark:text-amber-300">(מותאם אישית)</span>
