@@ -302,8 +302,9 @@ export function MediaLibraryView() {
   function openFolderPicker() {
     if (!dropboxToken || dropboxStatus !== 'valid') return
     setShowFolderPicker(true)
-    // Start at root
-    listDropboxFolder('')
+    // Start at the current effective path (if any), otherwise the resolved shared folder, otherwise root
+    const startPath = dropboxCustomPath || dropboxBasePath || ''
+    listDropboxFolder(startPath)
   }
 
   function selectFolderAsTarget(path: string) {
