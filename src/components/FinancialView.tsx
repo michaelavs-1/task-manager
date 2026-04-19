@@ -406,10 +406,10 @@ function FinancialDashboard() {
       {/* ── KPI Cards — full financial snapshot ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          // Row 1 — headline P&L picture
-          { label: 'סה"כ הכנסות',    value: fmt(totalRevenue),  icon: '📈', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-          { label: 'סה"כ הוצאות',    value: fmt(totalExpNet),   icon: '💸', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-          { label: 'רווח גולמי',      value: fmt(grossProfit),   icon: '💰', color: grossProfit >= 0 ? '#10b981' : '#ef4444', bg: grossProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', sub: `${grossProfitPct.toFixed(1)}% מההכנסות` },
+          // Row 1 — headline P&L picture (all values before VAT, matching revenue convention)
+          { label: 'הכנסות (לפני מע״מ)',  value: fmt(totalRevenue),  icon: '📈', color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: 'הוצאות (לפני מע״מ)',  value: fmt(totalExpNet),   icon: '💸', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          { label: 'רווח גולמי',          value: fmt(grossProfit),   icon: '💰', color: grossProfit >= 0 ? '#10b981' : '#ef4444', bg: grossProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', sub: `${grossProfitPct.toFixed(1)}% מההכנסות` },
           { label: 'יתרת מע"מ',       value: fmt(vatBalance),    icon: '🧾', color: vatBalance >= 0 ? '#f59e0b' : '#10b981', bg: 'rgba(245,158,11,0.08)', sub: vatBalance >= 0 ? 'לתשלום' : 'להחזר' },
           // Row 2 — cashflow / collection picture
           { label: 'תשלומים',          value: fmt(totalPaid),     icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)', sub: `${collectionPct.toFixed(0)}% נגבה` },
