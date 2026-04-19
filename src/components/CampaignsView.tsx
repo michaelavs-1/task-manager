@@ -5,6 +5,17 @@ import { useEsc } from '../hooks/useEsc'
 import { TicketTrackingView } from './TicketTrackingView'
 import { MediaLibraryView } from './MediaLibraryView'
 import { StatisticsView } from './StatisticsView'
+import {
+  readDropboxConfig,
+  campaignFolderPath,
+  listDropboxFolder as dbxListFolder,
+  getDropboxTempLink,
+  uploadFileToDropboxXHR,
+  deleteDropboxPath,
+  isImageName,
+  isVideoName,
+  type DropboxFileEntry,
+} from '../lib/dropbox'
 
 type Campaign = {
   id: string; monday_item_id: string; name: string; status: string | null
@@ -1047,6 +1058,13 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string; path: string}[]>([])
   const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false)
   const [showMediaPopup, setShowMediaPopup] = useState(false)
+  // Per-campaign Dropbox media (primary source when Dropbox is configured)
+  const [dropboxFiles, setDropboxFiles] = useState<{name: string; url: string; path: string}[]>([])
+  const [dropboxLoading, setDropboxLoading] = useState(false)
+  const [dropboxError, setDropboxError] = useState<string | null>(null)
+  const [popupUploadItems, setPopupUploadItems] = useState<{id: string; name: string; progress: number; status: 'uploading'|'done'|'error'; errorMsg?: string}[]>([])
+  const popupFileInputRef = useRef<HTMLInputElement>(null)
+  const [popupDragging, setPopupDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isUpdating = updatingId === campaign.id
   const displayStatus = campaign.status === 'חדש' ? 'פעיל' : (campaign.status || 'ללא סטאטוס')
@@ -1097,6 +1115,46 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
       })
   }, [expanded, campaign.id])
 
+  // Load per-campaign Dropbox files whenever the popup opens.
+  const loadDropboxFilesForCampaign = async () => {
+    const { token, basePath, rootNs } = readDropboxConfig()
+    if (!token || !basePath) {
+      setDropboxFiles([])
+      setDropboxError(null)
+      return
+    }
+    setDropboxLoading(true)
+    setDropboxError(null)
+    try {
+      const folder = campaignFolderPath(basePath, campaign.id, campaign.name)
+      const entries: DropboxFileEntry[] = await dbxListFolder(token, folder, rootNs, true)
+      // Resolve temp URLs in small batches (Dropbox API isn't batched for get_temporary_link)
+      const results: { name: string; url: string; path: string }[] = []
+      const batchSize = 6
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const slice = entries.slice(i, i + batchSize)
+        const urls = await Promise.all(slice.map(e =>
+          getDropboxTempLink(token, e.path_lower, rootNs).catch(() => null)
+        ))
+        slice.forEach((e, idx) => {
+          const u = urls[idx]
+          if (u) results.push({ name: e.name, url: u, path: e.path_lower })
+        })
+      }
+      setDropboxFiles(results)
+    } catch (e) {
+      setDropboxError(e instanceof Error ? e.message : 'שגיאה בטעינת המדיה מ-Dropbox')
+      setDropboxFiles([])
+    } finally {
+      setDropboxLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showMediaPopup) loadDropboxFilesForCampaign()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMediaPopup, campaign.id])
+
   const handleUpload = async (file: File) => {
     if (!file) return
     setUploading(true); setUploadError('')
@@ -1119,6 +1177,57 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
     e.preventDefault(); setDragging(false)
     const file = e.dataTransfer.files[0]
     if (file) handleUpload(file)
+  }
+
+  // Upload one or more files directly to this campaign's Dropbox folder, with progress.
+  const handleDropboxUpload = async (files: FileList | File[]) => {
+    const cfg = readDropboxConfig()
+    if (!cfg.token || !cfg.basePath) {
+      setDropboxError('Dropbox לא מוגדר. פתח את "מאגר מדיה" כדי להתחבר.')
+      return
+    }
+    const folder = campaignFolderPath(cfg.basePath, campaign.id, campaign.name)
+    const arr = Array.from(files)
+    // Seed progress rows
+    const rows = arr.map(f => ({
+      id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2),
+      name: f.name,
+      progress: 0,
+      status: 'uploading' as const,
+    }))
+    setPopupUploadItems(prev => [...prev, ...rows])
+    for (let i = 0; i < arr.length; i++) {
+      const file = arr[i]
+      const row = rows[i]
+      const dbxPath = folder + '/' + file.name
+      try {
+        await uploadFileToDropboxXHR({
+          file,
+          dbxPath,
+          token: cfg.token!,
+          rootNs: cfg.rootNs,
+          onProgress: (pct) => {
+            setPopupUploadItems(prev => prev.map(r => r.id === row.id ? { ...r, progress: pct } : r))
+          },
+        })
+        setPopupUploadItems(prev => prev.map(r => r.id === row.id ? { ...r, progress: 100, status: 'done' } : r))
+      } catch (err) {
+        setPopupUploadItems(prev => prev.map(r => r.id === row.id ? { ...r, status: 'error', errorMsg: err instanceof Error ? err.message : 'שגיאה' } : r))
+      }
+    }
+    // Refresh the listing
+    loadDropboxFilesForCampaign()
+  }
+
+  const handleDropboxDelete = async (path: string) => {
+    const cfg = readDropboxConfig()
+    if (!cfg.token) return
+    try {
+      await deleteDropboxPath(cfg.token, path, cfg.rootNs)
+      setDropboxFiles(prev => prev.filter(f => f.path !== path))
+    } catch (e) {
+      setDropboxError(e instanceof Error ? e.message : 'שגיאת מחיקה')
+    }
   }
 
   const handleDelete = async () => {
@@ -1368,12 +1477,21 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
 
       {/* Media popup */}
       {showMediaPopup && (() => {
-        const isImg = (u: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(u)
-        const isVid = (u: string) => /\.(mp4|mov|avi|webm)$/i.test(u)
-        const allFiles = [
-          ...(localMediaUrl ? [{ name: 'תמונת קמפיין', url: localMediaUrl, path: '' }] : []),
-          ...mediaLibraryFiles.filter(f => f.url !== localMediaUrl),
+        const isImg = (name: string) => isImageName(name)
+        const isVid = (name: string) => isVideoName(name)
+        const cfg = readDropboxConfig()
+        const dropboxConfigured = !!(cfg.token && cfg.basePath)
+        // Show Dropbox files as the primary source; fall back to legacy Supabase Storage if empty/not configured.
+        const primary: { name: string; url: string; path: string; source: 'dropbox' | 'supabase' | 'hero' }[] =
+          dropboxFiles.map(f => ({ ...f, source: 'dropbox' as const }))
+        const legacy: { name: string; url: string; path: string; source: 'dropbox' | 'supabase' | 'hero' }[] = [
+          ...(localMediaUrl ? [{ name: 'תמונת קמפיין', url: localMediaUrl, path: '', source: 'hero' as const }] : []),
+          ...mediaLibraryFiles
+            .filter(f => f.url !== localMediaUrl)
+            .map(f => ({ ...f, source: 'supabase' as const })),
         ]
+        const allFiles = [...primary, ...legacy]
+        const anyLoading = mediaLibraryLoading || dropboxLoading
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowMediaPopup(false)}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
@@ -1381,24 +1499,96 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">מדיה — {campaign.name}</h2>
                 <button onClick={() => setShowMediaPopup(false)} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
+
+              {/* Upload area (Dropbox) */}
+              <div className="px-6 pt-4 flex-shrink-0">
+                {!dropboxConfigured ? (
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs">
+                    Dropbox לא מוגדר. פתח "מאגר מדיה" מראש הדף והזן טוקן כדי לאפשר העלאה לקמפיין זה.
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={e => { e.preventDefault(); setPopupDragging(true) }}
+                    onDragLeave={() => setPopupDragging(false)}
+                    onDrop={e => {
+                      e.preventDefault(); setPopupDragging(false)
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleDropboxUpload(e.dataTransfer.files)
+                    }}
+                    className={`rounded-xl border-2 border-dashed p-4 flex items-center justify-between gap-3 transition-colors ${popupDragging ? 'border-pink-400 bg-pink-50 dark:bg-pink-900/20' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/30'}`}
+                  >
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                      גרור קבצים לכאן או בחר קובץ — יועלו לתיקיית המופע ב-Dropbox
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input ref={popupFileInputRef} type="file" multiple className="hidden"
+                        onChange={e => { if (e.target.files && e.target.files.length > 0) { handleDropboxUpload(e.target.files); e.target.value = '' } }}
+                      />
+                      <button
+                        onClick={() => popupFileInputRef.current?.click()}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition-colors"
+                      >בחר קבצים</button>
+                    </div>
+                  </div>
+                )}
+                {dropboxError && (
+                  <div className="mt-2 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
+                    {dropboxError}
+                  </div>
+                )}
+                {popupUploadItems.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {popupUploadItems.map(it => (
+                      <div key={it.id} className="flex items-center gap-2 text-xs">
+                        <span className="flex-1 truncate text-gray-700 dark:text-gray-300">{it.name}</span>
+                        {it.status === 'uploading' && (
+                          <>
+                            <div className="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-pink-500" style={{ width: it.progress + '%' }} />
+                            </div>
+                            <span className="text-gray-500 w-8 text-left">{it.progress}%</span>
+                          </>
+                        )}
+                        {it.status === 'done' && <span className="text-emerald-600">הועלה</span>}
+                        {it.status === 'error' && <span className="text-red-600 truncate" title={it.errorMsg}>נכשל: {it.errorMsg}</span>}
+                      </div>
+                    ))}
+                    {popupUploadItems.some(i => i.status !== 'uploading') && (
+                      <button onClick={() => setPopupUploadItems([])} className="text-[11px] text-gray-400 hover:text-gray-600">נקה רשימה</button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex-1 overflow-auto p-6">
-                {mediaLibraryLoading ? (
+                {anyLoading && allFiles.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>
                 ) : allFiles.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 text-sm">אין קבצי מדיה למופע זה</div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {allFiles.map((file, i) => (
-                      <div key={i} className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col">
-                        {isImg(file.url) ? (
+                      <div key={file.source + ':' + (file.path || i)} className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col">
+                        {isImg(file.name) || (file.source === 'hero' && /\.(jpe?g|png|gif|webp|svg)$/i.test(file.url)) ? (
                           <img src={file.url} alt={file.name} className="w-full h-36 object-cover" />
-                        ) : isVid(file.url) ? (
+                        ) : isVid(file.name) ? (
                           <video src={file.url} className="w-full h-36 object-cover" controls />
                         ) : (
                           <div className="w-full h-36 flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-4xl">📄</div>
                         )}
                         <div className="p-3 flex items-center gap-2">
-                          <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">{file.name}</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1" title={file.name}>{file.name}</span>
+                          {file.source === 'dropbox' && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm('למחוק קובץ זה?')) return
+                                await handleDropboxDelete(file.path)
+                              }}
+                              className="flex-shrink-0 p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                              title="מחק קובץ"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg>
+                            </button>
+                          )}
                           <a href={file.url} target="_blank" rel="noreferrer" download
                             className="flex-shrink-0 p-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
                             title="הורד קובץ"

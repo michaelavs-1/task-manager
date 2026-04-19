@@ -255,6 +255,11 @@ export function MediaLibraryView() {
         }
         if (cancelled) return
         setDropboxRootNs(effectiveRootNs)
+        // Persist root namespace so other components (e.g., BarbyCard) can reuse without re-resolving.
+        try {
+          if (effectiveRootNs) localStorage.setItem('dropbox_root_ns_v1', effectiveRootNs)
+          else localStorage.removeItem('dropbox_root_ns_v1')
+        } catch {}
         // Resolve shared folder path
         const pathRes = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
           method: 'POST',
@@ -266,9 +271,15 @@ export function MediaLibraryView() {
         })
         const data = await pathRes.json().catch(() => null)
         if (cancelled) return
-        if (data && data.path_lower) setDropboxBasePath(data.path_lower)
-        else if (data && data.name) setDropboxBasePath('/' + data.name)
-        else setDropboxBasePath('')
+        let resolvedBase = ''
+        if (data && data.path_lower) resolvedBase = data.path_lower
+        else if (data && data.name) resolvedBase = '/' + data.name
+        setDropboxBasePath(resolvedBase)
+        // Persist base path for reuse by other components
+        try {
+          if (resolvedBase) localStorage.setItem('dropbox_base_path_v1', resolvedBase)
+          else localStorage.removeItem('dropbox_base_path_v1')
+        } catch {}
       } catch (e) {
         if (cancelled) return
         setDropboxStatus('invalid')
@@ -298,9 +309,14 @@ export function MediaLibraryView() {
   }
 
   function clearDropboxToken() {
-    try { localStorage.removeItem('dropbox_token_v1') } catch {}
+    try {
+      localStorage.removeItem('dropbox_token_v1')
+      localStorage.removeItem('dropbox_base_path_v1')
+      localStorage.removeItem('dropbox_root_ns_v1')
+    } catch {}
     setDropboxToken('')
     setDropboxBasePath('')
+    setDropboxRootNs(null)
     setDropboxStatus('missing')
     setDropboxStatusMsg('')
   }
