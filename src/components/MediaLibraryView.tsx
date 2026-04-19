@@ -862,6 +862,9 @@ export function MediaLibraryView() {
               <h3 className="text-base font-bold text-gray-800 dark:text-white">בחר תיקיית יעד ב-Dropbox</h3>
               <button onClick={() => setShowFolderPicker(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
+            <p className="px-4 py-2 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+              לחיצה על שם תיקייה פותחת אותה. לחץ "בחר כיעד" כדי לבחור את התיקייה, או "בחר תיקייה זו" למטה כדי לבחור את התיקייה הנוכחית.
+            </p>
 
             {/* Breadcrumb */}
             <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center gap-1 text-xs flex-wrap">
@@ -896,20 +899,27 @@ export function MediaLibraryView() {
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {pickerEntries.map(entry => (
-                    <div key={entry.path_lower} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <div key={entry.path_lower} className="flex items-stretch hover:bg-gray-50 dark:hover:bg-gray-750">
+                      {/* Navigate into folder — clicks the whole row */}
                       <button
                         onClick={() => listDropboxFolder(entry.path_lower)}
-                        className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-100 hover:text-pink-600 flex-1 text-right"
+                        className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-100 hover:text-pink-600 flex-1 text-right px-4 py-2.5 min-w-0"
+                        title="כנס לתיקייה"
                       >
                         <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
                         </svg>
                         <span className="truncate">{entry.name}</span>
+                        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
                       </button>
+                      {/* Pick this folder directly as target */}
                       <button
                         onClick={() => selectFolderAsTarget(entry.path_lower)}
-                        className="text-xs px-2 py-1 rounded-lg bg-pink-100 text-pink-700 hover:bg-pink-200 font-semibold flex-shrink-0"
-                      >בחר</button>
+                        className="text-xs px-3 font-semibold bg-pink-50 text-pink-700 hover:bg-pink-100 dark:bg-pink-900/20 dark:text-pink-300 flex-shrink-0 border-r border-gray-100 dark:border-gray-700"
+                        title="בחר תיקייה זו כיעד"
+                      >בחר כיעד</button>
                     </div>
                   ))}
                 </div>
