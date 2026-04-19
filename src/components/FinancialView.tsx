@@ -1201,6 +1201,22 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
 
   useEffect(load, [])
 
+  // On first load, collapse every month accordion by default.
+  const didInitialCollapseRef = useRef(false)
+  useEffect(() => {
+    if (didInitialCollapseRef.current) return
+    if (invoices.length === 0) return
+    const keys = new Set<string>()
+    invoices.forEach(inv => {
+      if (!inv.date) return
+      const d = new Date(israeliToISO(inv.date))
+      if (isNaN(d.getTime())) return
+      keys.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+    })
+    setCollapsedMonths(keys)
+    didInitialCollapseRef.current = true
+  }, [invoices])
+
   const clients = clientList.map(c => c.name).sort()
   const docTypes = [...new Set(invoices.map(i => i.doc_type).filter(Boolean))].sort()
 
