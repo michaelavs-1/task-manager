@@ -23,6 +23,13 @@ type GalleryItem = {
 
 const DROPBOX_SHARED_FOLDER_URL = 'https://www.dropbox.com/scl/fo/pv4cyapt6tgcnkmkaq1b1/AHpXDdACHUTTygAN_xOP1Xs?rlkey=c9r45ykdnq6pc0eay0gykkdnh&dl=0'
 
+// Dropbox-API-Arg header must contain only ASCII. Escape non-ASCII chars as \uXXXX.
+function asciiSafeJson(obj: any): string {
+  return JSON.stringify(obj).replace(/[\u007f-\uffff]/g, (c) =>
+    '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4)
+  )
+}
+
 function uploadFileToDropboxXHR(
   file: File,
   dbxPath: string,
@@ -50,11 +57,18 @@ function uploadFileToDropboxXHR(
       }
     }
     xhr.onerror = () => reject(new Error('שגיאת רשת'))
-    xhr.open('POST', 'https://content.dropboxapi.com/2/files/upload')
-    xhr.setRequestHeader('Authorization', 'Bearer ' + token)
-    xhr.setRequestHeader('Dropbox-API-Arg', JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }))
-    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
-    xhr.send(file)
+    try {
+      xhr.open('POST', 'https://content.dropboxapi.com/2/files/upload')
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+      xhr.setRequestHeader(
+        'Dropbox-API-Arg',
+        asciiSafeJson({ path: dbxPath, mode: 'add', autorename: true, mute: false })
+      )
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+      xhr.send(file)
+    } catch (e) {
+      reject(e instanceof Error ? e : new Error('שגיאה בהכנת הבקשה'))
+    }
   })
 }
 
