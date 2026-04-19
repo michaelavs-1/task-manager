@@ -1,7 +1,7 @@
 'use client'
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import { supabase, supabaseConfig } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 type Campaign = { id: string; name: string; requester: string | null; launch_date: string | null }
 type UploadItem = {
@@ -9,19 +9,24 @@ type UploadItem = {
   name: string
   progress: number
   status: 'uploading' | 'done' | 'error'
-  supaStatus?: 'pending' | 'done' | 'error'
-  dbxStatus?: 'pending' | 'done' | 'error' | 'skipped'
   errorMsg?: string
 }
 type DropboxStatus = 'unknown' | 'checking' | 'valid' | 'invalid' | 'missing'
+type GalleryItem = {
+  path: string
+  artistName: string
+  campaignName: string
+  url: string
+  name: string
+  isImage: boolean
+}
 
-const BUCKET = 'campaigns-media'
-const ML_PREFIX = 'media-library'
 const DROPBOX_SHARED_FOLDER_URL = 'https://www.dropbox.com/scl/fo/pv4cyapt6tgcnkmkaq1b1/AHpXDdACHUTTygAN_xOP1Xs?rlkey=c9r45ykdnq6pc0eay0gykkdnh&dl=0'
 
-function uploadFileXHR(
+function uploadFileToDropboxXHR(
   file: File,
-  path: string,
+  dbxPath: string,
+  token: string,
   onProgress: (pct: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -30,15 +35,25 @@ function uploadFileXHR(
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
     }
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve()
-      else reject(new Error('העלאה נכשלה: ' + xhr.status))
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        const txt = xhr.responseText || ''
+        let msg = 'העלאה נכשלה (' + xhr.status + ')'
+        if (txt.includes('expired_access_token')) msg = 'טוקן Dropbox פג תוקף'
+        else if (txt.includes('invalid_access_token')) msg = 'טוקן Dropbox לא תקין'
+        else if (txt.includes('insufficient_space')) msg = 'אין מספיק מקום ב-Dropbox'
+        else if (txt.includes('path/conflict')) msg = 'שם הקובץ קיים כבר'
+        else if (txt.includes('not_permitted') || txt.includes('missing_scope')) msg = 'חסרה הרשאה ב-Dropbox (files.content.write)'
+        else if (txt) msg += ': ' + txt.slice(0, 200)
+        reject(new Error(msg))
+      }
     }
     xhr.onerror = () => reject(new Error('שגיאת רשת'))
-    xhr.open('POST', `${supabaseConfig.url}/storage/v1/object/${BUCKET}/${path}`)
-    xhr.setRequestHeader('Authorization', `Bearer ${supabaseConfig.anonKey}`)
-    xhr.setRequestHeader('apikey', supabaseConfig.anonKey)
-    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
-    xhr.setRequestHeader('x-upsert', 'false')
+    xhr.open('POST', 'https://content.dropboxapi.com/2/files/upload')
+    xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+    xhr.setRequestHeader('Dropbox-API-Arg', JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }))
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
     xhr.send(file)
   })
 }
@@ -110,7 +125,7 @@ export function MediaLibraryView() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [dragging, setDragging] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [galleryItems, setGalleryItems] = useState<{ campaignId: string; artistName: string; campaignName: string; url: string; name: string; isImage: boolean }[]>([])
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [filterArtist, setFilterArtist] = useState('')
   const [dropboxToken, setDropboxToken] = useState('')
@@ -137,7 +152,7 @@ export function MediaLibraryView() {
 
   useEffect(() => {
     setMounted(true)
-    loadCampaigns().then(camps => loadGallery(camps))
+    loadCampaigns()
     // Use env var token first, fallback to localStorage
     const envToken = process.env.NEXT_PUBLIC_DROPBOX_TOKEN
     if (envToken) {
@@ -201,6 +216,16 @@ export function MediaLibraryView() {
     })()
     return () => { cancelled = true }
   }, [dropboxToken])
+
+  // Reload the gallery whenever Dropbox becomes valid / path changes
+  useEffect(() => {
+    if (dropboxStatus === 'valid' && dropboxToken && (dropboxCustomPath || dropboxBasePath)) {
+      loadGallery()
+    } else if (dropboxStatus === 'missing' || dropboxStatus === 'invalid') {
+      setGalleryItems([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dropboxStatus, dropboxToken, dropboxBasePath, dropboxCustomPath])
 
   function saveDropboxToken() {
     const trimmed = tokenInputValue.trim()
@@ -298,34 +323,100 @@ export function MediaLibraryView() {
     return [] as Campaign[]
   }
 
-  async function loadGallery(campaignsList?: Campaign[]) {
+  // List all media files recursively under the Dropbox base path, and resolve temporary links.
+  async function loadGallery() {
+    if (!dropboxToken || dropboxStatus !== 'valid') return
+    const basePath = dropboxCustomPath || dropboxBasePath
+    if (!basePath) { setGalleryItems([]); return }
     setGalleryLoading(true)
     try {
-      const campData = campaignsList || campaigns
-      const { data: folders } = await supabase.storage.from(BUCKET).list(ML_PREFIX)
-      if (!folders) { setGalleryLoading(false); return }
-      const items: typeof galleryItems = []
-      for (const folder of folders) {
-        const campaignId = folder.name
-        const { data: files } = await supabase.storage.from(BUCKET).list(ML_PREFIX + '/' + campaignId)
-        if (!files) continue
-        const camp = campData.find(c => c.id === campaignId)
-        const artistName = camp?.requester || camp?.name || campaignId
-        const campaignName = camp?.name || campaignId
-        for (const file of files) {
-          if (file.name === '.emptyFolderPlaceholder') continue
-          const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(ML_PREFIX + '/' + campaignId + '/' + file.name)
-          const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)
-          items.push({ campaignId, artistName, campaignName, url: urlData.publicUrl, name: file.name, isImage })
+      const allFiles: { path_lower: string; path_display: string; name: string }[] = []
+      let resp = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dropboxToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path: basePath, recursive: true, include_deleted: false, limit: 2000 })
+      })
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '')
+        console.error('Dropbox list_folder failed', resp.status, txt)
+        setGalleryItems([])
+        setGalleryLoading(false)
+        return
+      }
+      let data: any = await resp.json()
+      while (true) {
+        for (const e of (data.entries || [])) {
+          if (e['.tag'] === 'file') {
+            allFiles.push({ path_lower: e.path_lower, path_display: e.path_display, name: e.name })
+          }
+        }
+        if (!data.has_more) break
+        const r2 = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + dropboxToken,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ cursor: data.cursor })
+        })
+        if (!r2.ok) break
+        data = await r2.json()
+      }
+
+      // Resolve a temporary link for each media file (batched to avoid hammering the API).
+      const items: GalleryItem[] = []
+      const batchSize = 6
+      const mediaFiles = allFiles.filter(f => /\.(jpg|jpeg|png|gif|webp|svg|mp4|mov|m4v|webm|avi|mkv)$/i.test(f.name))
+      for (let i = 0; i < mediaFiles.length; i += batchSize) {
+        const batch = mediaFiles.slice(i, i + batchSize)
+        const results = await Promise.all(batch.map(async (f) => {
+          try {
+            const lr = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+              method: 'POST',
+              headers: {
+                Authorization: 'Bearer ' + dropboxToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ path: f.path_lower })
+            })
+            if (!lr.ok) return null
+            const ld = await lr.json()
+            // path_display ≈ basePath/artistSlug/showSlug/filename
+            // Strip basePath prefix to extract artist/show
+            const baseLen = basePath.length
+            const rel = f.path_display.toLowerCase().startsWith(basePath.toLowerCase())
+              ? f.path_display.substring(baseLen).replace(/^\//, '')
+              : f.path_display.replace(/^\//, '')
+            const parts = rel.split('/')
+            const artistName = parts.length >= 2 ? parts[0] : 'ללא אומן'
+            const campaignName = parts.length >= 3 ? parts[1] : (parts.length >= 2 ? parts[0] : '')
+            const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(f.name)
+            return {
+              path: f.path_lower,
+              artistName,
+              campaignName,
+              url: ld.link,
+              name: f.name,
+              isImage
+            } as GalleryItem
+          } catch { return null }
+        }))
+        for (const res of results) {
+          if (res) items.push(res)
         }
       }
+      // Sort: artist name, then file name
+      items.sort((a, b) => a.artistName.localeCompare(b.artistName, 'he') || a.name.localeCompare(b.name))
       setGalleryItems(items)
     } catch (e) { console.error('gallery load error', e) }
     setGalleryLoading(false)
   }
 
   const artistsFromCampaigns = Array.from(new Set(campaigns.map(c => c.requester || c.name).filter(Boolean))).sort()
-const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c.name) === selectedArtist) : []
+  const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c.name) === selectedArtist) : []
 
   function formatDate(d: string | null) {
     if (!d) return ''
@@ -335,38 +426,28 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     } catch { return d }
   }
 
-  async function uploadToDropbox(file: File, safeName: string) {
-    if (!dropboxToken || !selectedCampaign) return
-    try {
-      const artistSlug = selectedArtist.replace(/[/\\:*?"<>|]/g, '_').trim()
-      const showSlug = (selectedCampaign.launch_date || selectedCampaign.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
-      const dbxPath = (dropboxBasePath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
-      await fetch('https://content.dropboxapi.com/2/files/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + dropboxToken,
-          'Dropbox-API-Arg': JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }),
-          'Content-Type': 'application/octet-stream'
-        },
-        body: file
-      })
-    } catch (e) { console.error('Dropbox upload error', e) }
-  }
-
   async function handleFiles(files: FileList | null) {
     if (!files || !selectedCampaign) return
+    if (!dropboxToken || dropboxStatus !== 'valid') {
+      setUploadError('Dropbox לא מחובר — לא ניתן להעלות. יש לחבר טוקן תקין.')
+      return
+    }
+    const basePath = dropboxCustomPath || dropboxBasePath
+    if (!basePath) {
+      setUploadError('לא נקבעה תיקיית יעד ב-Dropbox. בחר/י תיקייה מעל.')
+      return
+    }
     setUploadError('')
     const camp = selectedCampaign
-    const dbxActive = dropboxStatus === 'valid' && !!dropboxToken
+    const artistSlug = ((camp as any).requester || camp.name || 'artist').replace(/[/\\:*?"<>|]/g, '_').trim()
+    const showSlug = (camp.launch_date || camp.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
 
     // Build queue entries for all files
     const newItems: UploadItem[] = Array.from(files).map(f => ({
       id: Math.random().toString(36).slice(2),
       name: f.name,
       progress: 0,
-      status: 'uploading' as const,
-      supaStatus: 'pending',
-      dbxStatus: dbxActive ? 'pending' : 'skipped'
+      status: 'uploading' as const
     }))
     setUploadQueue(prev => [...prev, ...newItems])
 
@@ -375,74 +456,27 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
 
     const errorMsgs: string[] = []
 
-    // Upload all files in parallel
+    // Upload all files in parallel directly to Dropbox
     await Promise.all(Array.from(files).map(async (file, idx) => {
       const itemId = newItems[idx].id
       const safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = ML_PREFIX + '/' + camp.id + '/' + safeName
+      const dbxPath = basePath + '/' + artistSlug + '/' + showSlug + '/' + safeName
 
-      // --- 1. Supabase upload ---
-      let supaOk = false
       try {
-        await uploadFileXHR(file, path, (pct) => {
+        await uploadFileToDropboxXHR(file, dbxPath, dropboxToken, (pct) => {
           setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: pct } : u))
         })
-        supaOk = true
-        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, supaStatus: 'done' } : u))
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, progress: 100, status: 'done' } : u))
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'שגיאה בהעלאה ל-Supabase'
+        const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה'
         errorMsgs.push(`${file.name}: ${msg}`)
-        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, supaStatus: 'error', errorMsg: msg } : u))
-      }
-
-      // --- 2. Dropbox upload (only if Supabase succeeded and token is valid) ---
-      if (supaOk && dbxActive) {
-        try {
-          const artistSlug = ((camp as any).requester || camp.name || 'artist').replace(/[/\\:*?"<>|]/g, '_').trim()
-          const showSlug = (camp.launch_date || camp.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
-          const dbxPath = (effectiveDbxPath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
-          const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
-            method: 'POST',
-            headers: {
-              Authorization: 'Bearer ' + dropboxToken,
-              'Dropbox-API-Arg': JSON.stringify({ path: dbxPath, mode: 'add', autorename: true, mute: false }),
-              'Content-Type': 'application/octet-stream'
-            },
-            body: file
-          })
-          if (!r.ok) {
-            const txt = await r.text().catch(() => '')
-            const dbxMsg = txt.includes('expired_access_token')
-              ? 'טוקן Dropbox פג תוקף'
-              : ('שגיאת Dropbox ' + r.status)
-            errorMsgs.push(`${file.name}: ${dbxMsg}`)
-            setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'error', errorMsg: (u.errorMsg ? u.errorMsg + '; ' : '') + dbxMsg } : u))
-            // If token is expired, mark it so the banner appears
-            if (txt.includes('expired_access_token') || txt.includes('invalid_access_token')) {
-              setDropboxStatus('invalid')
-              setDropboxStatusMsg('הטוקן פג תוקף. יש להזין טוקן חדש.')
-            }
-          } else {
-            setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'done' } : u))
-          }
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : 'שגיאת רשת ב-Dropbox'
-          errorMsgs.push(`${file.name}: ${msg}`)
-          setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, dbxStatus: 'error', errorMsg: (u.errorMsg ? u.errorMsg + '; ' : '') + msg } : u))
+        setUploadQueue(prev => prev.map(u => u.id === itemId ? { ...u, status: 'error', errorMsg: msg } : u))
+        // If token is expired/invalid, surface the banner
+        if (msg.includes('פג תוקף') || msg.includes('לא תקין')) {
+          setDropboxStatus('invalid')
+          setDropboxStatusMsg(msg.includes('פג תוקף') ? 'הטוקן פג תוקף. יש להזין טוקן חדש.' : 'טוקן לא תקין. יש להזין טוקן חדש.')
         }
       }
-
-      // --- 3. Compute overall item status ---
-      setUploadQueue(prev => prev.map(u => {
-        if (u.id !== itemId) return u
-        const supa = u.supaStatus
-        const dbx = u.dbxStatus
-        let overall: 'uploading' | 'done' | 'error' = 'uploading'
-        if (supa === 'error') overall = 'error'
-        else if (supa === 'done' && (dbx === 'done' || dbx === 'skipped')) overall = 'done'
-        else if (supa === 'done' && dbx === 'error') overall = 'error'
-        return { ...u, status: overall }
-      }))
     }))
 
     if (errorMsgs.length) setUploadError(errorMsgs.join(' | '))
@@ -456,10 +490,24 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     }, 4000)
   }
 
-  async function deleteItem(campaignId: string, fileName: string) {
-    const path = ML_PREFIX + '/' + campaignId + '/' + fileName
-    await supabase.storage.from(BUCKET).remove([path])
-    setGalleryItems(prev => prev.filter(i => !(i.campaignId === campaignId && i.name === fileName)))
+  async function deleteItem(path: string) {
+    if (!dropboxToken) return
+    try {
+      const r = await fetch('https://api.dropboxapi.com/2/files/delete_v2', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dropboxToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path })
+      })
+      if (r.ok) {
+        setGalleryItems(prev => prev.filter(i => i.path !== path))
+      } else {
+        const txt = await r.text().catch(() => '')
+        console.error('Dropbox delete failed', r.status, txt)
+      }
+    } catch (e) { console.error('delete error', e) }
   }
 
   const displayedGallery = filterArtist ? galleryItems.filter(i => i.artistName === filterArtist) : galleryItems
@@ -486,10 +534,10 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            {dropboxStatus === 'valid' && 'Dropbox מחובר ומסונכרן'}
+            {dropboxStatus === 'valid' && 'Dropbox מחובר — כל המדיה נשמרת בתיקייה שלך'}
             {dropboxStatus === 'checking' && 'בודק חיבור Dropbox...'}
             {dropboxStatus === 'invalid' && 'Dropbox לא פעיל — ' + (dropboxStatusMsg || 'הטוקן אינו תקין')}
-            {dropboxStatus === 'missing' && 'Dropbox לא מחובר — קבצים יישמרו רק במאגר המקומי'}
+            {dropboxStatus === 'missing' && 'Dropbox לא מחובר — לא ניתן להעלות או לצפות במדיה'}
             {dropboxStatus === 'unknown' && 'בודק חיבור Dropbox...'}
           </p>
           {dropboxStatus === 'valid' && (
@@ -509,18 +557,22 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                 onClick={openFolderPicker}
                 className="underline font-semibold hover:text-emerald-800"
               >בחר תיקייה אחרת</button>
+              <button
+                onClick={() => loadGallery()}
+                className="underline hover:text-emerald-800"
+              >רענן גלריה</button>
             </div>
           )}
           {(dropboxStatus === 'invalid' || dropboxStatus === 'missing') && (
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
               יש ליצור טוקן חדש מ-
               <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Dropbox App Console</a>
-              {' '}(הרשאות נדרשות: <span className="font-mono">files.content.write</span>, <span className="font-mono">files.metadata.read</span>, <span className="font-mono">sharing.read</span>)
+              {' '}(הרשאות נדרשות: <span className="font-mono">files.content.write</span>, <span className="font-mono">files.content.read</span>, <span className="font-mono">files.metadata.read</span>, <span className="font-mono">sharing.read</span>)
             </p>
           )}
           {dropboxStatus === 'valid' && !dropboxBasePath && !dropboxCustomPath && (
             <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
-              ⚠ הקישור המשותף לא נפתר — ייתכן שחסר ה-scope <span className="font-mono">sharing.read</span>. הקבצים יישמרו בשורש החשבון. מומלץ לבחור תיקייה ידנית.
+              ⚠ הקישור המשותף לא נפתר — ייתכן שחסר ה-scope <span className="font-mono">sharing.read</span>. מומלץ לבחור תיקייה ידנית.
             </p>
           )}
 
@@ -654,10 +706,11 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
               </svg>
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">גרור קבצים לכאן או לחץ לבחירה</p>
               <p className="text-xs text-gray-400 mt-1">JPG, PNG, MP4, MOV ועוד — אפשר לבחור מספר קבצים בבת אחת</p>
+              <p className="text-xs text-gray-400 mt-1">הקבצים נשמרים ישירות לתיקייה שלך ב-Dropbox</p>
             </div>
             <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => handleFiles(e.target.files)} />
             {uploadError && <p className="mt-2 text-sm text-red-500">{uploadError}</p>}
-            {dropboxToken && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox מחובר</p>}
+            {dropboxStatus === 'valid' && <p className="mt-2 text-xs text-gray-400 flex items-center gap-1"><svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5"/></svg>Dropbox מחובר</p>}
           </div>
         )}
       </div>
@@ -692,6 +745,9 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-sm">אין מדיה עדיין</p>
+            {dropboxStatus === 'valid' && (
+              <p className="text-xs mt-1">הגלריה מציגה קבצים מתיקיית ה-Dropbox שלך</p>
+            )}
           </div>
         ) : (
           (() => {
@@ -720,8 +776,8 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                           className="text-white bg-black/50 rounded-lg p-1.5 hover:bg-black/70 transition-colors" title="צפייה">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                         </a>
-                        <button onClick={() => deleteItem(item.campaignId, item.name)}
-                          className="text-white bg-red-500/80 rounded-lg p-1.5 hover:bg-red-600 transition-colors" title="מחק">
+                        <button onClick={() => deleteItem(item.path)}
+                          className="text-white bg-red-500/80 rounded-lg p-1.5 hover:bg-red-600 transition-colors" title="מחק מ-Dropbox">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </div>
@@ -746,7 +802,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold text-gray-800 dark:text-white">
               {activeUploads > 0
-                ? `מעלה... (${activeUploads}/${totalUploads})`
+                ? `מעלה ל-Dropbox... (${activeUploads}/${totalUploads})`
                 : errCount > 0
                   ? `נכשלו ${errCount} מתוך ${totalUploads} ✗`
                   : `העלאה הסתיימה (${doneCount}/${totalUploads}) ✓`}
@@ -770,21 +826,8 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                     style={{ width: item.progress + '%' }}
                   />
                 </div>
-                {/* Per-destination status + error */}
-                {(item.status === 'error' || (item.supaStatus === 'done' && item.dbxStatus === 'error')) && (
-                  <div className="mt-1.5 text-[10px] space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className={item.supaStatus === 'done' ? 'text-emerald-600' : item.supaStatus === 'error' ? 'text-red-600' : 'text-gray-400'}>
-                        {item.supaStatus === 'done' ? '✓' : item.supaStatus === 'error' ? '✗' : '·'} Supabase
-                      </span>
-                      <span className={item.dbxStatus === 'done' ? 'text-emerald-600' : item.dbxStatus === 'error' ? 'text-red-600' : item.dbxStatus === 'skipped' ? 'text-gray-400' : 'text-gray-400'}>
-                        {item.dbxStatus === 'done' ? '✓' : item.dbxStatus === 'error' ? '✗' : item.dbxStatus === 'skipped' ? '—' : '·'} Dropbox
-                      </span>
-                    </div>
-                    {item.errorMsg && (
-                      <div className="text-red-600 dark:text-red-400 break-words" dir="auto">{item.errorMsg}</div>
-                    )}
-                  </div>
+                {item.status === 'error' && item.errorMsg && (
+                  <div className="mt-1.5 text-[10px] text-red-600 dark:text-red-400 break-words" dir="auto">{item.errorMsg}</div>
                 )}
               </div>
             ))}
