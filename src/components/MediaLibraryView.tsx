@@ -450,9 +450,9 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
     // Refresh gallery after all done
     loadGallery()
 
-    // Auto-clear successful items after 4 seconds; keep errors until user dismisses
+    // Auto-clear only successful items after 4 seconds; keep errors until user dismisses
     setTimeout(() => {
-      setUploadQueue(prev => prev.filter(u => u.status !== 'done'))
+      setUploadQueue(prev => prev.filter(u => u.status === 'error' || u.status === 'uploading'))
     }, 4000)
   }
 
@@ -563,6 +563,18 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
           )}
         </div>
       </div>
+
+      {/* Persistent upload error (visible after wizard resets) */}
+      {uploadError && (
+        <div className="mb-4 rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
+          <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-1">שגיאת העלאה</p>
+            <p className="text-xs text-red-700 dark:text-red-300 break-words" dir="auto">{uploadError}</p>
+          </div>
+          <button onClick={() => setUploadError('')} className="text-red-400 hover:text-red-600 text-lg leading-none flex-shrink-0">×</button>
+        </div>
+      )}
 
       {/* Upload section */}
       <div className="mb-8 rounded-2xl border-2 border-dashed border-pink-200 dark:border-pink-900 bg-gradient-to-br from-pink-50 to-white dark:from-gray-800 dark:to-gray-850 p-6">
@@ -726,21 +738,28 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
       </div>
 
       {/* Floating upload progress bar — rendered via portal so it shows even when tab is hidden */}
-      {mounted && uploadQueue.length > 0 && typeof document !== 'undefined' && createPortal(
-        <div className="fixed bottom-5 left-5 z-[9999] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-72">
+      {mounted && uploadQueue.length > 0 && typeof document !== 'undefined' && (() => {
+        const errCount = uploadQueue.filter(u => u.status === 'error').length
+        const doneCount = uploadQueue.filter(u => u.status === 'done').length
+        return createPortal(
+        <div className="fixed bottom-5 left-5 z-[9999] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 w-80">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold text-gray-800 dark:text-white">
-              {activeUploads > 0 ? `מעלה... (${activeUploads}/${totalUploads})` : `העלאה הסתיימה ✓`}
+              {activeUploads > 0
+                ? `מעלה... (${activeUploads}/${totalUploads})`
+                : errCount > 0
+                  ? `נכשלו ${errCount} מתוך ${totalUploads} ✗`
+                  : `העלאה הסתיימה (${doneCount}/${totalUploads}) ✓`}
             </p>
             {activeUploads === 0 && (
               <button onClick={() => setUploadQueue([])} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
             )}
           </div>
-          <div className="space-y-2.5 max-h-48 overflow-y-auto">
+          <div className="space-y-2.5 max-h-64 overflow-y-auto">
             {uploadQueue.map(item => (
-              <div key={item.id}>
+              <div key={item.id} className={item.status === 'error' ? 'p-2 -mx-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40' : ''}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 ml-2 max-w-[180px]">{item.name}</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 ml-2 max-w-[200px]" title={item.name}>{item.name}</span>
                   <span className={`text-xs font-bold flex-shrink-0 ${item.status === 'done' ? 'text-emerald-500' : item.status === 'error' ? 'text-red-500' : 'text-pink-600'}`}>
                     {item.status === 'done' ? '✓' : item.status === 'error' ? '✗' : item.progress + '%'}
                   </span>
@@ -751,12 +770,28 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                     style={{ width: item.progress + '%' }}
                   />
                 </div>
+                {/* Per-destination status + error */}
+                {(item.status === 'error' || (item.supaStatus === 'done' && item.dbxStatus === 'error')) && (
+                  <div className="mt-1.5 text-[10px] space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className={item.supaStatus === 'done' ? 'text-emerald-600' : item.supaStatus === 'error' ? 'text-red-600' : 'text-gray-400'}>
+                        {item.supaStatus === 'done' ? '✓' : item.supaStatus === 'error' ? '✗' : '·'} Supabase
+                      </span>
+                      <span className={item.dbxStatus === 'done' ? 'text-emerald-600' : item.dbxStatus === 'error' ? 'text-red-600' : item.dbxStatus === 'skipped' ? 'text-gray-400' : 'text-gray-400'}>
+                        {item.dbxStatus === 'done' ? '✓' : item.dbxStatus === 'error' ? '✗' : item.dbxStatus === 'skipped' ? '—' : '·'} Dropbox
+                      </span>
+                    </div>
+                    {item.errorMsg && (
+                      <div className="text-red-600 dark:text-red-400 break-words" dir="auto">{item.errorMsg}</div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>,
         document.body
-      )}
+      )})()}
 
       {/* Dropbox folder picker modal */}
       {mounted && showFolderPicker && typeof document !== 'undefined' && createPortal(
