@@ -1004,14 +1004,28 @@ function InvoiceModal({
   clientList?: ClientRecord[]
   projectList?: { id: string; name: string; category: string }[]
 }) {
-  const [form, setForm] = useState<InvoiceForm>(initial)
+  const [form, setForm] = useState<InvoiceForm>(() => {
+    // If an invoice was saved before auto-calc existed (before_vat > 0 but total is 0),
+    // fill in the expected total on open so the user sees it immediately.
+    if ((initial.before_vat || 0) > 0 && (!initial.total || initial.total === 0)) {
+      return { ...initial, total: roundCents(initial.before_vat * (1 + VAT_RATE)) }
+    }
+    return initial
+  })
   const [clientQuery, setClientQuery] = useState(initial.client || '')
   const [clientOpen, setClientOpen] = useState(false)
   useEsc(true, onClose)
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
-    setForm(f => ({ ...f, [k]: v }))
+    setForm(f => {
+      const next = { ...f, [k]: v } as InvoiceForm
+      // Auto-calculate total (incl. VAT) from before_vat — user can still override the total field afterwards.
+      if (k === 'before_vat') {
+        next.total = roundCents((v as number) * (1 + VAT_RATE))
+      }
+      return next
+    })
   }
 
   const filteredClients = clientOptions.filter(c =>
@@ -1098,6 +1112,8 @@ function InvoiceModal({
             </select>
           </div>
           <ModalField label='סכום לפני מע"מ ₪' value={form.before_vat} onChange={set('before_vat')} type="number" />
+          <ModalField label='סה"כ כולל מע"מ ₪' value={form.total} onChange={set('total')} type="number" />
+          <ModalField label='שולם ₪' value={form.paid} onChange={set('paid')} type="number" />
 
           {/* payment_date picker */}
           <div>
