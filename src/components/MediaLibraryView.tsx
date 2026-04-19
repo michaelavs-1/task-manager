@@ -119,6 +119,12 @@ export function MediaLibraryView() {
   const [dropboxStatusMsg, setDropboxStatusMsg] = useState('')
   const [showTokenInput, setShowTokenInput] = useState(false)
   const [tokenInputValue, setTokenInputValue] = useState('')
+  const [dropboxCustomPath, setDropboxCustomPath] = useState('')
+  const [showFolderPicker, setShowFolderPicker] = useState(false)
+  const [pickerPath, setPickerPath] = useState('')
+  const [pickerEntries, setPickerEntries] = useState<{ name: string; path_lower: string; tag: string }[]>([])
+  const [pickerLoading, setPickerLoading] = useState(false)
+  const [pickerError, setPickerError] = useState('')
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
   const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -142,6 +148,11 @@ export function MediaLibraryView() {
         else setDropboxStatus('missing')
       } catch { setDropboxStatus('missing') }
     }
+    // Load user-chosen custom path (overrides the auto-resolved shared link path)
+    try {
+      const cp = localStorage.getItem('dropbox_custom_path_v1')
+      if (cp) setDropboxCustomPath(cp)
+    } catch {}
   }, [])
 
   // Validate the Dropbox token, then resolve shared-folder path when valid
@@ -205,6 +216,64 @@ export function MediaLibraryView() {
     setDropboxBasePath('')
     setDropboxStatus('missing')
     setDropboxStatusMsg('')
+  }
+
+  // Effective Dropbox target path: user override wins; otherwise use auto-resolved shared link path
+  const effectiveDbxPath = dropboxCustomPath || dropboxBasePath
+
+  async function listDropboxFolder(path: string) {
+    if (!dropboxToken) return
+    setPickerLoading(true)
+    setPickerError('')
+    try {
+      const r = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + dropboxToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path, recursive: false, include_deleted: false })
+      })
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '')
+        if (txt.includes('expired_access_token')) setPickerError('הטוקן פג תוקף')
+        else if (txt.includes('not_folder')) setPickerError('הנתיב אינו תיקייה')
+        else if (txt.includes('not_found')) setPickerError('התיקייה לא נמצאה')
+        else setPickerError('שגיאה ' + r.status + ': ' + txt.slice(0, 120))
+        setPickerEntries([])
+        setPickerLoading(false)
+        return
+      }
+      const data = await r.json()
+      const folders = (data.entries || [])
+        .filter((e: any) => e['.tag'] === 'folder')
+        .map((e: any) => ({ name: e.name, path_lower: e.path_lower, tag: e['.tag'] }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name, 'he'))
+      setPickerEntries(folders)
+      setPickerPath(path)
+    } catch (e) {
+      setPickerError(e instanceof Error ? e.message : 'שגיאת רשת')
+      setPickerEntries([])
+    }
+    setPickerLoading(false)
+  }
+
+  function openFolderPicker() {
+    if (!dropboxToken || dropboxStatus !== 'valid') return
+    setShowFolderPicker(true)
+    // Start at root
+    listDropboxFolder('')
+  }
+
+  function selectFolderAsTarget(path: string) {
+    try { localStorage.setItem('dropbox_custom_path_v1', path) } catch {}
+    setDropboxCustomPath(path)
+    setShowFolderPicker(false)
+  }
+
+  function resetToSharedFolderPath() {
+    try { localStorage.removeItem('dropbox_custom_path_v1') } catch {}
+    setDropboxCustomPath('')
   }
 
   async function loadCampaigns() {
@@ -329,7 +398,7 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
         try {
           const artistSlug = ((camp as any).requester || camp.name || 'artist').replace(/[/\\:*?"<>|]/g, '_').trim()
           const showSlug = (camp.launch_date || camp.name || 'show').replace(/[/\\:*?"<>|]/g, '_').trim()
-          const dbxPath = (dropboxBasePath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
+          const dbxPath = (effectiveDbxPath || '') + '/' + artistSlug + '/' + showSlug + '/' + safeName
           const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
             method: 'POST',
             headers: {
@@ -421,8 +490,24 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
             {dropboxStatus === 'missing' && 'Dropbox לא מחובר — קבצים יישמרו רק במאגר המקומי'}
             {dropboxStatus === 'unknown' && 'בודק חיבור Dropbox...'}
           </p>
-          {dropboxStatus === 'valid' && dropboxBasePath && (
-            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">תיקיית יעד: {dropboxBasePath}</p>
+          {dropboxStatus === 'valid' && (
+            <div className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5 flex items-center gap-2 flex-wrap">
+              <span>תיקיית יעד:</span>
+              <span className="font-mono bg-white/60 dark:bg-gray-800/60 px-1.5 py-0.5 rounded">{effectiveDbxPath || '(root)'}</span>
+              {dropboxCustomPath && (
+                <>
+                  <span className="text-amber-600 dark:text-amber-300">(מותאם אישית)</span>
+                  <button
+                    onClick={resetToSharedFolderPath}
+                    className="underline hover:text-emerald-800"
+                  >חזרה לברירת מחדל</button>
+                </>
+              )}
+              <button
+                onClick={openFolderPicker}
+                className="underline font-semibold hover:text-emerald-800"
+              >בחר תיקייה אחרת</button>
+            </div>
           )}
           {(dropboxStatus === 'invalid' || dropboxStatus === 'missing') && (
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
@@ -661,6 +746,87 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                 </div>
               </div>
             ))}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Dropbox folder picker modal */}
+      {mounted && showFolderPicker && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[10000] bg-black/40 flex items-center justify-center p-4" onClick={() => setShowFolderPicker(false)}>
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base font-bold text-gray-800 dark:text-white">בחר תיקיית יעד ב-Dropbox</h3>
+              <button onClick={() => setShowFolderPicker(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+
+            {/* Breadcrumb */}
+            <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center gap-1 text-xs flex-wrap">
+              <button
+                onClick={() => listDropboxFolder('')}
+                className={'px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ' + (!pickerPath ? 'font-bold text-pink-600' : 'text-gray-500')}
+              >Dropbox</button>
+              {pickerPath && pickerPath.split('/').filter(Boolean).map((seg, i, arr) => {
+                const subPath = '/' + arr.slice(0, i + 1).join('/')
+                return (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="text-gray-300">/</span>
+                    <button
+                      onClick={() => listDropboxFolder(subPath)}
+                      className={'px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ' + (i === arr.length - 1 ? 'font-bold text-pink-600' : 'text-gray-500')}
+                    >{seg}</button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Folder list */}
+            <div className="flex-1 overflow-y-auto">
+              {pickerLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : pickerError ? (
+                <div className="p-4 text-sm text-red-500">{pickerError}</div>
+              ) : pickerEntries.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400">אין תיקיות משנה</div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {pickerEntries.map(entry => (
+                    <div key={entry.path_lower} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-750">
+                      <button
+                        onClick={() => listDropboxFolder(entry.path_lower)}
+                        className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-100 hover:text-pink-600 flex-1 text-right"
+                      >
+                        <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                        </svg>
+                        <span className="truncate">{entry.name}</span>
+                      </button>
+                      <button
+                        onClick={() => selectFolderAsTarget(entry.path_lower)}
+                        className="text-xs px-2 py-1 rounded-lg bg-pink-100 text-pink-700 hover:bg-pink-200 font-semibold flex-shrink-0"
+                      >בחר</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer: "pick this folder" + path display */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+              <div className="text-xs text-gray-500 truncate flex-1">
+                <span className="font-mono">{pickerPath || '/'}</span>
+              </div>
+              <button
+                onClick={() => selectFolderAsTarget(pickerPath)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-pink-600 text-white hover:bg-pink-700 font-semibold flex-shrink-0"
+              >בחר תיקייה זו</button>
+            </div>
           </div>
         </div>,
         document.body
