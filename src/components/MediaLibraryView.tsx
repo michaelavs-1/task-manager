@@ -223,14 +223,38 @@ export function MediaLibraryView() {
         // Capture the account's ROOT namespace (= team root for team members).
         // Using this as Dropbox-API-Path-Root makes paths resolve in the team namespace
         // rather than the user's personal home namespace.
+        let effectiveRootNs: string | null = null
         try {
           const acc = await r.json()
           const rootNs = acc?.root_info?.root_namespace_id || null
           const homeNs = acc?.root_info?.home_namespace_id || null
           // Only pin to root namespace if it's different from home namespace (team member w/ separate team space)
-          if (rootNs && rootNs !== homeNs) setDropboxRootNs(rootNs)
-          else setDropboxRootNs(null)
-        } catch { setDropboxRootNs(null) }
+          if (rootNs && rootNs !== homeNs) effectiveRootNs = rootNs
+        } catch { effectiveRootNs = null }
+        // Probe: sandbox (App folder) apps reject Dropbox-API-Path-Root with 400.
+        // If so, disable path-root so uploads/listings still work (they will go to the App folder).
+        if (effectiveRootNs) {
+          try {
+            const probe = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+              method: 'POST',
+              headers: {
+                Authorization: 'Bearer ' + dropboxToken,
+                'Content-Type': 'application/json',
+                'Dropbox-API-Path-Root': asciiSafeJson({ '.tag': 'root', root: effectiveRootNs })
+              },
+              body: JSON.stringify({ path: '', recursive: false, limit: 1 })
+            })
+            if (!probe.ok) {
+              const t = await probe.text().catch(() => '')
+              if (probe.status === 400 && /sandbox/i.test(t)) {
+                effectiveRootNs = null
+                setDropboxStatusMsg('אפליקציית Dropbox מסוג "App folder" – לא ניתן לכתוב לתיקיית הצוות. יש להגדיר אפליקציה מסוג "Full Dropbox".')
+              }
+            }
+          } catch { /* leave as-is */ }
+        }
+        if (cancelled) return
+        setDropboxRootNs(effectiveRootNs)
         // Resolve shared folder path
         const pathRes = await fetch('https://api.dropboxapi.com/2/sharing/get_shared_link_metadata', {
           method: 'POST',
