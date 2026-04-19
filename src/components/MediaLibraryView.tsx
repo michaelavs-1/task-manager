@@ -125,6 +125,7 @@ export function MediaLibraryView() {
   const [pickerEntries, setPickerEntries] = useState<{ name: string; path_lower: string; tag: string }[]>([])
   const [pickerLoading, setPickerLoading] = useState(false)
   const [pickerError, setPickerError] = useState('')
+  const [manualPathInput, setManualPathInput] = useState('')
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
   const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -238,8 +239,9 @@ export function MediaLibraryView() {
         const txt = await r.text().catch(() => '')
         if (txt.includes('expired_access_token')) setPickerError('הטוקן פג תוקף')
         else if (txt.includes('not_folder')) setPickerError('הנתיב אינו תיקייה')
-        else if (txt.includes('not_found')) setPickerError('התיקייה לא נמצאה')
-        else setPickerError('שגיאה ' + r.status + ': ' + txt.slice(0, 120))
+        else if (txt.includes('not_found')) setPickerError('התיקייה לא נמצאה — נסה נתיב אחר או הקלד ידנית')
+        else if (txt.includes('not_permitted') || txt.includes('missing_scope')) setPickerError('לאפליקציה ב-Dropbox חסר ה-scope "files.metadata.read". יש להוסיף אותו ב-App Console → Permissions, ולאחר מכן ליצור טוקן חדש. כגיבוי ניתן להקליד נתיב ידני למטה.')
+        else setPickerError('שגיאה ' + r.status + ': ' + txt)
         setPickerEntries([])
         setPickerLoading(false)
         return
@@ -513,7 +515,12 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
               יש ליצור טוקן חדש מ-
               <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Dropbox App Console</a>
-              {' '}(הרשאות: files.content.write, sharing.read)
+              {' '}(הרשאות נדרשות: <span className="font-mono">files.content.write</span>, <span className="font-mono">files.metadata.read</span>, <span className="font-mono">sharing.read</span>)
+            </p>
+          )}
+          {dropboxStatus === 'valid' && !dropboxBasePath && !dropboxCustomPath && (
+            <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
+              ⚠ הקישור המשותף לא נפתר — ייתכן שחסר ה-scope <span className="font-mono">sharing.read</span>. הקבצים יישמרו בשורש החשבון. מומלץ לבחור תיקייה ידנית.
             </p>
           )}
 
@@ -826,6 +833,35 @@ const artistCampaigns = selectedArtist ? campaigns.filter(c => (c.requester || c
                 onClick={() => selectFolderAsTarget(pickerPath)}
                 className="text-xs px-3 py-1.5 rounded-lg bg-pink-600 text-white hover:bg-pink-700 font-semibold flex-shrink-0"
               >בחר תיקייה זו</button>
+            </div>
+
+            {/* Manual path fallback — useful when list_folder scope is missing */}
+            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <p className="text-xs text-gray-500 mb-1.5">או הקלד נתיב ידנית (למשל <span className="font-mono">/My Apps/media</span>)</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={manualPathInput}
+                  onChange={e => setManualPathInput(e.target.value)}
+                  placeholder="/path/to/folder"
+                  dir="ltr"
+                  className="flex-1 px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-900 dark:text-white"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const p = manualPathInput.trim()
+                      if (p.startsWith('/')) selectFolderAsTarget(p)
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    const p = manualPathInput.trim()
+                    if (p.startsWith('/')) selectFolderAsTarget(p)
+                    else setPickerError('נתיב חייב להתחיל ב-/')
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-800 font-semibold flex-shrink-0"
+                >השתמש בנתיב</button>
+              </div>
             </div>
           </div>
         </div>,
