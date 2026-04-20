@@ -3929,7 +3929,7 @@ function ExpensesTab() {
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [transferExpMonth, setTransferExpMonth] = useState<string>('')
-  const [transferBtnRect, setTransferBtnRect] = useState<{ top: number; left: number } | null>(null)
+  const [transferBtnRect, setTransferBtnRect] = useState<{ top: number; right: number } | null>(null)
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
   const [expandedExpId, setExpandedExpId] = useState<number | null>(null)
   const [modalMonthOpen, setModalMonthOpen] = useState(false)
@@ -4659,7 +4659,7 @@ function ExpensesTab() {
                                         setTransferExpId(null); setTransferBtnRect(null)
                                       } else {
                                         setTransferExpId(e.id)
-                                        setTransferBtnRect({ top: rect.bottom + 4, left: rect.left })
+                                        setTransferBtnRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
                                       }
                                       setTransferExpMonth('')
                                     }}
@@ -4736,7 +4736,7 @@ function ExpensesTab() {
           <div className="fixed inset-0 z-[998]" onClick={() => { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('') }} />
           <div
             className="bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl min-w-[190px]"
-            style={{ position: 'fixed', top: transferBtnRect.top, left: transferBtnRect.left, zIndex: 999 }}
+            style={{ position: 'fixed', top: transferBtnRect.top, right: transferBtnRect.right, zIndex: 999 }}
             dir="rtl"
             onClick={ev => ev.stopPropagation()}
           >
