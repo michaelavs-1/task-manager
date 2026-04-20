@@ -1317,6 +1317,12 @@ function InvoicesTab() {
   const [editIssuedByVal, setEditIssuedByVal] = useState('')
   const [editPaymentDateId, setEditPaymentDateId] = useState<number | null>(null)
   const [editPaymentDateVal, setEditPaymentDateVal] = useState('')
+  const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
+  const [editNotesId, setEditNotesId] = useState<number | null>(null)
+  const [editNotesVal, setEditNotesVal] = useState('')
+  function toggleExpanded(id: number) {
+    setExpandedInvIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  }
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
 const [filterYear, setFilterYear] = useState<string | null>(null)
@@ -1669,9 +1675,19 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                 const st = invoiceStatus(inv)
                 const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
                 return (
-                  <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                  <Fragment key={inv.id}>
+                  <tr className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                     <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <button
+                        onClick={() => toggleExpanded(inv.id)}
+                        className={`flex items-center gap-1 font-mono hover:text-indigo-600 transition-colors ${expandedInvIds.has(inv.id) ? 'text-indigo-600 font-semibold' : 'text-gray-500'}`}
+                        title="לחץ לפתיחת הערות"
+                      >
+                        <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${expandedInvIds.has(inv.id) ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                        {inv.invoice_num || '—'}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 max-w-[200px] relative">
                       {reassignId === inv.id ? (
                         <ClientPicker clientList={clientList} currentClientId={inv.client_id}
@@ -1807,6 +1823,50 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                       </div>
                     </td>
                   </tr>
+                  {expandedInvIds.has(inv.id) && (
+                    <tr className="bg-indigo-50/60 border-b border-indigo-100">
+                      <td colSpan={15} className="px-6 py-3">
+                        <div className="flex items-start gap-3" dir="rtl">
+                          <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap pt-1">📝 הערות:</span>
+                          {editNotesId === inv.id ? (
+                            <div className="flex-1 flex items-start gap-2">
+                              <textarea
+                                autoFocus
+                                value={editNotesVal}
+                                onChange={e => setEditNotesVal(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Escape') setEditNotesId(null) }}
+                                rows={2}
+                                className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                                placeholder="הכנס הערה..."
+                              />
+                              <button
+                                onClick={async () => {
+                                  await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
+                                  setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, notes: editNotesVal } : x))
+                                  setEditNotesId(null)
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
+                                style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+                              >שמור</button>
+                              <button onClick={() => setEditNotesId(null)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 flex-shrink-0">ביטול</button>
+                            </div>
+                          ) : (
+                            <div className="flex-1 flex items-center gap-2 group">
+                              <span className="text-xs text-gray-600 whitespace-pre-wrap">{inv.notes || <span className="text-gray-300 italic">אין הערות</span>}</span>
+                              <button
+                                onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }}
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all"
+                                title="ערוך הערות"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 )
               })}
             </tbody>
@@ -1914,9 +1974,19 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                           const st = invoiceStatus(inv)
                           const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
                           return (
-                            <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                            <Fragment key={inv.id}>
+                            <tr className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                               <td className="px-3 py-2.5 text-center text-gray-300 text-xs font-mono">{i + 1}</td>
-                              <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{inv.invoice_num || '—'}</td>
+                              <td className="px-4 py-2.5 font-mono text-xs">
+                                <button
+                                  onClick={() => toggleExpanded(inv.id)}
+                                  className={`flex items-center gap-1 font-mono hover:text-indigo-600 transition-colors ${expandedInvIds.has(inv.id) ? 'text-indigo-600 font-semibold' : 'text-gray-500'}`}
+                                  title="לחץ לפתיחת הערות"
+                                >
+                                  <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${expandedInvIds.has(inv.id) ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                  {inv.invoice_num || '—'}
+                                </button>
+                              </td>
                               <td className="px-4 py-2.5 max-w-[180px] relative">
                                 {reassignId === inv.id ? (
                                   <ClientPicker clientList={clientList} currentClientId={inv.client_id}
@@ -2050,6 +2120,50 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                 </div>
                               </td>
                             </tr>
+                            {expandedInvIds.has(inv.id) && (
+                              <tr className="bg-indigo-50/60 border-b border-indigo-100">
+                                <td colSpan={15} className="px-6 py-3">
+                                  <div className="flex items-start gap-3" dir="rtl">
+                                    <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap pt-1">📝 הערות:</span>
+                                    {editNotesId === inv.id ? (
+                                      <div className="flex-1 flex items-start gap-2">
+                                        <textarea
+                                          autoFocus
+                                          value={editNotesVal}
+                                          onChange={e => setEditNotesVal(e.target.value)}
+                                          onKeyDown={e => { if (e.key === 'Escape') setEditNotesId(null) }}
+                                          rows={2}
+                                          className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                                          placeholder="הכנס הערה..."
+                                        />
+                                        <button
+                                          onClick={async () => {
+                                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
+                                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, notes: editNotesVal } : x))
+                                            setEditNotesId(null)
+                                          }}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
+                                          style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+                                        >שמור</button>
+                                        <button onClick={() => setEditNotesId(null)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 flex-shrink-0">ביטול</button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex-1 flex items-center gap-2 group">
+                                        <span className="text-xs text-gray-600 whitespace-pre-wrap">{inv.notes || <span className="text-gray-300 italic">אין הערות</span>}</span>
+                                        <button
+                                          onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }}
+                                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all"
+                                          title="ערוך הערות"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                            </Fragment>
                           )
                         })}
                       </Fragment>
