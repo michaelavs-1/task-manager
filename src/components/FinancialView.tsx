@@ -1919,11 +1919,12 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     if (newStatus === 'cancelled') {
       patch = { status: 'cancelled' }
     } else if (newStatus === 'paid') {
-      patch = { status: null, paid: roundCents(inv.total - (inv.tax_withheld || 0)),
+      // Don't send status field — paid/unpaid is derived from paid vs total
+      patch = { paid: roundCents(inv.total - (inv.tax_withheld || 0)),
         payment_date: inv.payment_date || isoToIsraeli(new Date().toISOString().slice(0, 10)) }
     } else {
-      // unpaid / pending
-      patch = { status: null, paid: 0, tax_withheld: 0 }
+      // unpaid / pending — clear paid amount, don't touch status column
+      patch = { paid: 0, tax_withheld: 0 }
     }
     const res = await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
     const data = await res.json()
