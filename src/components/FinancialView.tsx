@@ -1496,6 +1496,12 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     setEditPaymentDateId(null)
   }
 
+  async function saveNotes(invId: number) {
+    await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
+    setInvoices(prev => prev.map(x => x.id === invId ? { ...x, notes: editNotesVal } : x))
+    setEditNotesId(null)
+  }
+
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
@@ -1834,17 +1840,16 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                 autoFocus
                                 value={editNotesVal}
                                 onChange={e => setEditNotesVal(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Escape') setEditNotesId(null) }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Escape') setEditNotesId(null)
+                                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNotes(inv.id) }
+                                }}
                                 rows={2}
                                 className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                                placeholder="הכנס הערה..."
+                                placeholder="הכנס הערה... (Enter לשמירה, Shift+Enter לשורה חדשה)"
                               />
                               <button
-                                onClick={async () => {
-                                  await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
-                                  setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, notes: editNotesVal } : x))
-                                  setEditNotesId(null)
-                                }}
+                                onClick={() => saveNotes(inv.id)}
                                 className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
                                 style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
                               >שמור</button>
@@ -2131,17 +2136,16 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                           autoFocus
                                           value={editNotesVal}
                                           onChange={e => setEditNotesVal(e.target.value)}
-                                          onKeyDown={e => { if (e.key === 'Escape') setEditNotesId(null) }}
+                                          onKeyDown={e => {
+                                            if (e.key === 'Escape') setEditNotesId(null)
+                                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNotes(inv.id) }
+                                          }}
                                           rows={2}
                                           className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                                          placeholder="הכנס הערה..."
+                                          placeholder="הכנס הערה... (Enter לשמירה, Shift+Enter לשורה חדשה)"
                                         />
                                         <button
-                                          onClick={async () => {
-                                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
-                                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, notes: editNotesVal } : x))
-                                            setEditNotesId(null)
-                                          }}
+                                          onClick={() => saveNotes(inv.id)}
                                           className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
                                           style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
                                         >שמור</button>
