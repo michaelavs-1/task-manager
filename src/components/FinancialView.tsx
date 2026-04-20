@@ -1144,7 +1144,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
                     {invs.map((inv, i) => {
                       const rem = (inv.total || 0) - (inv.paid || 0)
                       const status = rem <= 0 ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
-                      const statusLabel = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }[status]
+                      const statusLabel = { paid: 'שולם', partial: 'חלקי', unpaid: 'לא שולם' }[status]
                       const statusStyle = { paid: { bg: '#d1fae5', color: '#065f46' }, partial: { bg: '#fef3c7', color: '#92400e' }, unpaid: { bg: '#fee2e2', color: '#991b1b' } }[status]
                       return (
                         <tr key={inv.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
@@ -1195,7 +1195,7 @@ interface InvoiceRow {
   status?: string   // explicit override: 'cancelled' | null/'' = auto-calculate
 }
 
-const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין', cancelled: 'מבוטל' }
+const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'לא שולם', cancelled: 'מבוטל' }
 const STATUS_STYLE: Record<string, string> = {
   paid:      'bg-emerald-100 text-emerald-700',
   partial:   'bg-amber-100 text-amber-700',
@@ -1727,6 +1727,7 @@ function InvoicesTab() {
   const [editPaymentDateId, setEditPaymentDateId] = useState<number | null>(null)
   const [editPaymentDateVal, setEditPaymentDateVal] = useState('')
   const [statusPickerId, setStatusPickerId] = useState<number | null>(null)
+  const [statusPickerRect, setStatusPickerRect] = useState<{ top: number; right: number } | null>(null)
   const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
   const [editNotesId, setEditNotesId] = useState<number | null>(null)
   const [editNotesVal, setEditNotesVal] = useState('')
@@ -2082,7 +2083,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
             <option value="">כל הסטטוסים</option>
-            <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">ממתין</option>
+            <option value="paid">שולם</option><option value="partial">חלקי</option><option value="unpaid">לא שולם</option>
           </select>
           {projectList.length > 0 && (
             <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
@@ -2217,23 +2218,17 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-center relative">
+                    <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => setStatusPickerId(statusPickerId === inv.id ? null : inv.id)}
+                        onClick={e => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                          if (statusPickerId === inv.id) { setStatusPickerId(null); setStatusPickerRect(null) }
+                          else { setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right }) }
+                        }}
                         className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                       >
                         {STATUS_LABEL[st]} ▾
                       </button>
-                      {statusPickerId === inv.id && (
-                        <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]" dir="rtl" onClick={e => e.stopPropagation()}>
-                          {[{ key: 'paid', label: 'שולם' }, { key: 'unpaid', label: 'ממתין' }, { key: 'cancelled', label: 'מבוטל' }].map(opt => (
-                            <button key={opt.key} onClick={() => saveInvoiceStatus(inv.id, opt.key)}
-                              className={`w-full text-right px-3 py-2 text-xs hover:bg-indigo-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${st === opt.key ? 'font-bold text-indigo-600' : 'text-gray-700'}`}>
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-center items-center">
@@ -2535,23 +2530,17 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </button>
                               </td>
-                              <td className="px-4 py-2.5 text-center relative">
+                              <td className="px-4 py-2.5 text-center">
                                 <button
-                                  onClick={() => setStatusPickerId(statusPickerId === inv.id ? null : inv.id)}
+                                  onClick={e => {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                                    if (statusPickerId === inv.id) { setStatusPickerId(null); setStatusPickerRect(null) }
+                                    else { setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right }) }
+                                  }}
                                   className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                                 >
                                   {STATUS_LABEL[st]} ▾
                                 </button>
-                                {statusPickerId === inv.id && (
-                                  <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]" dir="rtl" onClick={e => e.stopPropagation()}>
-                                    {[{ key: 'paid', label: 'שולם' }, { key: 'unpaid', label: 'ממתין' }, { key: 'cancelled', label: 'מבוטל' }].map(opt => (
-                                      <button key={opt.key} onClick={() => saveInvoiceStatus(inv.id, opt.key)}
-                                        className={`w-full text-right px-3 py-2 text-xs hover:bg-indigo-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${st === opt.key ? 'font-bold text-indigo-600' : 'text-gray-700'}`}>
-                                        {opt.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
                               </td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1 justify-center items-center">
@@ -2674,6 +2663,32 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
           saving={saving}
         />
       )}
+
+      {/* Status picker — fixed portal (escapes overflow-auto table container) */}
+      {statusPickerId !== null && statusPickerRect && (() => {
+        const inv = invoices.find(i => i.id === statusPickerId)
+        if (!inv) return null
+        const st = invoiceStatus(inv)
+        return (
+          <>
+            <div className="fixed inset-0 z-[998]" onClick={() => { setStatusPickerId(null); setStatusPickerRect(null) }} />
+            <div
+              className="bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]"
+              style={{ position: 'fixed', top: statusPickerRect.top, right: statusPickerRect.right, zIndex: 999 }}
+              dir="rtl"
+              onClick={e => e.stopPropagation()}
+            >
+              {[{ key: 'paid', label: 'שולם' }, { key: 'unpaid', label: 'לא שולם' }, { key: 'cancelled', label: 'מבוטל' }].map(opt => (
+                <button key={opt.key}
+                  onClick={() => { saveInvoiceStatus(inv.id, opt.key); setStatusPickerId(null); setStatusPickerRect(null) }}
+                  className={`w-full text-right px-3 py-2 text-xs hover:bg-indigo-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${st === opt.key ? 'font-bold text-indigo-600' : 'text-gray-700'}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )
+      })()}
 
       {/* Mark-paid + withholding modal */}
       {withholdingInv !== null && (() => {
@@ -3898,7 +3913,7 @@ function FinProjectsTab() {
                       const statusStyle = {
                         paid:    { bg: '#d1fae5', color: '#065f46', label: 'שולם' },
                         partial: { bg: '#fef3c7', color: '#92400e', label: 'חלקי' },
-                        unpaid:  { bg: '#fee2e2', color: '#991b1b', label: 'ממתין' },
+                        unpaid:  { bg: '#fee2e2', color: '#991b1b', label: 'לא שולם' },
                       }[status]
                       return (
                         <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
