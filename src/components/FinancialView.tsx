@@ -35,7 +35,7 @@ const TAX_STATUS_STYLE: Record<string, string> = {
   'פטור': 'bg-sky-100 text-sky-700',
 }
 
-type SupExpense = { supplier: string; description: string; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }
+type SupExpense = { supplier: string; description: string; project_id: string | null; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }
 
 function SuppliersTab() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -55,9 +55,10 @@ function SuppliersTab() {
     ]).then(([supData, expData]) => {
       if (supData.error) setError(supData.error)
       else setSuppliers(supData.suppliers || [])
-      setExpenses((expData.expenses || []).map((ex: { supplier: string; description: string; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }) => ({
+      setExpenses((expData.expenses || []).map((ex: { supplier: string; description: string; project_id?: string | null; month: string; amount: number; total: number; paid: number; payment_date: string; has_invoice: boolean }) => ({
         supplier: ex.supplier,
         description: ex.description || '',
+        project_id: ex.project_id || null,
         month: ex.month || '',
         amount: ex.amount || 0,
         total: ex.total || 0,
@@ -331,20 +332,24 @@ type GlSummary = {
 function FinancialDashboard() {
   const [invoices, setInvoices] = useState<FinDashInvoice[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [gl, setGl] = useState<GlSummary | null>(null)
   const [glLoading, setGlLoading] = useState(true)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
   const [cfOpenMonth, setCfOpenMonth] = useState<string | null>(null)
+  const [bankBalance, setBankBalance] = useState<string>('')
 
   useEffect(() => {
     Promise.all([
       fetch('/api/invoices').then(r => r.json()),
       fetch('/api/expenses').then(r => r.json()),
+      fetch('/api/projects').then(r => r.json()).catch(() => ({ projects: [] })),
     ])
-      .then(([invData, expData]) => {
+      .then(([invData, expData, projData]) => {
         setInvoices(invData.invoices || [])
         setExpenses(expData.expenses || [])
+        setProjects((projData.projects || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -511,7 +516,7 @@ function FinancialDashboard() {
       {/* ── צפי תזרימי ── */}
       {(() => {
         type CfRow = { inv: FinDashInvoice; remaining: number }
-        type CfExpRow = { supplier: string; description: string; unpaid: number }
+        type CfExpRow = { supplier: string; project: string; unpaid: number }
         type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; expRows: CfExpRow[]; expTotal: number }
         const cfMap: Record<string, CfMonth> = {}
         invoices.forEach(inv => {
@@ -538,7 +543,8 @@ function FinancialDashboard() {
             if (mIdx < 0 || mIdx > 11) return
             cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, expRows: [], expTotal: 0 }
           }
-          cfMap[key].expRows.push({ supplier: exp.supplier || '—', description: exp.description || '—', unpaid })
+          const projName = exp.project_id ? (projects.find(p => p.id === exp.project_id)?.name || exp.description || exp.project_id) : (exp.description || '—')
+          cfMap[key].expRows.push({ supplier: exp.supplier || '—', project: projName, unpaid })
           cfMap[key].expTotal += unpaid
         })
         const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
@@ -546,18 +552,41 @@ function FinancialDashboard() {
         const grandIncome = cfMonths.reduce((s, m) => s + m.total, 0)
         const grandExp    = cfMonths.reduce((s, m) => s + m.expTotal, 0)
         const grandNet    = grandIncome - grandExp
+        const bankNum     = parseFloat(bankBalance.replace(/,/g, '')) || 0
+        const grandWithBank = grandNet + bankNum
 
         return (
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.06)' }}>
             {/* Header */}
-            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
-              <div>
+            <div className="px-5 py-4 border-b flex items-start justify-between gap-4" style={{ borderColor: 'var(--border-color)' }}>
+              <div className="flex-1">
                 <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>צפי תזרימי</h3>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>תזרים צפוי לפי חודש — רק תשלומים שטרם בוצעו</p>
+                {/* Bank balance input */}
+                <div className="flex items-center gap-2 mt-3">
+                  <label className="text-[11px] font-semibold whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>יתרה בחשבון:</label>
+                  <div className="relative">
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--text-secondary)' }}>₪</span>
+                    <input
+                      type="number"
+                      value={bankBalance}
+                      onChange={e => setBankBalance(e.target.value)}
+                      placeholder="0"
+                      className="pr-6 pl-2 py-1 text-xs rounded-lg border text-right"
+                      style={{ width: 130, borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>סיכום נטו</div>
-                <span className="text-base font-bold" style={{ color: grandNet >= 0 ? '#6366f1' : '#ef4444' }}>{fmt(grandNet)}</span>
+                <div className="text-base font-bold" style={{ color: grandNet >= 0 ? '#6366f1' : '#ef4444' }}>{fmt(grandNet)}</div>
+                {bankNum !== 0 && (
+                  <>
+                    <div className="text-[10px] mt-1.5" style={{ color: 'var(--text-secondary)' }}>כולל יתרה בחשבון</div>
+                    <div className="text-base font-bold" style={{ color: grandWithBank >= 0 ? '#10b981' : '#ef4444' }}>{fmt(grandWithBank)}</div>
+                  </>
+                )}
               </div>
             </div>
             {/* Summary cards row */}
@@ -637,7 +666,7 @@ function FinancialDashboard() {
                     <table className="w-full text-xs mb-4">
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          {['ספק', 'תיאור', 'יתרה לתשלום'].map(h => (
+                          {['ספק', 'פרויקט', 'יתרה לתשלום'].map(h => (
                             <th key={h} className="py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                           ))}
                         </tr>
@@ -646,7 +675,7 @@ function FinancialDashboard() {
                         {cfMap[cfOpenMonth].expRows.map((er, i) => (
                           <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
                             <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{er.supplier}</td>
-                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{er.description}</td>
+                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{er.project}</td>
                             <td className="py-2 font-bold text-left" style={{ color: '#ef4444' }}>{fmt(er.unpaid)}</td>
                           </tr>
                         ))}
@@ -3929,7 +3958,7 @@ function ExpensesTab() {
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [transferExpMonth, setTransferExpMonth] = useState<string>('')
-  const [transferBtnRect, setTransferBtnRect] = useState<{ top: number; right: number } | null>(null)
+  const [transferBtnRect, setTransferBtnRect] = useState<{ top?: number; bottom?: number; right: number } | null>(null)
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
   const [expandedExpId, setExpandedExpId] = useState<number | null>(null)
   const [modalMonthOpen, setModalMonthOpen] = useState(false)
@@ -4659,7 +4688,12 @@ function ExpensesTab() {
                                         setTransferExpId(null); setTransferBtnRect(null)
                                       } else {
                                         setTransferExpId(e.id)
-                                        setTransferBtnRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                                        const dropH = 320 // approx dropdown height
+                                        const openUp = rect.bottom + dropH > window.innerHeight
+                                        setTransferBtnRect(openUp
+                                          ? { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }
+                                          : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+                                        )
                                       }
                                       setTransferExpMonth('')
                                     }}
@@ -4736,7 +4770,7 @@ function ExpensesTab() {
           <div className="fixed inset-0 z-[998]" onClick={() => { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('') }} />
           <div
             className="bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl min-w-[190px]"
-            style={{ position: 'fixed', top: transferBtnRect.top, right: transferBtnRect.right, zIndex: 999 }}
+            style={{ position: 'fixed', top: transferBtnRect.top, bottom: transferBtnRect.bottom, right: transferBtnRect.right, zIndex: 999 }}
             dir="rtl"
             onClick={ev => ev.stopPropagation()}
           >
