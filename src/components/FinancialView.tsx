@@ -47,6 +47,7 @@ function SuppliersTab() {
   const [filterDept, setFilterDept] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [openSupMonth, setOpenSupMonth] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -249,47 +250,114 @@ function SuppliersTab() {
                           </span>
                         </div>
                       </div>
-                      {/* Payments table */}
+                      {/* Payments table — grouped by year → month, descending */}
                       {t.count === 0 ? (
                         <div className="text-xs text-gray-400 py-2">אין תשלומים רשומים לספק זה</div>
-                      ) : (
-                        <table className="w-full text-xs border-collapse rounded-xl overflow-hidden">
-                          <thead>
-                            <tr className="bg-indigo-100 text-indigo-700">
-                              <th className="px-3 py-2 text-right font-semibold">חודש</th>
-                              <th className="px-3 py-2 text-right font-semibold">תיאור</th>
-                              <th className="px-3 py-2 text-right font-semibold">סכום</th>
-                              <th className="px-3 py-2 text-right font-semibold">שולם</th>
-                              <th className="px-3 py-2 text-right font-semibold">יתרה לתשלום</th>
-                              <th className="px-3 py-2 text-right font-semibold">תאריך תשלום</th>
-                              <th className="px-3 py-2 text-center font-semibold">חשבונית</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {t.rows.map((ex, ri) => {
-                              const rowBal = ex.total - ex.paid
-                              return (
-                                <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-indigo-50/40'}>
-                                  <td className="px-3 py-2 text-gray-600">{ex.month || '—'}</td>
-                                  <td className="px-3 py-2 text-gray-700 max-w-[220px] truncate">{ex.description || '—'}</td>
-                                  <td className="px-3 py-2 font-mono text-gray-800">{fmtS(ex.total)}</td>
-                                  <td className="px-3 py-2 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
-                                  <td className={`px-3 py-2 font-mono font-semibold ${rowBal > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                    {rowBal > 0 ? fmtS(rowBal) : '✔'}
-                                  </td>
-                                  <td className="px-3 py-2 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
-                                  <td className="px-3 py-2 text-center">
-                                    {ex.has_invoice
-                                      ? <span className="text-emerald-500 font-bold">✔</span>
-                                      : <span className="text-gray-300">—</span>
+                      ) : (() => {
+                        // Sort descending
+                        const sorted = [...t.rows].sort((a, b) => (b.month || '').localeCompare(a.month || ''))
+                        // Group by year
+                        const yearMap: Record<string, Record<string, SupExpense[]>> = {}
+                        sorted.forEach(ex => {
+                          const yr = (ex.month || '').slice(0, 4) || '—'
+                          const mo = ex.month || '—'
+                          if (!yearMap[yr]) yearMap[yr] = {}
+                          if (!yearMap[yr][mo]) yearMap[yr][mo] = []
+                          yearMap[yr][mo].push(ex)
+                        })
+                        const years = Object.keys(yearMap).sort((a, b) => b.localeCompare(a))
+                        const MONTH_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+                        const moLabel = (key: string) => {
+                          const m = parseInt(key.slice(5)) - 1
+                          return `${MONTH_HE[m] || key.slice(5)} ${key.slice(0, 4)}`
+                        }
+                        return (
+                          <table className="w-full text-xs border-collapse rounded-xl overflow-hidden">
+                            <thead>
+                              <tr className="bg-indigo-100 text-indigo-700">
+                                <th className="px-3 py-2 text-right font-semibold w-6"></th>
+                                <th className="px-3 py-2 text-right font-semibold">חודש / תיאור</th>
+                                <th className="px-3 py-2 text-right font-semibold">סכום</th>
+                                <th className="px-3 py-2 text-right font-semibold">שולם</th>
+                                <th className="px-3 py-2 text-right font-semibold">יתרה</th>
+                                <th className="px-3 py-2 text-right font-semibold">תאריך תשלום</th>
+                                <th className="px-3 py-2 text-center font-semibold">חשבונית</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {years.map(yr => {
+                                const months = Object.keys(yearMap[yr]).sort((a, b) => b.localeCompare(a))
+                                const yrTotal = months.reduce((s, mo) => s + yearMap[yr][mo].reduce((ss, ex) => ss + ex.total, 0), 0)
+                                const yrPaid  = months.reduce((s, mo) => s + yearMap[yr][mo].reduce((ss, ex) => ss + ex.paid, 0), 0)
+                                return [
+                                  // Year header row
+                                  <tr key={`yr-${yr}`} className="bg-indigo-600">
+                                    <td colSpan={3} className="px-3 py-1.5 text-white font-bold text-xs">{yr}</td>
+                                    <td className="px-3 py-1.5 text-indigo-100 text-xs font-semibold">{fmtS(yrPaid)}</td>
+                                    <td className="px-3 py-1.5 font-semibold text-xs" style={{ color: yrTotal - yrPaid > 0 ? '#fca5a5' : '#86efac' }}>{yrTotal - yrPaid > 0 ? fmtS(yrTotal - yrPaid) : '✔'}</td>
+                                    <td colSpan={2} />
+                                  </tr>,
+                                  // Month rows
+                                  ...months.map(mo => {
+                                    const rows = yearMap[yr][mo]
+                                    const moKey = `${s.id}-${mo}`
+                                    const isMonthOpen = openSupMonth === moKey
+                                    const moTotal = rows.reduce((ss, ex) => ss + ex.total, 0)
+                                    const moPaid  = rows.reduce((ss, ex) => ss + ex.paid, 0)
+                                    const moBal   = moTotal - moPaid
+                                    if (rows.length === 1) {
+                                      const ex = rows[0]
+                                      const rowBal = ex.total - ex.paid
+                                      return (
+                                        <tr key={mo} className="bg-white hover:bg-indigo-50/30">
+                                          <td className="px-3 py-2" />
+                                          <td className="px-3 py-2 text-gray-700">{moLabel(mo)} — {ex.description || '—'}</td>
+                                          <td className="px-3 py-2 font-mono text-gray-800">{fmtS(ex.total)}</td>
+                                          <td className="px-3 py-2 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
+                                          <td className={`px-3 py-2 font-mono font-semibold ${rowBal > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{rowBal > 0 ? fmtS(rowBal) : '✔'}</td>
+                                          <td className="px-3 py-2 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
+                                          <td className="px-3 py-2 text-center">{ex.has_invoice ? <span className="text-emerald-500 font-bold">✔</span> : <span className="text-gray-300">—</span>}</td>
+                                        </tr>
+                                      )
                                     }
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      )}
+                                    // Multiple rows → accordion
+                                    return [
+                                      <tr key={`${mo}-header`}
+                                        className="cursor-pointer bg-indigo-50 hover:bg-indigo-100/60 border-b border-indigo-100"
+                                        onClick={() => setOpenSupMonth(isMonthOpen ? null : moKey)}
+                                      >
+                                        <td className="px-3 py-2 text-center">
+                                          <span className="text-indigo-400 text-[10px] transition-transform duration-200 inline-block select-none"
+                                            style={{ transform: isMonthOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                                        </td>
+                                        <td className="px-3 py-2 font-semibold text-indigo-700">{moLabel(mo)} <span className="text-indigo-400 font-normal text-[10px] mr-1">({rows.length} תשלומים)</span></td>
+                                        <td className="px-3 py-2 font-mono font-semibold text-gray-800">{fmtS(moTotal)}</td>
+                                        <td className="px-3 py-2 font-mono text-emerald-600 font-semibold">{fmtS(moPaid)}</td>
+                                        <td className={`px-3 py-2 font-mono font-semibold ${moBal > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{moBal > 0 ? fmtS(moBal) : '✔'}</td>
+                                        <td colSpan={2} />
+                                      </tr>,
+                                      ...(isMonthOpen ? rows.map((ex, ri) => {
+                                        const rowBal = ex.total - ex.paid
+                                        return (
+                                          <tr key={`${mo}-${ri}`} className="bg-white border-b border-indigo-50">
+                                            <td className="px-3 py-1.5" />
+                                            <td className="px-3 py-1.5 text-gray-600 pl-6">↳ {ex.description || '—'}</td>
+                                            <td className="px-3 py-1.5 font-mono text-gray-700">{fmtS(ex.total)}</td>
+                                            <td className="px-3 py-1.5 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
+                                            <td className={`px-3 py-1.5 font-mono ${rowBal > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{rowBal > 0 ? fmtS(rowBal) : '✔'}</td>
+                                            <td className="px-3 py-1.5 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
+                                            <td className="px-3 py-1.5 text-center">{ex.has_invoice ? <span className="text-emerald-500">✔</span> : <span className="text-gray-300">—</span>}</td>
+                                          </tr>
+                                        )
+                                      }) : [])
+                                    ]
+                                  })
+                                ]
+                              })}
+                            </tbody>
+                          </table>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ) : null
