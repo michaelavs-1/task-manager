@@ -820,7 +820,7 @@ function FinancialDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {[...months].reverse().map((m, i) => {
+                {months.map((m, i) => {
                   const rem    = m.revenue - m.paid - m.withheld
                   const profit = m.revenue - m.expenses
                   return (
