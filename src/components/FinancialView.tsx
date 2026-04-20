@@ -547,13 +547,23 @@ function FinancialDashboard() {
           cfMap[key].expRows.push({ supplier: exp.supplier || '—', project: projName, unpaid })
           cfMap[key].expTotal += unpaid
         })
-        const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
+        const currentMonthKey = new Date().toISOString().slice(0, 7)
+        const cfMonths = Object.values(cfMap)
+          .filter(m => m.key >= currentMonthKey)
+          .sort((a, b) => a.key.localeCompare(b.key))
         if (cfMonths.length === 0) return null
         const grandIncome = cfMonths.reduce((s, m) => s + m.total, 0)
         const grandExp    = cfMonths.reduce((s, m) => s + m.expTotal, 0)
         const grandNet    = grandIncome - grandExp
         const bankNum     = parseFloat(bankBalance.replace(/,/g, '')) || 0
         const grandWithBank = grandNet + bankNum
+        // Running balance per month: starts with bank balance, accumulates each month's net
+        let running = bankNum
+        const runningByMonth: Record<string, number> = {}
+        cfMonths.forEach(mo => {
+          running += (mo.total - mo.expTotal)
+          runningByMonth[mo.key] = running
+        })
 
         return (
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.06)' }}>
@@ -594,6 +604,7 @@ function FinancialDashboard() {
               {cfMonths.map(mo => {
                 const isOpen = cfOpenMonth === mo.key
                 const net = mo.total - mo.expTotal
+                const runningAfter = runningByMonth[mo.key]
                 return (
                   <button
                     key={mo.key}
@@ -602,7 +613,7 @@ function FinancialDashboard() {
                     style={{
                       background: isOpen ? '#6366f1' : 'var(--bg-secondary)',
                       border: `1.5px solid ${isOpen ? '#6366f1' : 'var(--border-color)'}`,
-                      minWidth: 148,
+                      minWidth: 155,
                     }}
                   >
                     <div className="text-xs font-semibold mb-1.5" style={{ color: isOpen ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>{mo.label}</div>
@@ -622,6 +633,12 @@ function FinancialDashboard() {
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
                       <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
                     </div>
+                    {bankNum !== 0 && (
+                      <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>יתרה בחשבון</div>
+                        <div className="text-xs font-bold" style={{ color: isOpen ? (runningAfter >= 0 ? '#bbf7d0' : '#fca5a5') : (runningAfter >= 0 ? '#10b981' : '#ef4444') }}>{fmt(runningAfter)}</div>
+                      </div>
+                    )}
                   </button>
                 )
               })}
