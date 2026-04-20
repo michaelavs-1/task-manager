@@ -1225,6 +1225,10 @@ function InvoicesTab() {
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   useEsc(deleteId !== null, () => setDeleteId(null))
+  // Withholding confirmation modal state
+  const [withholdingInv, setWithholdingInv] = useState<InvoiceRow | null>(null)
+  const [withhold5, setWithhold5] = useState<boolean>(false)
+  useEsc(withholdingInv !== null, () => setWithholdingInv(null))
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [reassignProjectId, setReassignProjectId] = useState<number | null>(null)
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
@@ -1369,13 +1373,18 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
   }
 
-  // Quick-action checkmark: prompt for withholding %, then close out the invoice
-  async function markInvoicePaidAskWithholding(inv: InvoiceRow) {
-    const ans = window.prompt('נוכה מס במקור? הכנס אחוז (ריק = 0, למשל 5 עבור 5%)', '')
-    if (ans === null) return
-    const pct = Number(ans) || 0
+  // Open the withholding confirmation modal
+  function markInvoicePaidAskWithholding(inv: InvoiceRow) {
+    setWithhold5(false)
+    setWithholdingInv(inv)
+  }
+
+  // Commit the confirmation from the modal
+  async function confirmMarkPaidWithWithholding() {
+    if (!withholdingInv) return
+    const inv = withholdingInv
     const base = inv.before_vat || 0
-    const withheld = roundCents(base * (pct / 100))
+    const withheld = withhold5 ? roundCents(base * 0.05) : 0
     const paid = roundCents(inv.total - withheld)
     const patch: Partial<InvoiceRow> = {
       paid,
@@ -1385,6 +1394,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     const res = await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
     const data = await res.json()
     if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+    setWithholdingInv(null)
   }
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
@@ -1834,6 +1844,47 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
           saving={saving}
         />
       )}
+
+      {/* Mark-paid + withholding modal */}
+      {withholdingInv !== null && (() => {
+        const inv = withholdingInv
+        const base = inv.before_vat || 0
+        const withheldPreview = withhold5 ? roundCents(base * 0.05) : 0
+        const paidPreview = roundCents(inv.total - withheldPreview)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setWithholdingInv(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold text-gray-800 text-base">סימון חשבונית כשולמה</h3>
+              <div className="text-xs text-gray-500 leading-relaxed">
+                {inv.client && <div>לקוח: <span className="font-semibold text-gray-700">{inv.client}</span></div>}
+                <div>סה"כ: <span className="font-semibold text-gray-700">{fmt(inv.total)}</span></div>
+              </div>
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={withhold5}
+                  onChange={e => setWithhold5(e.target.checked)}
+                  className="w-4 h-4 accent-purple-600"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-gray-800">נוכה מס במקור 5%</div>
+                  <div className="text-[11px] text-gray-500">מחושב מהסכום לפני מע״מ ({fmt(base)})</div>
+                </div>
+              </label>
+              <div className="rounded-xl bg-gray-50 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-gray-500">שולם:</span><span className="font-semibold text-emerald-600">{fmt(paidPreview)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">ניכוי מס:</span><span className="font-semibold text-purple-600">{withheldPreview > 0 ? fmt(withheldPreview) : '—'}</span></div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={confirmMarkPaidWithWithholding} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>
+                  אישור
+                </button>
+                <button onClick={() => setWithholdingInv(null)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Delete Confirm */}
       {deleteId !== null && (
