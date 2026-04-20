@@ -305,6 +305,18 @@ function SuppliersTab() {
 // ── Financial Dashboard ───────────────────────────────────────────────────────
 const MONTH_NAMES_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
 
+// All months 2025-01 → 2026-12 (used in InvoicesTab + ExpensesTab to pad empty months)
+const ALL_MONTHS_FULL: { key: string; label: string }[] = (() => {
+  const list: { key: string; label: string }[] = []
+  for (let y = 2025; y <= 2026; y++) {
+    for (let mo = 1; mo <= 12; mo++) {
+      const key = `${y}-${String(mo).padStart(2,'0')}`
+      list.push({ key, label: `${MONTH_NAMES_HE[mo-1]} ${y}` })
+    }
+  }
+  return list
+})()
+
 function fmt(n: number) {
   return '₪' + Math.round(n).toLocaleString('he-IL')
 }
@@ -1541,18 +1553,6 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     setTransferInvId(null)
   }
 
-  // All months from 2025-01 to 2026-12
-  const ALL_MONTHS: { key: string; label: string }[] = (() => {
-    const list: { key: string; label: string }[] = []
-    for (let y = 2025; y <= 2026; y++) {
-      for (let mo = 1; mo <= 12; mo++) {
-        const key = `${y}-${String(mo).padStart(2,'0')}`
-        list.push({ key, label: `${MONTH_NAMES_HE[mo-1]} ${y}` })
-      }
-    }
-    return list
-  })()
-
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
@@ -1867,26 +1867,6 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        {/* Transfer button */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setTransferInvId(transferInvId === inv.id ? null : inv.id)}
-                            title="העברה לחודש אחר"
-                            className="px-1.5 py-1 rounded-lg hover:bg-violet-100 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
-                          >העברה</button>
-                          {transferInvId === inv.id && (
-                            <div className="absolute left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
-                              <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100">העבר לחודש:</div>
-                              {ALL_MONTHS.map(mo => (
-                                <button
-                                  key={mo.key}
-                                  onClick={() => transferInvoiceToMonth(inv.id, mo.key)}
-                                  className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 transition-colors"
-                                >{mo.label}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
                         <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
@@ -1968,7 +1948,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
               mGroups[key].rows.push(inv)
             })
             // Add empty months up to Dec 2026, respecting the active year filter
-            ALL_MONTHS
+            ALL_MONTHS_FULL
               .filter(m => !selectedYear || m.key.startsWith(selectedYear))
               .forEach(({ key, label }) => {
                 if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
@@ -2189,26 +2169,6 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   <button onClick={() => setModalInv(inv)} className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
-                                  {/* Transfer button */}
-                                  <div className="relative">
-                                    <button
-                                      onClick={() => setTransferInvId(transferInvId === inv.id ? null : inv.id)}
-                                      title="העברה לחודש אחר"
-                                      className="px-1.5 py-1 rounded-lg hover:bg-violet-100 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
-                                    >העברה</button>
-                                    {transferInvId === inv.id && (
-                                      <div className="absolute left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
-                                        <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100">העבר לחודש:</div>
-                                        {ALL_MONTHS.map(mo => (
-                                          <button
-                                            key={mo.key}
-                                            onClick={() => transferInvoiceToMonth(inv.id, mo.key)}
-                                            className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 transition-colors"
-                                          >{mo.label}</button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
                                   <button onClick={() => setDeleteId(inv.id)} className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
@@ -3673,6 +3633,7 @@ function ExpensesTab() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
+  const [transferExpId, setTransferExpId] = useState<number | null>(null)
 
   const fmt = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
   const fmtDec = (n: number) => n ? `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'
@@ -3822,7 +3783,16 @@ function ExpensesTab() {
     return true
   })
 
-  const months = [...new Set(filtered.map(e => e.month).filter(Boolean))].sort()
+  // Build months list: filtered data months + all empty months up to 2026-12 (when no specific month filter active)
+  const filteredMonthsSet = new Set(filtered.map(e => e.month).filter(Boolean))
+  const monthsToShow: string[] = filterMonth
+    ? [filterMonth]
+    : (() => {
+        const set = new Set(filteredMonthsSet)
+        ALL_MONTHS_FULL.forEach(m => set.add(m.key))
+        return [...set].sort()
+      })()
+  const months = monthsToShow
   const allMonths = [...new Set(expenses.map(e => e.month).filter(Boolean))].sort()
 
   const projMap = Object.fromEntries(projects.map(p => [p.id, p]))
@@ -4306,12 +4276,38 @@ function ExpensesTab() {
                               </button>
                             </td>
 
-                            {/* Delete only */}
+                            {/* Transfer + Delete */}
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <button onClick={() => handleDelete(e.id)} disabled={deleting === e.id}
-                                className="p-1 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50 opacity-0 group-hover:opacity-100" title="מחק">
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Transfer to month */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setTransferExpId(transferExpId === e.id ? null : e.id)}
+                                    title="העברה לחודש אחר"
+                                    className="px-1.5 py-1 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
+                                  >העברה</button>
+                                  {transferExpId === e.id && (
+                                    <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
+                                      <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-700">העבר לחודש:</div>
+                                      {ALL_MONTHS_FULL.map(mo => (
+                                        <button
+                                          key={mo.key}
+                                          onClick={async () => {
+                                            await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: mo.key }) })
+                                            setExpenses(prev => prev.map(x => x.id === e.id ? { ...x, month: mo.key } : x))
+                                            setTransferExpId(null)
+                                          }}
+                                          className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-200 hover:text-indigo-700 transition-colors"
+                                        >{mo.label}</button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <button onClick={() => handleDelete(e.id)} disabled={deleting === e.id}
+                                  className="p-1 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="מחק">
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
