@@ -2,7 +2,7 @@
 import { useState, useEffect, Fragment, useRef } from 'react'
 import { useEsc } from '../hooks/useEsc'
 
-export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses'
+export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses' | 'authority_payments'
 
 const INVOICES_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo/edit?gid=584902190'
 
@@ -322,6 +322,7 @@ function FinancialDashboard() {
   const [loading, setLoading] = useState(true)
   const [gl, setGl] = useState<GlSummary | null>(null)
   const [glLoading, setGlLoading] = useState(true)
+  const [hoveredBar, setHoveredBar] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -500,14 +501,16 @@ function FinancialDashboard() {
                 const revH = Math.round((m.revenue / maxRev) * 130)
                 const paidH = Math.round((m.paid / maxRev) * 130)
                 return (
-                  <div key={m.sortKey} className="flex flex-col items-center gap-1 flex-1 min-w-[36px] group">
+                  <div key={m.sortKey} className="flex flex-col items-center gap-1 flex-1 min-w-[36px]"
+                    onMouseEnter={() => setHoveredBar(m.sortKey)}
+                    onMouseLeave={() => setHoveredBar(null)}>
                     <div className="relative w-full flex flex-col justify-end" style={{ height: 130 }}>
                       {/* Revenue bar */}
                       <div className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all" style={{ height: revH, background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.3)' }} />
                       {/* Paid bar */}
                       <div className="absolute bottom-0 left-1 right-1 rounded-t-lg transition-all" style={{ height: paidH, background: 'linear-gradient(to top, #6366f1, #818cf8)' }} />
                       {/* Tooltip */}
-                      <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: 10 }}>
+                      <div className={`absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs px-2 py-1 rounded-lg transition-opacity z-10 pointer-events-none ${hoveredBar === m.sortKey ? 'opacity-100' : 'opacity-0'}`} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: 10 }}>
                         {fmt(m.revenue)}
                       </div>
                     </div>
@@ -749,7 +752,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
     if (!monthMap[key]) monthMap[key] = { label, invoices: [] }
     monthMap[key].invoices.push(inv)
   })
-  const months = Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0]))
+  const months = Object.entries(monthMap).sort((a,b) => a[0].localeCompare(b[0]))
 
   if (months.length === 0) return null
 
@@ -1017,6 +1020,32 @@ function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
     </div>
   )
 }
+
+// ── IssuedByPicker — inline employee picker ──
+const TEAM_MEMBERS = ['מיכאל', 'דן', 'דעיה']
+function IssuedByPicker({ current, onSave, onClose }: {
+  current: string
+  onSave: (name: string) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="absolute z-50 right-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-1.5 min-w-[140px]" dir="rtl">
+      {TEAM_MEMBERS.map(name => (
+        <button
+          key={name}
+          onClick={() => onSave(name)}
+          className={`w-full text-right px-3 py-2 rounded-xl text-sm font-medium transition-colors ${current === name ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}
+        >
+          {name}
+        </button>
+      ))}
+      <div className="pt-1 border-t border-gray-100">
+        <button onClick={onClose} className="w-full py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
   client_id: null, project_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
   invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, tax_withheld: 0, payment_date: '', notes: '',
@@ -1320,6 +1349,7 @@ function InvoicesTab() {
   const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
   const [editNotesId, setEditNotesId] = useState<number | null>(null)
   const [editNotesVal, setEditNotesVal] = useState('')
+  const [transferInvId, setTransferInvId] = useState<number | null>(null)
   function toggleExpanded(id: number) {
     setExpandedInvIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   }
@@ -1501,6 +1531,27 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     setInvoices(prev => prev.map(x => x.id === invId ? { ...x, notes: editNotesVal } : x))
     setEditNotesId(null)
   }
+
+  async function transferInvoiceToMonth(invId: number, targetMonthKey: string) {
+    // targetMonthKey = "YYYY-MM"
+    const [y, mo] = targetMonthKey.split('-')
+    const newDate = isoToIsraeli(`${y}-${mo}-01`)
+    await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: newDate }) })
+    setInvoices(prev => prev.map(x => x.id === invId ? { ...x, date: newDate } : x))
+    setTransferInvId(null)
+  }
+
+  // All months from 2025-01 to 2026-12
+  const ALL_MONTHS: { key: string; label: string }[] = (() => {
+    const list: { key: string; label: string }[] = []
+    for (let y = 2025; y <= 2026; y++) {
+      for (let mo = 1; mo <= 12; mo++) {
+        const key = `${y}-${String(mo).padStart(2,'0')}`
+        list.push({ key, label: `${MONTH_NAMES_HE[mo-1]} ${y}` })
+      }
+    }
+    return list
+  })()
 
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
@@ -1739,21 +1790,14 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] relative">
                       {reassignIssuedById === inv.id ? (
-                        <input
-                          autoFocus
-                          value={editIssuedByVal}
-                          onChange={e => setEditIssuedByVal(e.target.value)}
-                          onBlur={async () => {
-                            const val = editIssuedByVal.trim()
-                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: val }) })
-                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: val } : x))
+                        <IssuedByPicker
+                          current={inv.issued_by || ''}
+                          onSave={async (name) => {
+                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: name }) })
+                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: name } : x))
                             setReassignIssuedById(null)
                           }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                            if (e.key === 'Escape') setReassignIssuedById(null)
-                          }}
-                          className="w-full border border-indigo-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          onClose={() => setReassignIssuedById(null)}
                         />
                       ) : (
                         <button
@@ -1814,7 +1858,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1 justify-center">
+                      <div className="flex gap-1 justify-center items-center">
                         {st !== 'paid' && (
                           <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
@@ -1823,6 +1867,26 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
+                        {/* Transfer button */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setTransferInvId(transferInvId === inv.id ? null : inv.id)}
+                            title="העברה לחודש אחר"
+                            className="px-1.5 py-1 rounded-lg hover:bg-violet-100 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
+                          >העברה</button>
+                          {transferInvId === inv.id && (
+                            <div className="absolute left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
+                              <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100">העבר לחודש:</div>
+                              {ALL_MONTHS.map(mo => (
+                                <button
+                                  key={mo.key}
+                                  onClick={() => transferInvoiceToMonth(inv.id, mo.key)}
+                                  className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 transition-colors"
+                                >{mo.label}</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <button onClick={() => setDeleteId(inv.id)} title="מחיקה" className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
@@ -1903,6 +1967,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
               if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
               mGroups[key].rows.push(inv)
             })
+            // Ensure all months from earliest existing to 2026-12 are shown (empty if needed)
+            ALL_MONTHS.forEach(({ key, label }) => {
+              if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
+            })
             const groups = Object.values(mGroups).sort((a,b) => a.key.localeCompare(b.key))
             const COLS = 15
             const TH = 'px-4 py-3 text-right font-semibold'
@@ -1933,10 +2001,12 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
                   ) : groups.map(group => {
                     const isCollapsed = collapsedMonths.has(group.key)
-                    const mTotal    = group.rows.reduce((s,i) => s+i.total, 0)
-                    const mPaid     = group.rows.reduce((s,i) => s+i.paid,  0)
-                    const mWithheld = group.rows.reduce((s,i) => s+(i.tax_withheld || 0), 0)
-                    const mRem      = Math.max(0, roundCents(mTotal - (mPaid + mWithheld)))
+                    const mTotal     = group.rows.reduce((s,i) => s+i.total, 0)
+                    const mPaid      = group.rows.reduce((s,i) => s+i.paid,  0)
+                    const mWithheld  = group.rows.reduce((s,i) => s+(i.tax_withheld || 0), 0)
+                    const mBeforeVat = group.rows.reduce((s,i) => s+(i.before_vat || 0), 0)
+                    const mVat       = roundCents(mTotal - mBeforeVat)
+                    const mRem       = Math.max(0, roundCents(mTotal - (mPaid + mWithheld)))
                     const mOpen     = group.rows.filter(i => Math.max(0, roundCents(i.total-(i.paid+(i.tax_withheld||0)))) > 0).length
 
                     return (
@@ -1960,8 +2030,13 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
                             {mWithheld > 0 && <span className="mr-2 text-xs text-purple-500" title="ניכוי מס במקור">ניכוי: {fmt(mWithheld)}</span>}
                           </td>
-                          {/* Empty: פרויקט, תאריך, סוג, מי הוציא, סכום חשבונית */}
-                          <td colSpan={5} />
+                          {/* Empty: פרויקט, תאריך, סוג, מי הוציא */}
+                          <td colSpan={4} />
+                          {/* סכום חשבונית + מע"מ */}
+                          <td className="px-4 py-3">
+                            <div className="text-xs font-bold text-gray-600">{fmt(mBeforeVat)}</div>
+                            {mVat > 0 && <div className="text-xs text-blue-400 mt-0.5">מע&quot;מ: {fmt(mVat)}</div>}
+                          </td>
                           {/* סה"כ לתשלום */}
                           <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
                           {/* שולם */}
@@ -2035,21 +2110,14 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] relative">
                                 {reassignIssuedById === inv.id ? (
-                                  <input
-                                    autoFocus
-                                    value={editIssuedByVal}
-                                    onChange={e => setEditIssuedByVal(e.target.value)}
-                                    onBlur={async () => {
-                                      const val = editIssuedByVal.trim()
-                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: val }) })
-                                      setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: val } : x))
+                                  <IssuedByPicker
+                                    current={inv.issued_by || ''}
+                                    onSave={async (name) => {
+                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: name }) })
+                                      setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: name } : x))
                                       setReassignIssuedById(null)
                                     }}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                                      if (e.key === 'Escape') setReassignIssuedById(null)
-                                    }}
-                                    className="w-full border border-indigo-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    onClose={() => setReassignIssuedById(null)}
                                   />
                                 ) : (
                                   <button
@@ -2110,7 +2178,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                 </button>
                               </td>
                               <td className="px-4 py-2.5">
-                                <div className="flex gap-1 justify-center">
+                                <div className="flex gap-1 justify-center items-center">
                                   {st !== 'paid' && (
                                     <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
                                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
@@ -2119,6 +2187,26 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   <button onClick={() => setModalInv(inv)} className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>
+                                  {/* Transfer button */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setTransferInvId(transferInvId === inv.id ? null : inv.id)}
+                                      title="העברה לחודש אחר"
+                                      className="px-1.5 py-1 rounded-lg hover:bg-violet-100 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
+                                    >העברה</button>
+                                    {transferInvId === inv.id && (
+                                      <div className="absolute left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
+                                        <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100">העבר לחודש:</div>
+                                        {ALL_MONTHS.map(mo => (
+                                          <button
+                                            key={mo.key}
+                                            onClick={() => transferInvoiceToMonth(inv.id, mo.key)}
+                                            className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 transition-colors"
+                                          >{mo.label}</button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                   <button onClick={() => setDeleteId(inv.id)} className="p-1 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
@@ -3885,9 +3973,9 @@ function ExpensesTab() {
                 <div className="flex-1" />
                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">שירותים: <span className="font-semibold text-gray-700 dark:text-gray-200">{fmt(mNet)}</span></span>
                 {mVat > 0 && <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">מע&quot;מ: <span className="font-semibold text-blue-600">{fmt(mVat)}</span></span>}
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">סה&quot;כ: <span className="font-semibold text-violet-600">{fmt(mTotal)}</span></span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">סה&quot;כ לתשלום: <span className="font-semibold text-violet-600">{fmt(mTotal)}</span></span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">שולם: <span className="font-semibold text-emerald-600">{fmt(mPaid)}</span></span>
-                {mBalance > 0 && <span className="text-xs text-rose-500 font-semibold ml-4">יתרה: {fmt(mBalance)}</span>}
+                {mBalance > 0 && <span className="text-xs text-rose-500 font-semibold ml-4">יתרה לתשלום: {fmt(mBalance)}</span>}
                 <button onClick={e => { e.stopPropagation(); openAdd(month) }}
                   className="mr-2 text-xs text-violet-500 hover:text-violet-700 font-medium flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -4410,6 +4498,8 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
 
       {activeTab === 'expenses' && <ExpensesTab />}
 
+      {activeTab === 'authority_payments' && <AuthorityPaymentsTab />}
+
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">
           <iframe
@@ -4418,6 +4508,162 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
             title="טבלה ישנה"
             loading="lazy"
           />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── AuthorityPaymentsTab ─────────────────────────────────────────────────────
+function AuthorityPaymentsTab() {
+  const AUTHORITY_TYPES = [
+    { key: 'vat',         label: 'מע"מ',              color: '#6366f1', bg: 'rgba(99,102,241,0.07)'  },
+    { key: 'income_tax',  label: 'מס הכנסה',          color: '#f59e0b', bg: 'rgba(245,158,11,0.07)'  },
+    { key: 'nii',         label: 'ביטוח לאומי',       color: '#10b981', bg: 'rgba(16,185,129,0.07)'  },
+    { key: 'withholding', label: 'ניכוי מס במקור',    color: '#8b5cf6', bg: 'rgba(139,92,246,0.07)'  },
+  ]
+  type AuthPayment = { id: number; authority: string; amount: number; period: string; due_date: string; paid_date: string; status: string; notes: string }
+  const [payments, setPayments] = useState<AuthPayment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [statusForm, setStatusForm] = useState<'paid'|'pending'|'overdue'>('paid')
+  const [form, setForm] = useState({ authority: 'vat', amount: '', period: '', due_date: '', paid_date: '', notes: '' })
+  const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+
+  useEffect(() => {
+    fetch('/api/authority-payments')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setPayments(data) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 p-4 gap-3" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800">תשלומי רשויות</h2>
+          <p className="text-xs text-gray-400 mt-0.5">מע"מ, מס הכנסה, ביטוח לאומי, ניכויים</p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#6366f1,#7c3aed)' }}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הוסף תשלום
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-shrink-0">
+        {AUTHORITY_TYPES.map(a => {
+          const total = payments.filter(p => p.authority === a.key).reduce((s, p) => s + (p.amount || 0), 0)
+          return (
+            <div key={a.key} className="rounded-2xl border border-gray-100 px-4 py-3" style={{ background: a.bg }}>
+              <div className="text-xs text-gray-500 mb-1">{a.label}</div>
+              <div className="text-base font-bold" style={{ color: a.color }}>{fmt(total)}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 rounded-2xl overflow-auto border border-gray-100 bg-white">
+        {loading ? (
+          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">טוען...</div>
+        ) : payments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-3">
+            <svg className="w-10 h-10 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            <p className="text-sm">אין תשלומי רשויות עדיין</p>
+            <button onClick={() => setShowAdd(true)} className="text-indigo-500 text-sm hover:underline">+ הוסף תשלום ראשון</button>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wide bg-gray-50">
+                <th className="px-4 py-3 text-right font-semibold">רשות</th>
+                <th className="px-4 py-3 text-right font-semibold">תקופה</th>
+                <th className="px-4 py-3 text-right font-semibold">סכום</th>
+                <th className="px-4 py-3 text-right font-semibold">תאריך תשלום</th>
+                <th className="px-4 py-3 text-right font-semibold">סטטוס</th>
+                <th className="px-4 py-3 text-right font-semibold">הערות</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {payments.map(p => {
+                const auth = AUTHORITY_TYPES.find(a => a.key === p.authority)
+                const statusLabel = p.status === 'paid' ? 'שולם' : p.status === 'overdue' ? 'באיחור' : 'ממתין'
+                const statusColor = p.status === 'paid' ? 'text-emerald-600 bg-emerald-50' : p.status === 'overdue' ? 'text-red-600 bg-red-50' : 'text-amber-600 bg-amber-50'
+                return (
+                  <tr key={p.id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-lg text-xs font-semibold" style={{ background: auth?.bg, color: auth?.color }}>{auth?.label || p.authority}</span></td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{p.period || '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-800">{fmt(p.amount)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{p.paid_date || p.due_date || '—'}</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${statusColor}`}>{statusLabel}</span></td>
+                    <td className="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate">{p.notes || '—'}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={async () => { await fetch(`/api/authority-payments/${p.id}`, { method: 'DELETE' }); setPayments(prev => prev.filter(x => x.id !== p.id)) }} className="p-1 rounded-lg hover:bg-red-100 text-gray-300 hover:text-red-500 transition-colors">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Add modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-gray-800 text-base">הוספת תשלום רשות</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-400 mb-1">רשות</label>
+                <select value={form.authority} onChange={e => setForm(f => ({ ...f, authority: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  {AUTHORITY_TYPES.map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">תקופה (לדוגמה: 04/2026)</label>
+                <input type="text" placeholder="04/2026" value={form.period} onChange={e => setForm(f => ({ ...f, period: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">סכום (₪)</label>
+                <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">תאריך תשלום</label>
+                <input type="date" value={form.paid_date} onChange={e => setForm(f => ({ ...f, paid_date: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">סטטוס</label>
+                <select value={statusForm} onChange={e => setStatusForm(e.target.value as 'paid'|'pending'|'overdue')} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <option value="paid">שולם</option>
+                  <option value="pending">ממתין</option>
+                  <option value="overdue">באיחור</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-400 mb-1">הערות</label>
+                <input type="text" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={async () => {
+                  const res = await fetch('/api/authority-payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, amount: Number(form.amount) || 0, status: statusForm }) })
+                  const data = await res.json()
+                  if (!data.error) { setPayments(prev => [...prev, data]); setShowAdd(false); setForm({ authority: 'vat', amount: '', period: '', due_date: '', paid_date: '', notes: '' }); setStatusForm('paid') }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                style={{ background: 'linear-gradient(135deg,#6366f1,#7c3aed)' }}
+              >שמור</button>
+              <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
