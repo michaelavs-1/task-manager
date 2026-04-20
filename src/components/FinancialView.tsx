@@ -4057,6 +4057,7 @@ function ExpensesTab() {
   const [filterVat, setFilterVat] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterInvoice, setFilterInvoice] = useState<'' | 'yes' | 'no'>('')
+  const [filterPayment, setFilterPayment] = useState<'all' | 'open' | 'closed'>('all')
   const [projDropOpen, setProjDropOpen] = useState(false)
   const [projDropSearch, setProjDropSearch] = useState('')
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
@@ -4237,6 +4238,8 @@ function ExpensesTab() {
     if (filterMonth && e.month !== filterMonth) return false
     if (filterInvoice === 'yes' && !e.has_invoice) return false
     if (filterInvoice === 'no' && e.has_invoice) return false
+    if (filterPayment === 'open' && roundCents(e.total - e.paid) <= 0) return false
+    if (filterPayment === 'closed' && roundCents(e.total - e.paid) > 0) return false
     return true
   })
 
@@ -4398,8 +4401,16 @@ function ExpensesTab() {
           <option value="yes">יש חשבונית</option>
           <option value="no">אין חשבונית</option>
         </select>
-        {(filterMonth || filterProject || filterVat || filterInvoice) && (
-          <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice('') }}
+        {/* Payment status filter */}
+        <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+          {([['all','הכל'],['open','פתוחים'],['closed','סגורים']] as const).map(([val, label]) => (
+            <button key={val} onClick={() => setFilterPayment(val)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${filterPayment === val ? 'bg-white dark:bg-gray-600 shadow text-violet-700 dark:text-violet-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+            >{label}</button>
+          ))}
+        </div>
+        {(filterMonth || filterProject || filterVat || filterInvoice || filterPayment !== 'all') && (
+          <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice(''); setFilterPayment('all') }}
             className="text-xs text-gray-400 hover:text-gray-600 underline">נקה פילטרים</button>
         )}
         <div className="flex-1" />
