@@ -31,11 +31,12 @@ export async function POST(req: NextRequest) {
       doc_type:    body.doc_type    ?? '',
       invoice_num: body.invoice_num ?? '',
       client:      body.client      ?? '',
-      before_vat:  Number(body.before_vat) || 0,
-      total:       Number(body.total)       || 0,
-      paid:        Number(body.paid)        || 0,
-      notes:       body.notes       ?? '',
-      project_id:  body.project_id  ?? null,
+      before_vat:   Number(body.before_vat)   || 0,
+      total:        Number(body.total)        || 0,
+      paid:         Number(body.paid)         || 0,
+      tax_withheld: Number(body.tax_withheld) || 0,
+      notes:        body.notes       ?? '',
+      project_id:   body.project_id  ?? null,
     })
     .select()
     .single()

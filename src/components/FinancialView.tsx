@@ -334,10 +334,11 @@ function FinancialDashboard() {
   )
 
   // ── KPIs ──
-  const totalRevenue = invoices.reduce((s, i) => s + (i.before_vat || 0), 0)
-  const totalPaid    = invoices.reduce((s, i) => s + (i.paid  || 0), 0)
-  const totalRemain  = totalRevenue - totalPaid
-  const openCount    = invoices.filter(i => (i.total - i.paid) > 0).length
+  const totalRevenue   = invoices.reduce((s, i) => s + (i.before_vat || 0), 0)
+  const totalPaid      = invoices.reduce((s, i) => s + (i.paid || 0), 0)
+  const totalWithheld  = invoices.reduce((s, i) => s + (i.tax_withheld || 0), 0)
+  const totalRemain    = Math.max(0, totalRevenue - totalPaid - totalWithheld)
+  const openCount      = invoices.filter(i => (i.total - i.paid - (i.tax_withheld || 0)) > 0).length
 
   // Expenses KPIs (for top-level "everything at a glance" overview)
   const totalExpNet = expenses.reduce((s, e) => s + (e.amount || 0), 0)
@@ -355,17 +356,18 @@ function FinancialDashboard() {
   const collectionPct  = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0
 
   // ── Monthly breakdown ──
-  type MonthData = { label: string; sortKey: string; revenue: number; paid: number; count: number }
+  type MonthData = { label: string; sortKey: string; revenue: number; paid: number; withheld: number; count: number }
   const monthMap: Record<string, MonthData> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-    if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, count: 0 }
-    monthMap[key].revenue += inv.before_vat || 0
-    monthMap[key].paid    += inv.paid  || 0
-    monthMap[key].count   += 1
+    if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, withheld: 0, count: 0 }
+    monthMap[key].revenue  += inv.before_vat || 0
+    monthMap[key].paid     += inv.paid  || 0
+    monthMap[key].withheld += inv.tax_withheld || 0
+    monthMap[key].count    += 1
   })
   const months = Object.values(monthMap).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12)
 
@@ -414,8 +416,8 @@ function FinancialDashboard() {
           // Row 2 — cashflow / collection picture
           { label: 'תשלומים',          value: fmt(totalPaid),     icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.08)', sub: `${collectionPct.toFixed(0)}% נגבה` },
           { label: 'נותר לגבייה',      value: fmt(totalRemain),   icon: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+          { label: 'ניכוי מס במקור',   value: fmt(totalWithheld), icon: '🏛️', color: '#a855f7', bg: 'rgba(168,85,247,0.08)', sub: totalRevenue > 0 ? `${(totalWithheld / totalRevenue * 100).toFixed(1)}% מההכנסות` : undefined },
           { label: 'חשבוניות פתוחות',  value: String(openCount),  icon: '📋', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
-          { label: 'מס\' הוצאות',       value: String(expenses.length), icon: '📊', color: '#a855f7', bg: 'rgba(168,85,247,0.08)' },
         ].map(card => (
           <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <div className="flex items-center justify-between">
@@ -505,19 +507,20 @@ function FinancialDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)' }}>
-                  {['חודש','הכנסות','תשלומים','נותר','חשבוניות'].map(h => (
+                  {['חודש','הכנסות','תשלומים','ניכוי מס','נותר','חשבוניות'].map(h => (
                     <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {[...months].map((m, i) => {
-                  const rem = m.revenue - m.paid
+                  const rem = m.revenue - m.paid - m.withheld
                   return (
                     <tr key={m.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
                       <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.label}</td>
                       <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(m.revenue)}</td>
                       <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(m.paid)}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: '#a855f7' }}>{m.withheld > 0 ? fmt(m.withheld) : '—'}</td>
                       <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{fmt(rem)}</td>
                       <td className="px-4 py-2.5 text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{m.count}</td>
                     </tr>
@@ -789,7 +792,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
 }
 
 // Helper type for dashboard (subset of InvoiceRow)
-interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; client: string; doc_type: string }
+interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; tax_withheld?: number; client: string; doc_type: string }
 
 // ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
@@ -805,6 +808,7 @@ interface InvoiceRow {
   before_vat: number
   total: number
   paid: number
+  tax_withheld: number
   payment_date: string
   notes: string
 }
@@ -818,9 +822,11 @@ const STATUS_STYLE: Record<string, string> = {
 
 function roundCents(n: number) { return Math.round(n * 100) / 100 }
 function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
-  const remaining = roundCents(inv.total - inv.paid)
+  // Tax withheld at source counts toward "fully paid" even though it didn't land in our account
+  const settled = (inv.paid || 0) + (inv.tax_withheld || 0)
+  const remaining = roundCents(inv.total - settled)
   if (inv.total > 0 && remaining < 1) return 'paid'
-  if (inv.paid > 0) return 'partial'
+  if (settled > 0) return 'partial'
   return 'unpaid'
 }
 
@@ -931,7 +937,7 @@ function ProjectPicker({ projectList, currentProjectId, onSave, onClose }: {
 }
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
   client_id: null, project_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
-  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, payment_date: '', notes: '',
+  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, tax_withheld: 0, payment_date: '', notes: '',
 }
 
 type InvoiceForm = Omit<InvoiceRow, 'id'>
@@ -1017,7 +1023,7 @@ function InvoiceModal({
   useEsc(true, onClose)
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const v = ['before_vat','total','paid'].includes(k) ? Number(e.target.value) || 0 : e.target.value
+    const v = ['before_vat','total','paid','tax_withheld'].includes(k) ? Number(e.target.value) || 0 : e.target.value
     setForm(f => {
       const next = { ...f, [k]: v } as InvoiceForm
       // Auto-calculate total (incl. VAT) from before_vat — user can still override the total field afterwards.
@@ -1114,6 +1120,36 @@ function InvoiceModal({
           <ModalField label='סכום לפני מע"מ ₪' value={form.before_vat} onChange={set('before_vat')} type="number" />
           <ModalField label='סה"כ כולל מע"מ ₪' value={form.total} onChange={set('total')} type="number" />
           <ModalField label='שולם ₪' value={form.paid} onChange={set('paid')} type="number" />
+
+          {/* Tax withheld at source (ניכוי מס במקור) with quick 5% helper */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs text-gray-400">ניכוי מס במקור ₪</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const base = form.before_vat || 0
+                  const w = roundCents(base * 0.05)
+                  setForm(f => ({
+                    ...f,
+                    tax_withheld: w,
+                    // If user hasn't recorded any payment yet, assume 95% received
+                    paid: (f.paid || 0) === 0 ? roundCents(f.total - w) : f.paid,
+                  }))
+                }}
+                className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold"
+                title="חישוב ניכוי 5% מהסכום לפני מע״מ"
+              >
+                5%
+              </button>
+            </div>
+            <input
+              type="number"
+              value={form.tax_withheld}
+              onChange={set('tax_withheld')}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+            />
+          </div>
 
           {/* payment_date picker */}
           <div>
@@ -1263,7 +1299,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
   const filtered = invoices.filter(inv => {
     const q = search.toLowerCase()
     const st = invoiceStatus(inv)
-    const remaining = Math.max(0, roundCents(inv.total - inv.paid))
+    const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
     const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
     const matchYear = !inv.date || israeliToISO(inv.date).startsWith(selectedYear)
@@ -1289,7 +1325,8 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
   const totalAmount    = filtered.reduce((s, i) => s + i.total, 0)
   const totalBeforeVat = filtered.reduce((s, i) => s + (i.before_vat || 0), 0)
   const totalPaid      = filtered.reduce((s, i) => s + i.paid, 0)
-  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, roundCents(i.total - i.paid)), 0)
+  const totalWithheld  = filtered.reduce((s, i) => s + (i.tax_withheld || 0), 0)
+  const totalRemaining = filtered.reduce((s, i) => s + Math.max(0, roundCents(i.total - (i.paid + (i.tax_withheld || 0)))), 0)
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
   async function handleSave(form: InvoiceForm) {
@@ -1313,6 +1350,43 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     setDeleteId(null)
   }
 
+  // Quick-toggle from status badge — if already paid, undo; if not, mark full as paid (no withholding)
+  async function markInvoicePaid(inv: InvoiceRow) {
+    const st = invoiceStatus(inv)
+    let patch: Partial<InvoiceRow>
+    if (st === 'paid') {
+      // Undo: reset paid and withheld to 0
+      patch = { paid: 0, tax_withheld: 0 }
+    } else {
+      // Mark full total as received
+      patch = {
+        paid: roundCents(inv.total - (inv.tax_withheld || 0)),
+        payment_date: inv.payment_date || isoToIsraeli(new Date().toISOString().slice(0, 10)),
+      }
+    }
+    const res = await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    const data = await res.json()
+    if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+  }
+
+  // Quick-action checkmark: prompt for withholding %, then close out the invoice
+  async function markInvoicePaidAskWithholding(inv: InvoiceRow) {
+    const ans = window.prompt('נוכה מס במקור? הכנס אחוז (ריק = 0, למשל 5 עבור 5%)', '')
+    if (ans === null) return
+    const pct = Number(ans) || 0
+    const base = inv.before_vat || 0
+    const withheld = roundCents(base * (pct / 100))
+    const paid = roundCents(inv.total - withheld)
+    const patch: Partial<InvoiceRow> = {
+      paid,
+      tax_withheld: withheld,
+      payment_date: inv.payment_date || isoToIsraeli(new Date().toISOString().slice(0, 10)),
+    }
+    const res = await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    const data = await res.json()
+    if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+  }
+
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
@@ -1328,6 +1402,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             <span className="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 font-semibold">ללא מע"מ: <b>{fmt(totalBeforeVat)}</b></span>
             <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold">סה"כ: <b>{fmt(totalAmount)}</b></span>
             <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">שולם: <b>{fmt(totalPaid)}</b></span>
+            {totalWithheld > 0 && <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-semibold" title="ניכוי מס במקור">ניכוי מס: <b>{fmt(totalWithheld)}</b></span>}
             <span className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-semibold">יתרה: <b>{fmt(totalRemaining)}</b></span>
           </div>
         </div>
@@ -1365,8 +1440,8 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
           {([
             { key: 'all', label: 'הכל', count: invoices.length },
-            { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) > 0).length },
-            { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - inv.paid)) === 0).length },
+            { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) > 0).length },
+            { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) === 0).length },
           ] as const).map(({ key, label, count }) => (
             <button
               key={key}
@@ -1468,7 +1543,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                 <tr><td colSpan={12} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
               ) : filtered.map((inv, i) => {
                 const st = invoiceStatus(inv)
-                const remaining = Math.max(0, roundCents(inv.total - inv.paid))
+                const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
                 return (
                   <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                     <td className="px-3 py-3 text-center text-gray-400 text-xs font-mono select-none">{i + 1}</td>
@@ -1522,9 +1597,22 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
                     <td className="px-4 py-3">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
-                    <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => markInvoicePaid(inv)}
+                        title={st === 'paid' ? 'לחץ לביטול סימון' : 'סמן כשולם'}
+                        className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
+                      >
+                        {STATUS_LABEL[st]}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-center">
+                        {st !== 'paid' && (
+                          <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          </button>
+                        )}
                         <button onClick={() => setModalInv(inv)} title="עריכה" className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
@@ -1593,10 +1681,11 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
                   ) : groups.map(group => {
                     const isCollapsed = collapsedMonths.has(group.key)
-                    const mTotal = group.rows.reduce((s,i) => s+i.total, 0)
-                    const mPaid  = group.rows.reduce((s,i) => s+i.paid,  0)
-                    const mRem   = Math.max(0, mTotal - mPaid)
-                    const mOpen  = group.rows.filter(i => Math.max(0, roundCents(i.total-i.paid)) > 0).length
+                    const mTotal    = group.rows.reduce((s,i) => s+i.total, 0)
+                    const mPaid     = group.rows.reduce((s,i) => s+i.paid,  0)
+                    const mWithheld = group.rows.reduce((s,i) => s+(i.tax_withheld || 0), 0)
+                    const mRem      = Math.max(0, roundCents(mTotal - (mPaid + mWithheld)))
+                    const mOpen     = group.rows.filter(i => Math.max(0, roundCents(i.total-(i.paid+(i.tax_withheld||0)))) > 0).length
 
                     return (
                       <Fragment key={group.key}>
@@ -1617,6 +1706,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                             <span className="font-bold text-indigo-700 text-sm">{group.label}</span>
                             <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
+                            {mWithheld > 0 && <span className="mr-2 text-xs text-purple-500" title="ניכוי מס במקור">ניכוי: {fmt(mWithheld)}</span>}
                           </td>
                           {/* Empty: פרויקט, תאריך, סוג, מי הוציא, לפני מע"מ */}
                           <td colSpan={5} />
@@ -1633,7 +1723,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         {/* Invoice rows for this month */}
                         {!isCollapsed && group.rows.map((inv, i) => {
                           const st = invoiceStatus(inv)
-                          const remaining = Math.max(0, roundCents(inv.total - inv.paid))
+                          const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
                           return (
                             <tr key={inv.id} className={`border-b border-gray-100 hover:bg-indigo-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                               <td className="px-3 py-2.5 text-center text-gray-300 text-xs font-mono">{i + 1}</td>
@@ -1685,9 +1775,22 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
                               <td className="px-4 py-2.5 text-xs">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
-                              <td className="px-4 py-2.5 text-center"><span className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
+                              <td className="px-4 py-2.5 text-center">
+                                <button
+                                  onClick={() => markInvoicePaid(inv)}
+                                  title={st === 'paid' ? 'לחץ לביטול סימון' : 'סמן כשולם'}
+                                  className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
+                                >
+                                  {STATUS_LABEL[st]}
+                                </button>
+                              </td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1 justify-center">
+                                  {st !== 'paid' && (
+                                    <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    </button>
+                                  )}
                                   <button onClick={() => setModalInv(inv)} className="p-1 rounded-lg hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                   </button>

@@ -20,7 +20,7 @@ export async function PATCH(
   for (const f of fields) {
     if (f in body) updates[f] = body[f]
   }
-  for (const f of ['before_vat','total','paid']) {
+  for (const f of ['before_vat','total','paid','tax_withheld']) {
     if (f in body) updates[f] = Number(body[f]) || 0
   }
   // client_id is a nullable FK — handle separately so null is preserved
