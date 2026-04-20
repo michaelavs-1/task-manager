@@ -367,32 +367,35 @@ function FinancialDashboard() {
     </div>
   )
 
-  // ── KPIs ──
-  const totalRevenue   = invoices.reduce((s, i) => s + (i.before_vat || 0), 0)
-  const totalPaid      = invoices.reduce((s, i) => s + (i.paid || 0), 0)
-  const totalWithheld  = invoices.reduce((s, i) => s + (i.tax_withheld || 0), 0)
-  const totalRemain    = Math.max(0, totalRevenue - totalPaid - totalWithheld)
-  const openCount      = invoices.filter(i => (i.total - i.paid - (i.tax_withheld || 0)) > 0).length
+  // ── KPIs — exclude cancelled invoices from all calculations ──
+  const activeInvoices = invoices.filter(i => i.status !== 'cancelled')
+  const totalRevenue   = activeInvoices.reduce((s, i) => s + (i.before_vat || 0), 0)
+  const totalPaid      = activeInvoices.reduce((s, i) => s + (i.paid || 0), 0)
+  const totalWithheld  = activeInvoices.reduce((s, i) => s + (i.tax_withheld || 0), 0)
+  // Remaining per invoice (post-VAT basis, consistent with what was paid)
+  const totalRemain    = activeInvoices.reduce((s, i) => s + Math.max(0, roundCents((i.total || 0) - (i.paid || 0) - (i.tax_withheld || 0))), 0)
+  const openCount      = activeInvoices.filter(i => Math.max(0, roundCents((i.total || 0) - (i.paid || 0) - (i.tax_withheld || 0))) > 0).length
 
   // Expenses KPIs (for top-level "everything at a glance" overview)
   const totalExpNet = expenses.reduce((s, e) => s + (e.amount || 0), 0)
   const totalExpVat = expenses.reduce((s, e) => s + (e.vat || 0), 0)
 
-  // VAT owed: VAT collected on revenue minus VAT paid on expenses
-  const totalRevenueVat = invoices.reduce((s, i) => s + ((i.total || 0) - (i.before_vat || 0)), 0)
+  // VAT owed: VAT collected on revenue (active only) minus VAT paid on expenses
+  const totalRevenueVat = activeInvoices.reduce((s, i) => s + ((i.total || 0) - (i.before_vat || 0)), 0)
   const vatBalance      = totalRevenueVat - totalExpVat
 
   // Gross profit = revenue (net) − expenses (net)
   const grossProfit    = totalRevenue - totalExpNet
   const grossProfitPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
 
-  // Collection rate
-  const collectionPct  = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0
+  // Collection rate: paid vs total invoiced (post-VAT, consistent units)
+  const totalInvoiced  = activeInvoices.reduce((s, i) => s + (i.total || 0), 0)
+  const collectionPct  = totalInvoiced > 0 ? ((totalPaid + totalWithheld) / totalInvoiced) * 100 : 0
 
   // ── Monthly breakdown ──
   type MonthData = { label: string; sortKey: string; revenue: number; paid: number; withheld: number; count: number; expenses: number }
   const monthMap: Record<string, MonthData> = {}
-  invoices.forEach(inv => {
+  activeInvoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
@@ -419,7 +422,7 @@ function FinancialDashboard() {
 
   // ── Top clients ──
   const clientMap: Record<string, { name: string; revenue: number; paid: number }> = {}
-  invoices.forEach(inv => {
+  activeInvoices.forEach(inv => {
     const name = inv.client || 'לא מוגדר'
     if (!clientMap[name]) clientMap[name] = { name, revenue: 0, paid: 0 }
     clientMap[name].revenue += inv.before_vat || 0
@@ -1102,7 +1105,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
 }
 
 // Helper type for dashboard (subset of InvoiceRow)
-interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; tax_withheld?: number; client: string; doc_type: string; payment_date?: string }
+interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; tax_withheld?: number; client: string; doc_type: string; payment_date?: string; status?: string }
 
 // ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
