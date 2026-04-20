@@ -891,23 +891,55 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
   const [chosen, setChosen] = useState<ClientRecord | null>(
     currentClientId ? clientList.find(c => c.id === currentClientId) ?? null : null
   )
+  const [hlIdx, setHlIdx] = useState(-1)
+  const listRef = useRef<HTMLUListElement>(null)
   const matches = clientList.filter(c => c.name.toLowerCase().includes(q.toLowerCase()))
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHlIdx(i => {
+        const next = Math.min(i + 1, matches.length - 1)
+        listRef.current?.children[next]?.scrollIntoView({ block: 'nearest' })
+        return next
+      })
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHlIdx(i => {
+        const prev = Math.max(i - 1, 0)
+        listRef.current?.children[prev]?.scrollIntoView({ block: 'nearest' })
+        return prev
+      })
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const target = hlIdx >= 0 ? matches[hlIdx] : chosen
+      if (target) onSave(target)
+    } else if (e.key === 'Escape') {
+      onClose()
+    }
+  }
+
   return (
     <div className="absolute z-50 right-0 top-full mt-1 w-72 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-2" dir="rtl">
       <input
         autoFocus
         value={q}
-        onChange={e => setQ(e.target.value)}
+        onChange={e => { setQ(e.target.value); setHlIdx(-1) }}
+        onKeyDown={handleKeyDown}
         placeholder="חפש לקוח..."
         className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
       />
-      <ul className="max-h-52 overflow-y-auto space-y-0.5">
+      <ul ref={listRef} className="max-h-52 overflow-y-auto space-y-0.5">
         {matches.length === 0 && <li className="text-xs text-gray-400 text-center py-3">לא נמצאו תוצאות</li>}
-        {matches.map(c => (
+        {matches.map((c, idx) => (
           <li
             key={c.id}
-            onClick={() => setChosen(c)}
-            className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${chosen?.id === c.id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}
+            onClick={() => { setChosen(c); onSave(c) }}
+            className={`px-3 py-1.5 rounded-xl text-sm cursor-pointer transition-colors ${
+              idx === hlIdx ? 'bg-indigo-200 text-indigo-800 font-semibold'
+              : chosen?.id === c.id ? 'bg-indigo-100 text-indigo-700 font-semibold'
+              : 'hover:bg-gray-50 text-gray-700'
+            }`}
           >
             {c.name}
           </li>
@@ -916,7 +948,7 @@ function ClientPicker({ clientList, currentClientId, onSave, onClose }: {
       <div className="flex gap-2 pt-1 border-t border-gray-100">
         <button
           onClick={() => { if (chosen) onSave(chosen) }}
-          disabled={!chosen}
+          disabled={!chosen && hlIdx < 0}
           className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-colors"
           style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
         >
@@ -1281,6 +1313,8 @@ function InvoicesTab() {
   useEsc(withholdingInv !== null, () => setWithholdingInv(null))
   const [reassignId, setReassignId] = useState<number | null>(null)
   const [reassignProjectId, setReassignProjectId] = useState<number | null>(null)
+  const [reassignIssuedById, setReassignIssuedById] = useState<number | null>(null)
+  const [editIssuedByVal, setEditIssuedByVal] = useState('')
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
 const [filterYear, setFilterYear] = useState<string | null>(null)
@@ -1420,7 +1454,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     }
     const res = await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
     const data = await res.json()
-    if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+    if (!data.error) setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, ...data } : i))
   }
 
   // Open the withholding confirmation modal
@@ -1443,7 +1477,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     }
     const res = await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
     const data = await res.json()
-    if (!data.error) setInvoices(prev => prev.map(i => i.id === data.id ? data : i))
+    if (!data.error) setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, ...data } : i))
     setWithholdingInv(null)
   }
 
@@ -1609,9 +1643,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                 <th className="px-4 py-3 text-right font-semibold">תאריך</th>
                 <th className="px-4 py-3 text-right font-semibold">סוג</th>
                 <th className="px-4 py-3 text-right font-semibold">מי הוציא</th>
-                <th className="px-4 py-3 text-right font-semibold">לפני מע"מ</th>
-                <th className="px-4 py-3 text-right font-semibold">סה"כ</th>
+                <th className="px-4 py-3 text-right font-semibold">סכום חשבונית</th>
+                <th className="px-4 py-3 text-right font-semibold">סה"כ לתשלום</th>
                 <th className="px-4 py-3 text-right font-semibold">שולם</th>
+                <th className="px-4 py-3 text-right font-semibold">ניכוי מס</th>
                 <th className="px-4 py-3 text-right font-semibold">יתרה</th>
                 <th className="px-4 py-3 text-right font-semibold">ת. תשלום</th>
                 <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
@@ -1671,10 +1706,39 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{inv.issued_by || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs max-w-[120px] relative">
+                      {reassignIssuedById === inv.id ? (
+                        <input
+                          autoFocus
+                          value={editIssuedByVal}
+                          onChange={e => setEditIssuedByVal(e.target.value)}
+                          onBlur={async () => {
+                            const val = editIssuedByVal.trim()
+                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: val }) })
+                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: val } : x))
+                            setReassignIssuedById(null)
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                            if (e.key === 'Escape') setReassignIssuedById(null)
+                          }}
+                          className="w-full border border-indigo-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => { setReassignIssuedById(inv.id); setEditIssuedByVal(inv.issued_by || '') }}
+                          className="truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 w-full text-right"
+                          title="לחץ לעריכה"
+                        >
+                          <span className="truncate">{inv.issued_by || '—'}</span>
+                          <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                     <td className="px-4 py-3 font-semibold text-gray-800">{fmt(inv.total)}</td>
                     <td className="px-4 py-3 text-emerald-600 font-medium">{fmt(inv.paid)}</td>
+                    <td className="px-4 py-3 text-purple-600 text-xs">{inv.tax_withheld ? fmt(inv.tax_withheld) : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                     <td className="px-4 py-3 text-center">
@@ -1712,6 +1776,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                   <td className="px-4 py-3 text-gray-700">{fmt(filtered.reduce((s, i) => s + i.before_vat, 0))}</td>
                   <td className="px-4 py-3 text-gray-800">{fmt(totalAmount)}</td>
                   <td className="px-4 py-3 text-emerald-600">{fmt(totalPaid)}</td>
+                  <td className="px-4 py-3 text-purple-600">{totalWithheld > 0 ? fmt(totalWithheld) : '—'}</td>
                   <td className="px-4 py-3 text-red-500">{fmt(totalRemaining)}</td>
                   <td /><td />
                 </tr>
@@ -1733,7 +1798,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
               mGroups[key].rows.push(inv)
             })
             const groups = Object.values(mGroups).sort((a,b) => a.key.localeCompare(b.key))
-            const COLS = 14
+            const COLS = 15
             const TH = 'px-4 py-3 text-right font-semibold'
 
             return (
@@ -1747,9 +1812,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <th className={TH}>תאריך</th>
                     <th className={TH}>סוג</th>
                     <th className={TH}>מי הוציא</th>
-                    <th className={TH}>לפני מע"מ</th>
-                    <th className={TH}>סה"כ</th>
+                    <th className={TH}>סכום חשבונית</th>
+                    <th className={TH}>סה"כ לתשלום</th>
                     <th className={TH}>שולם</th>
+                    <th className={TH}>ניכוי מס</th>
                     <th className={TH}>יתרה</th>
                     <th className={TH}>ת. תשלום</th>
                     <th className="px-4 py-3 text-center font-semibold">סטטוס</th>
@@ -1788,12 +1854,14 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
                             {mWithheld > 0 && <span className="mr-2 text-xs text-purple-500" title="ניכוי מס במקור">ניכוי: {fmt(mWithheld)}</span>}
                           </td>
-                          {/* Empty: פרויקט, תאריך, סוג, מי הוציא, לפני מע"מ */}
+                          {/* Empty: פרויקט, תאריך, סוג, מי הוציא, סכום חשבונית */}
                           <td colSpan={5} />
-                          {/* סה"כ */}
+                          {/* סה"כ לתשלום */}
                           <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
                           {/* שולם */}
                           <td className="px-4 py-3 text-xs font-bold text-emerald-600">{fmt(mPaid)}</td>
+                          {/* ניכוי מס */}
+                          <td className="px-4 py-3 text-xs font-bold text-purple-600">{mWithheld > 0 ? fmt(mWithheld) : '—'}</td>
                           {/* יתרה */}
                           <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : '✓'}</td>
                           {/* Empty: ת. תשלום, סטטוס, פעולות */}
@@ -1849,10 +1917,39 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               </td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
-                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] truncate">{inv.issued_by || '—'}</td>
+                              <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[100px] relative">
+                                {reassignIssuedById === inv.id ? (
+                                  <input
+                                    autoFocus
+                                    value={editIssuedByVal}
+                                    onChange={e => setEditIssuedByVal(e.target.value)}
+                                    onBlur={async () => {
+                                      const val = editIssuedByVal.trim()
+                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issued_by: val }) })
+                                      setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, issued_by: val } : x))
+                                      setReassignIssuedById(null)
+                                    }}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                      if (e.key === 'Escape') setReassignIssuedById(null)
+                                    }}
+                                    className="w-full border border-indigo-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => { setReassignIssuedById(inv.id); setEditIssuedByVal(inv.issued_by || '') }}
+                                    className="truncate hover:text-indigo-600 transition-colors group flex items-center gap-1 w-full text-right"
+                                    title="לחץ לעריכה"
+                                  >
+                                    <span className="truncate">{inv.issued_by || '—'}</span>
+                                    <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  </button>
+                                )}
+                              </td>
                               <td className="px-4 py-2.5 text-gray-600 text-xs">{fmt(inv.before_vat)}</td>
                               <td className="px-4 py-2.5 font-semibold text-gray-800 text-xs">{fmt(inv.total)}</td>
                               <td className="px-4 py-2.5 text-emerald-600 text-xs">{fmt(inv.paid)}</td>
+                              <td className="px-4 py-2.5 text-purple-600 text-xs">{inv.tax_withheld ? fmt(inv.tax_withheld) : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-xs">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.payment_date)}</td>
                               <td className="px-4 py-2.5 text-center">
@@ -1892,6 +1989,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3 text-gray-700 text-xs">{fmt(filtered.reduce((s,i) => s+i.before_vat,0))}</td>
                     <td className="px-4 py-3 text-gray-800 text-xs">{fmt(totalAmount)}</td>
                     <td className="px-4 py-3 text-emerald-600 text-xs">{fmt(totalPaid)}</td>
+                    <td className="px-4 py-3 text-purple-600 text-xs">{totalWithheld > 0 ? fmt(totalWithheld) : '—'}</td>
                     <td className="px-4 py-3 text-red-500 text-xs">{fmt(totalRemaining)}</td>
                     <td /><td />
                   </tr>
