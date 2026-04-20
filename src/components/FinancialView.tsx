@@ -1128,7 +1128,7 @@ function InvoiceModal({
               <button
                 type="button"
                 onClick={() => {
-                  const base = form.before_vat || 0
+                  const base = form.total || 0
                   const w = roundCents(base * 0.05)
                   setForm(f => ({
                     ...f,
@@ -1138,7 +1138,7 @@ function InvoiceModal({
                   }))
                 }}
                 className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold"
-                title="חישוב ניכוי 5% מהסכום לפני מע״מ"
+                title='חישוב ניכוי 5% מהסכום אחרי מע״מ'
               >
                 5%
               </button>
@@ -1383,7 +1383,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
   async function confirmMarkPaidWithWithholding() {
     if (!withholdingInv) return
     const inv = withholdingInv
-    const base = inv.before_vat || 0
+    const base = inv.total || 0
     const withheld = withhold5 ? roundCents(base * 0.05) : 0
     const paid = roundCents(inv.total - withheld)
     const patch: Partial<InvoiceRow> = {
@@ -1848,7 +1848,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
       {/* Mark-paid + withholding modal */}
       {withholdingInv !== null && (() => {
         const inv = withholdingInv
-        const base = inv.before_vat || 0
+        const base = inv.total || 0
         const withheldPreview = withhold5 ? roundCents(base * 0.05) : 0
         const paidPreview = roundCents(inv.total - withheldPreview)
         return (
@@ -1868,7 +1868,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                 />
                 <div className="flex-1">
                   <div className="text-sm font-semibold text-gray-800">נוכה מס במקור 5%</div>
-                  <div className="text-[11px] text-gray-500">מחושב מהסכום לפני מע״מ ({fmt(base)})</div>
+                  <div className="text-[11px] text-gray-500">מחושב מהסכום אחרי מע״מ ({fmt(base)})</div>
                 </div>
               </label>
               <div className="rounded-xl bg-gray-50 p-3 text-xs space-y-1">
