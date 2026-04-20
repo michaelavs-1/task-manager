@@ -1967,10 +1967,12 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
               if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
               mGroups[key].rows.push(inv)
             })
-            // Ensure all months from earliest existing to 2026-12 are shown (empty if needed)
-            ALL_MONTHS.forEach(({ key, label }) => {
-              if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
-            })
+            // Add empty months up to Dec 2026, respecting the active year filter
+            ALL_MONTHS
+              .filter(m => !selectedYear || m.key.startsWith(selectedYear))
+              .forEach(({ key, label }) => {
+                if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
+              })
             const groups = Object.values(mGroups).sort((a,b) => a.key.localeCompare(b.key))
             const COLS = 15
             const TH = 'px-4 py-3 text-right font-semibold'
