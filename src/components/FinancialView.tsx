@@ -1138,8 +1138,11 @@ function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' | 'cancel
   // Tax withheld at source counts toward "fully paid" even though it didn't land in our account
   const settled = (inv.paid || 0) + (inv.tax_withheld || 0)
   const remaining = roundCents(inv.total - settled)
-  // Use absolute value for remaining so negative invoices (credit notes) are handled correctly
-  if (Math.abs(remaining) < 1) return 'paid'
+  // remaining < 1: covers exact zero, rounding, AND over-settled cases
+  // (e.g. paid=total AND tax_withheld>0 → remaining is negative → still fully paid)
+  if (inv.total >= 0 && remaining < 1) return 'paid'
+  // For credit notes (negative total), treat similarly
+  if (inv.total < 0 && remaining > -1) return 'paid'
   if (inv.total > 0 && settled > 0) return 'partial'
   if (inv.total < 0 && settled < 0) return 'partial'
   return 'unpaid'
