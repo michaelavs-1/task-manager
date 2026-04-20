@@ -989,17 +989,20 @@ interface InvoiceRow {
   tax_withheld: number
   payment_date: string
   notes: string
+  status?: string   // explicit override: 'cancelled' | null/'' = auto-calculate
 }
 
-const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין' }
+const STATUS_LABEL: Record<string, string> = { paid: 'שולם', partial: 'חלקי', unpaid: 'ממתין', cancelled: 'מבוטל' }
 const STATUS_STYLE: Record<string, string> = {
-  paid: 'bg-emerald-100 text-emerald-700',
-  partial: 'bg-amber-100 text-amber-700',
-  unpaid: 'bg-red-100 text-red-600',
+  paid:      'bg-emerald-100 text-emerald-700',
+  partial:   'bg-amber-100 text-amber-700',
+  unpaid:    'bg-red-100 text-red-600',
+  cancelled: 'bg-gray-100 text-gray-400 line-through',
 }
 
 function roundCents(n: number) { return Math.round(n * 100) / 100 }
-function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
+function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' | 'cancelled' {
+  if (inv.status === 'cancelled') return 'cancelled'
   // Tax withheld at source counts toward "fully paid" even though it didn't land in our account
   const settled = (inv.paid || 0) + (inv.tax_withheld || 0)
   const remaining = roundCents(inv.total - settled)
@@ -1517,6 +1520,7 @@ function InvoicesTab() {
   const [editIssuedByVal, setEditIssuedByVal] = useState('')
   const [editPaymentDateId, setEditPaymentDateId] = useState<number | null>(null)
   const [editPaymentDateVal, setEditPaymentDateVal] = useState('')
+  const [statusPickerId, setStatusPickerId] = useState<number | null>(null)
   const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
   const [editNotesId, setEditNotesId] = useState<number | null>(null)
   const [editNotesVal, setEditNotesVal] = useState('')
@@ -1697,6 +1701,27 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_date: val }) })
     setInvoices(prev => prev.map(x => x.id === invId ? { ...x, payment_date: val } : x))
     setEditPaymentDateId(null)
+  }
+
+  async function saveInvoiceStatus(invId: number, newStatus: string) {
+    // newStatus: 'paid' | 'unpaid' | 'cancelled'
+    // For paid: set paid = total. For unpaid: set paid = 0. For cancelled: set status = 'cancelled'.
+    const inv = invoices.find(i => i.id === invId)
+    if (!inv) return
+    let patch: Record<string, unknown> = {}
+    if (newStatus === 'cancelled') {
+      patch = { status: 'cancelled' }
+    } else if (newStatus === 'paid') {
+      patch = { status: null, paid: roundCents(inv.total - (inv.tax_withheld || 0)),
+        payment_date: inv.payment_date || isoToIsraeli(new Date().toISOString().slice(0, 10)) }
+    } else {
+      // unpaid / pending
+      patch = { status: null, paid: 0, tax_withheld: 0 }
+    }
+    const res = await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    const data = await res.json()
+    if (!data.error) setInvoices(prev => prev.map(i => i.id === invId ? { ...i, ...data } : i))
+    setStatusPickerId(null)
   }
 
   async function saveNotes(invId: number) {
@@ -1986,18 +2011,27 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center relative">
                       <button
-                        onClick={() => markInvoicePaid(inv)}
-                        title={st === 'paid' ? 'לחץ לביטול סימון' : 'סמן כשולם'}
+                        onClick={() => setStatusPickerId(statusPickerId === inv.id ? null : inv.id)}
                         className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                       >
-                        {STATUS_LABEL[st]}
+                        {STATUS_LABEL[st]} ▾
                       </button>
+                      {statusPickerId === inv.id && (
+                        <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]" dir="rtl" onClick={e => e.stopPropagation()}>
+                          {[{ key: 'paid', label: 'שולם' }, { key: 'unpaid', label: 'ממתין' }, { key: 'cancelled', label: 'מבוטל' }].map(opt => (
+                            <button key={opt.key} onClick={() => saveInvoiceStatus(inv.id, opt.key)}
+                              className={`w-full text-right px-3 py-2 text-xs hover:bg-indigo-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${st === opt.key ? 'font-bold text-indigo-600' : 'text-gray-700'}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-center items-center">
-                        {st !== 'paid' && (
+                        {st !== 'paid' && st !== 'cancelled' && (
                           <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                           </button>
@@ -2295,18 +2329,27 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </button>
                               </td>
-                              <td className="px-4 py-2.5 text-center">
+                              <td className="px-4 py-2.5 text-center relative">
                                 <button
-                                  onClick={() => markInvoicePaid(inv)}
-                                  title={st === 'paid' ? 'לחץ לביטול סימון' : 'סמן כשולם'}
+                                  onClick={() => setStatusPickerId(statusPickerId === inv.id ? null : inv.id)}
                                   className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                                 >
-                                  {STATUS_LABEL[st]}
+                                  {STATUS_LABEL[st]} ▾
                                 </button>
+                                {statusPickerId === inv.id && (
+                                  <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]" dir="rtl" onClick={e => e.stopPropagation()}>
+                                    {[{ key: 'paid', label: 'שולם' }, { key: 'unpaid', label: 'ממתין' }, { key: 'cancelled', label: 'מבוטל' }].map(opt => (
+                                      <button key={opt.key} onClick={() => saveInvoiceStatus(inv.id, opt.key)}
+                                        className={`w-full text-right px-3 py-2 text-xs hover:bg-indigo-50 transition-colors first:rounded-t-xl last:rounded-b-xl ${st === opt.key ? 'font-bold text-indigo-600' : 'text-gray-700'}`}>
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-2.5">
                                 <div className="flex gap-1 justify-center items-center">
-                                  {st !== 'paid' && (
+                                  {st !== 'paid' && st !== 'cancelled' && (
                                     <button onClick={() => markInvoicePaidAskWithholding(inv)} title="סמן כשולם (עם אפשרות ניכוי)" className="p-1 rounded-lg hover:bg-emerald-100 text-gray-400 hover:text-emerald-600 transition-colors">
                                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                     </button>
