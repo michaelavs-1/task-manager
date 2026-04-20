@@ -4111,6 +4111,7 @@ function ExpensesTab() {
   const [filterMonth, setFilterMonth] = useState('')
   const [filterInvoice, setFilterInvoice] = useState<'' | 'yes' | 'no'>('')
   const [filterPayment, setFilterPayment] = useState<'all' | 'open' | 'closed'>('all')
+  const [filterSupplier, setFilterSupplier] = useState('')
   const [projDropOpen, setProjDropOpen] = useState(false)
   const [projDropSearch, setProjDropSearch] = useState('')
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
@@ -4293,6 +4294,7 @@ function ExpensesTab() {
     if (filterInvoice === 'no' && e.has_invoice) return false
     if (filterPayment === 'open' && roundCents(e.total - e.paid) <= 0) return false
     if (filterPayment === 'closed' && roundCents(e.total - e.paid) > 0) return false
+    if (filterSupplier && !e.supplier?.toLowerCase().includes(filterSupplier.toLowerCase())) return false
     return true
   })
 
@@ -4462,8 +4464,22 @@ function ExpensesTab() {
             >{label}</button>
           ))}
         </div>
-        {(filterMonth || filterProject || filterVat || filterInvoice || filterPayment !== 'all') && (
-          <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice(''); setFilterPayment('all') }}
+        {/* Supplier search */}
+        <div className="relative flex items-center">
+          <svg className="absolute right-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input
+            type="text"
+            value={filterSupplier}
+            onChange={e => setFilterSupplier(e.target.value)}
+            placeholder="חיפוש ספק..."
+            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg pr-8 pl-3 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300 w-40"
+          />
+          {filterSupplier && (
+            <button onClick={() => setFilterSupplier('')} className="absolute left-2 text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>
+          )}
+        </div>
+        {(filterMonth || filterProject || filterVat || filterInvoice || filterPayment !== 'all' || filterSupplier) && (
+          <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice(''); setFilterPayment('all'); setFilterSupplier('') }}
             className="text-xs text-gray-400 hover:text-gray-600 underline">נקה פילטרים</button>
         )}
         <div className="flex-1" />
