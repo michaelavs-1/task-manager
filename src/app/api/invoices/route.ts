@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { bookInvoiceIssued } from '@/lib/accounting'
 
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
 
@@ -42,5 +50,26 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-book invoice-issued JE (best-effort; never blocks the invoice response)
+  try {
+    if (data && data.total && data.total > 0) {
+      const jeId = await bookInvoiceIssued({
+        id: data.id,
+        date: data.date || new Date().toISOString().slice(0, 10),
+        client: data.client || '',
+        client_tax_id: data.client_tax_id || '',
+        before_vat: Number(data.before_vat) || 0,
+        total: Number(data.total) || 0,
+        invoice_num: data.invoice_num || String(data.id),
+        project_id: data.project_id || null,
+      })
+      const adm = getSupabaseAdmin()
+      await adm.from('invoices').update({ je_id: jeId }).eq('id', data.id)
+    }
+  } catch (e) {
+    console.error('[invoices POST] JE booking failed:', (e as Error).message)
+  }
+
   return NextResponse.json(data)
 }

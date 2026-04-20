@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { bookExpenseIncurred } from '@/lib/accounting'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,5 +40,25 @@ export async function POST(req: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-book expense JE (best-effort)
+  try {
+    if (data && (Number(data.total) || 0) > 0) {
+      const jeId = await bookExpenseIncurred({
+        id: data.id,
+        supplier: data.supplier || '',
+        description: data.description || '',
+        amount: Number(data.amount) || 0,
+        vat:    Number(data.vat)    || 0,
+        total:  Number(data.total)  || 0,
+        month:  data.month || '',
+        project_id: data.project_id || null,
+      })
+      await supabase.from('expenses').update({ je_id: jeId }).eq('id', data.id)
+    }
+  } catch (e) {
+    console.error('[expenses POST] JE booking failed:', (e as Error).message)
+  }
+
   return NextResponse.json({ expense: data })
 }
