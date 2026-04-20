@@ -1483,6 +1483,13 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     setWithholdingInv(null)
   }
 
+  async function savePaymentDate(invId: number) {
+    const val = isoToIsraeli(editPaymentDateVal)
+    await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_date: val }) })
+    setInvoices(prev => prev.map(x => x.id === invId ? { ...x, payment_date: val } : x))
+    setEditPaymentDateId(null)
+  }
+
   if (loading) return <div className="flex-1 flex items-center justify-center"><div className="text-gray-400 text-sm">טוען חשבוניות...</div></div>
   if (error) return <div className="flex-1 flex items-center justify-center"><div className="text-red-500 text-sm">{error}</div></div>
 
@@ -1744,33 +1751,36 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap relative">
                       {editPaymentDateId === inv.id ? (
-                        <input
-                          autoFocus
-                          type="date"
-                          value={editPaymentDateVal}
-                          onChange={e => setEditPaymentDateVal(e.target.value)}
-                          onBlur={async () => {
-                            const val = isoToIsraeli(editPaymentDateVal)
-                            await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_date: val }) })
-                            setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, payment_date: val } : x))
-                            setEditPaymentDateId(null)
-                          }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                            if (e.key === 'Escape') setEditPaymentDateId(null)
-                          }}
-                          className="border border-indigo-300 rounded-lg px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                        />
-                      ) : (
-                        <button
-                          onClick={() => { setEditPaymentDateId(inv.id); setEditPaymentDateVal(israeliToISO(inv.payment_date) || '') }}
-                          className="hover:text-indigo-600 transition-colors group flex items-center gap-1"
-                          title="לחץ לעריכת תאריך תשלום"
-                        >
-                          <span>{formatDateFull(inv.payment_date)}</span>
-                          <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        </button>
-                      )}
+                        <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[220px]" dir="rtl">
+                          <input
+                            autoFocus
+                            type="date"
+                            value={editPaymentDateVal}
+                            onChange={e => setEditPaymentDateVal(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') savePaymentDate(inv.id)
+                              if (e.key === 'Escape') setEditPaymentDateId(null)
+                            }}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          />
+                          <div className="flex gap-2 pt-1 border-t border-gray-100">
+                            <button
+                              onClick={() => savePaymentDate(inv.id)}
+                              className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white"
+                              style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+                            >אישור</button>
+                            <button onClick={() => setEditPaymentDateId(null)} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                          </div>
+                        </div>
+                      ) : null}
+                      <button
+                        onClick={() => { setEditPaymentDateId(inv.id); setEditPaymentDateVal(israeliToISO(inv.payment_date) || '') }}
+                        className="hover:text-indigo-600 transition-colors group flex items-center gap-1"
+                        title="לחץ לעריכת תאריך תשלום"
+                      >
+                        <span>{formatDateFull(inv.payment_date)}</span>
+                        <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
@@ -1984,33 +1994,36 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <td className="px-4 py-2.5 text-xs">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap relative">
                                 {editPaymentDateId === inv.id ? (
-                                  <input
-                                    autoFocus
-                                    type="date"
-                                    value={editPaymentDateVal}
-                                    onChange={e => setEditPaymentDateVal(e.target.value)}
-                                    onBlur={async () => {
-                                      const val = isoToIsraeli(editPaymentDateVal)
-                                      await fetch(`/api/invoices/${inv.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payment_date: val }) })
-                                      setInvoices(prev => prev.map(x => x.id === inv.id ? { ...x, payment_date: val } : x))
-                                      setEditPaymentDateId(null)
-                                    }}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                                      if (e.key === 'Escape') setEditPaymentDateId(null)
-                                    }}
-                                    className="border border-indigo-300 rounded-lg px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => { setEditPaymentDateId(inv.id); setEditPaymentDateVal(israeliToISO(inv.payment_date) || '') }}
-                                    className="hover:text-indigo-600 transition-colors group flex items-center gap-1"
-                                    title="לחץ לעריכת תאריך תשלום"
-                                  >
-                                    <span>{formatDateFull(inv.payment_date)}</span>
-                                    <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                  </button>
-                                )}
+                                  <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 space-y-2 min-w-[220px]" dir="rtl">
+                                    <input
+                                      autoFocus
+                                      type="date"
+                                      value={editPaymentDateVal}
+                                      onChange={e => setEditPaymentDateVal(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter') savePaymentDate(inv.id)
+                                        if (e.key === 'Escape') setEditPaymentDateId(null)
+                                      }}
+                                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    />
+                                    <div className="flex gap-2 pt-1 border-t border-gray-100">
+                                      <button
+                                        onClick={() => savePaymentDate(inv.id)}
+                                        className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white"
+                                        style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
+                                      >אישור</button>
+                                      <button onClick={() => setEditPaymentDateId(null)} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                                <button
+                                  onClick={() => { setEditPaymentDateId(inv.id); setEditPaymentDateVal(israeliToISO(inv.payment_date) || '') }}
+                                  className="hover:text-indigo-600 transition-colors group flex items-center gap-1"
+                                  title="לחץ לעריכת תאריך תשלום"
+                                >
+                                  <span>{formatDateFull(inv.payment_date)}</span>
+                                  <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </button>
                               </td>
                               <td className="px-4 py-2.5 text-center">
                                 <button
