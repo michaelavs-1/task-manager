@@ -11,11 +11,12 @@ import { ArtistDashboardView } from "@/components/ArtistDashboardView"
 import { ActivityLogView } from "@/components/ActivityLogView"
 import { useTheme } from "@/components/ThemeProvider"
 import { FinancialView, type FinTab } from "@/components/FinancialView"
+import { AccountingView, ACCOUNTING_TABS, type AcctTab } from "@/components/AccountingView"
 import { UserManagementView } from "@/components/UserManagementView"
 import { MeetingsView } from "@/components/MeetingsView"
 import { GeneralOverviewView } from "@/components/GeneralOverviewView"
 
-type Section = "management" | "financial"
+type Section = "management" | "financial" | "accounting"
 type Tab = "general" | "tasks" | "projects" | "campaigns" | "links" | "pixels" | "artists" | "activity" | "users" | "meetings"
 
 export default function Dashboard() {
@@ -26,10 +27,16 @@ export default function Dashboard() {
   const [selectedArtistName, setSelectedArtistName] = useState<string>("")
   const [activeSection, setActiveSectionRaw] = useState<Section>("management")
   const [activeFinTab, setActiveFinTabRaw] = useState<FinTab>('dashboard')
+  const [activeAcctTab, setActiveAcctTabRaw] = useState<AcctTab>('dashboard')
 
   const setActiveTab = (t: Tab) => { setActiveTabRaw(t); localStorage.setItem('dash_tab', t) }
-  const setActiveSection = (s: Section) => { setActiveSectionRaw(s); localStorage.setItem('dash_section', s); if (s === 'financial') { setActiveFinTabRaw('dashboard'); localStorage.setItem('dash_fin_tab', 'dashboard') } }
-  const setActiveFinTab = (f: FinTab) => { setActiveFinTabRaw(f); localStorage.setItem('dash_fin_tab', f) }
+  const setActiveSection = (s: Section) => {
+    setActiveSectionRaw(s); localStorage.setItem('dash_section', s)
+    if (s === 'financial')  { setActiveFinTabRaw('dashboard');  localStorage.setItem('dash_fin_tab', 'dashboard') }
+    if (s === 'accounting') { setActiveAcctTabRaw('dashboard'); localStorage.setItem('dash_acct_tab', 'dashboard') }
+  }
+  const setActiveFinTab  = (f: FinTab)  => { setActiveFinTabRaw(f);  localStorage.setItem('dash_fin_tab',  f) }
+  const setActiveAcctTab = (a: AcctTab) => { setActiveAcctTabRaw(a); localStorage.setItem('dash_acct_tab', a) }
   const [showNewTask, setShowNewTask] = useState(false)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
@@ -52,9 +59,11 @@ export default function Dashboard() {
     const savedSection = localStorage.getItem('dash_section') as Section | null
     const savedTab = localStorage.getItem('dash_tab') as Tab | null
     const savedFinTab = localStorage.getItem('dash_fin_tab') as FinTab | null
+    const savedAcctTab = localStorage.getItem('dash_acct_tab') as AcctTab | null
     if (savedSection) setActiveSectionRaw(savedSection)
     if (savedTab) setActiveTabRaw(savedTab)
     if (savedFinTab) setActiveFinTabRaw(savedFinTab)
+    if (savedAcctTab) setActiveAcctTabRaw(savedAcctTab)
   }, [])
 
   const loadTasks = useCallback(async () => {
@@ -272,7 +281,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 flex flex-col flex-shrink-0 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #0c0e1c 0%, #111827 60%, #0e1220 100%)', borderLeft: '1px solid rgba(99,102,241,0.1)' }}>
         {/* Ambient top glow */}
-        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none" style={{ background: activeSection === 'financial' ? 'radial-gradient(ellipse at 50% -10%, rgba(20,184,166,0.22) 0%, transparent 70%)' : 'radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 70%)', transition: 'background 0.4s ease' }} />
+        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none" style={{ background: activeSection === 'accounting' ? 'radial-gradient(ellipse at 50% -10%, rgba(168,85,247,0.22) 0%, transparent 70%)' : activeSection === 'financial' ? 'radial-gradient(ellipse at 50% -10%, rgba(20,184,166,0.22) 0%, transparent 70%)' : 'radial-gradient(ellipse at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 70%)', transition: 'background 0.4s ease' }} />
 
         {/* Header */}
         <div className="relative px-5 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -313,6 +322,13 @@ export default function Dashboard() {
               style={activeSection === "financial" ? { background: 'linear-gradient(135deg, #14b8a6, #059669)', color: 'white', boxShadow: '0 2px 10px rgba(20,184,166,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
             >
               פיננסי
+            </button>
+            <button
+              onClick={() => setActiveSection("accounting")}
+              className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
+              style={activeSection === "accounting" ? { background: 'linear-gradient(135deg, #a855f7, #7e22ce)', color: 'white', boxShadow: '0 2px 10px rgba(168,85,247,0.5)' } : { background: 'transparent', color: 'rgba(255,255,255,0.35)' }}
+            >
+              הנה״ח
             </button>
           </div>
         </div>
@@ -358,6 +374,25 @@ export default function Dashboard() {
               >
                 {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #14b8a6, #059669)' }} />}
                 <div className="flex-shrink-0" style={{ color: isActive ? '#2dd4bf' : 'rgba(255,255,255,0.3)' }}>{icon}</div>
+                <span className="font-medium">{label}</span>
+              </button>
+            )
+          }) : activeSection === "accounting" ? ACCOUNTING_TABS.map(({ key, label }) => {
+            const isActive = activeAcctTab === key
+            return (
+              <button
+                key={key}
+                onClick={() => setActiveAcctTab(key)}
+                className="relative w-full flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: isActive ? 'rgba(168,85,247,0.14)' : 'transparent',
+                  border: isActive ? '1px solid rgba(168,85,247,0.25)' : '1px solid transparent',
+                  color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.45)',
+                }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(168,85,247,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.8)' } }}
+                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' } }}
+              >
+                {isActive && <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" style={{ background: 'linear-gradient(to bottom, #c084fc, #7e22ce)' }} />}
                 <span className="font-medium">{label}</span>
               </button>
             )
@@ -435,7 +470,9 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-        {activeSection === "financial" ? (
+        {activeSection === "accounting" ? (
+          <AccountingView activeTab={activeAcctTab} />
+        ) : activeSection === "financial" ? (
           <FinancialView activeTab={activeFinTab} />
         ) : (
         <>
