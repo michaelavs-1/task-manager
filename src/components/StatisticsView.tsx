@@ -214,7 +214,31 @@ export function StatisticsView() {
 
   // Focus on the last N pokes (snapshots) for the table — show all by default; this is history
   const [pokeWindow, setPokeWindow] = useState<number>(14)
-  const pokeDates = pokes.allDates.slice(-pokeWindow)
+  // Sort mode for the performances table: 'total' = by ticket count in window (desc), 'date' = by launch date (ascending, nearest first)
+  const [pokeSortBy, setPokeSortBy] = useState<'total' | 'date'>('total')
+  // Window selection mode: a fixed last-N window OR a custom from→to date range
+  const [pokeMode, setPokeMode] = useState<'window' | 'range'>('window')
+  const [pokeRangeFrom, setPokeRangeFrom] = useState<string>('')
+  const [pokeRangeTo, setPokeRangeTo] = useState<string>('')
+  // Initialize range defaults once dates are available
+  useEffect(() => {
+    if (pokes.allDates.length === 0) return
+    if (!pokeRangeFrom) {
+      const first = pokes.allDates[Math.max(0, pokes.allDates.length - 14)]
+      setPokeRangeFrom(first)
+    }
+    if (!pokeRangeTo) {
+      setPokeRangeTo(pokes.allDates[pokes.allDates.length - 1])
+    }
+  }, [pokes.allDates, pokeRangeFrom, pokeRangeTo])
+  const pokeDates = useMemo(() => {
+    if (pokeMode === 'range' && pokeRangeFrom && pokeRangeTo) {
+      const lo = pokeRangeFrom <= pokeRangeTo ? pokeRangeFrom : pokeRangeTo
+      const hi = pokeRangeFrom <= pokeRangeTo ? pokeRangeTo : pokeRangeFrom
+      return pokes.allDates.filter(d => d >= lo && d <= hi)
+    }
+    return pokes.allDates.slice(-pokeWindow)
+  }, [pokes.allDates, pokeMode, pokeRangeFrom, pokeRangeTo, pokeWindow])
   const latestPokeDate = pokes.allDates[pokes.allDates.length - 1] || null
   const prevPokeDate = pokes.allDates[pokes.allDates.length - 2] || null
   const latestPokeTotal = latestPokeDate ? (pokes.totalsByDate[latestPokeDate] || 0) : 0
@@ -225,7 +249,17 @@ export function StatisticsView() {
   const pokeCampaigns = upcoming
     .map(c => ({ ...c, _total: pokeDates.reduce((s, d) => s + (pokes.byCampaign[c.id]?.[d] || 0), 0) }))
     .filter(c => pokeDates.some(d => pokes.byCampaign[c.id]?.[d] !== undefined))
-    .sort((a, b) => b._total - a._total)
+    .sort((a, b) => {
+      if (pokeSortBy === 'date') {
+        const da = a.launch_date ? new Date(a.launch_date).getTime() : Number.POSITIVE_INFINITY
+        const db = b.launch_date ? new Date(b.launch_date).getTime() : Number.POSITIVE_INFINITY
+        if (da !== db) return da - db
+        // Tie-breaker: higher total first so the ordering is still stable
+        return b._total - a._total
+      }
+      // Default: by total ticket count in window (desc)
+      return b._total - a._total
+    })
 
   // Max value for heat-coloring
   const maxPokeValue = Math.max(1, ...pokeDates.flatMap(d =>
@@ -281,13 +315,61 @@ export function StatisticsView() {
               המספר הגדול = סה"כ כרטיסים שנמכרו עד אותו יום · המספר הקטן מתחתיו = כמה נמכרו באותה דקירה
             </p>
           </div>
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-            {[7, 14, 30, 60].map(n => (
-              <button key={n} onClick={() => setPokeWindow(n)}
-                className={'px-3 py-1 rounded-md text-xs font-semibold transition-colors ' + (pokeWindow === n ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}>
-                {n} דקירות
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sort mode toggle */}
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5" title="מיון טבלת המופעים">
+              <button
+                onClick={() => setPokeSortBy('total')}
+                className={'px-3 py-1 rounded-md text-xs font-semibold transition-colors ' + (pokeSortBy === 'total' ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
+              >
+                לפי מכירות
               </button>
-            ))}
+              <button
+                onClick={() => setPokeSortBy('date')}
+                className={'px-3 py-1 rounded-md text-xs font-semibold transition-colors ' + (pokeSortBy === 'date' ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
+              >
+                לפי תאריך
+              </button>
+            </div>
+            {/* Window size toggle */}
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+              {[7, 14, 30, 60].map(n => (
+                <button key={n} onClick={() => { setPokeMode('window'); setPokeWindow(n) }}
+                  className={'px-3 py-1 rounded-md text-xs font-semibold transition-colors ' + (pokeMode === 'window' && pokeWindow === n ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}>
+                  {n} דקירות
+                </button>
+              ))}
+              <button
+                onClick={() => setPokeMode('range')}
+                className={'px-3 py-1 rounded-md text-xs font-semibold transition-colors ' + (pokeMode === 'range' ? 'bg-white dark:bg-gray-800 shadow text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700')}
+                title="טווח תאריכים מותאם"
+              >
+                טווח
+              </button>
+            </div>
+            {/* Custom date range inputs (only when in range mode) */}
+            {pokeMode === 'range' && (
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <label className="text-[11px] text-gray-600 dark:text-gray-300 px-1">מ־</label>
+                <input
+                  type="date"
+                  value={pokeRangeFrom}
+                  min={pokes.allDates[0] || undefined}
+                  max={pokes.allDates[pokes.allDates.length - 1] || undefined}
+                  onChange={e => setPokeRangeFrom(e.target.value)}
+                  className="text-xs px-2 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100"
+                />
+                <label className="text-[11px] text-gray-600 dark:text-gray-300 px-1">עד</label>
+                <input
+                  type="date"
+                  value={pokeRangeTo}
+                  min={pokes.allDates[0] || undefined}
+                  max={pokes.allDates[pokes.allDates.length - 1] || undefined}
+                  onChange={e => setPokeRangeTo(e.target.value)}
+                  className="text-xs px-2 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100"
+                />
+              </div>
+            )}
           </div>
         </div>
 
