@@ -511,7 +511,7 @@ function FinancialDashboard() {
       {/* ── צפי תזרימי ── */}
       {(() => {
         type CfRow = { inv: FinDashInvoice; remaining: number }
-        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number }
+        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; expTotal: number }
         const cfMap: Record<string, CfMonth> = {}
         invoices.forEach(inv => {
           const remaining = Math.round(((inv.total || 0) - (inv.paid || 0) - (inv.tax_withheld || 0)) * 100) / 100
@@ -520,10 +520,25 @@ function FinancialDashboard() {
           if (!key) return
           if (!cfMap[key]) {
             const [y, m] = key.split('-')
-            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0 }
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0, expTotal: 0 }
           }
           cfMap[key].rows.push({ inv, remaining })
           cfMap[key].total += remaining
+        })
+        // Aggregate unpaid expenses per month
+        expenses.forEach(exp => {
+          if (!exp.month) return
+          const key = exp.month
+          const unpaid = Math.round(((exp.total || 0) - (exp.paid || 0)) * 100) / 100
+          if (unpaid <= 0) return
+          if (cfMap[key]) {
+            cfMap[key].expTotal += unpaid
+          } else {
+            const [y, m] = key.split('-')
+            const mIdx = parseInt(m) - 1
+            if (mIdx < 0 || mIdx > 11) return
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, expTotal: unpaid }
+          }
         })
         const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
         if (cfMonths.length === 0) return null
@@ -555,8 +570,19 @@ function FinancialDashboard() {
                     }}
                   >
                     <div className="text-xs font-semibold mb-1" style={{ color: isOpen ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>{mo.label}</div>
-                    <div className="text-base font-bold" style={{ color: isOpen ? '#fff' : '#6366f1' }}>{fmt(mo.total)}</div>
-                    <div className="text-[10px] mt-0.5" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>{mo.rows.length} חשבוניות</div>
+                    {mo.total > 0 && (
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>הכנסות</div>
+                        <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : '#6366f1' }}>{fmt(mo.total)}</div>
+                      </div>
+                    )}
+                    {mo.expTotal > 0 && (
+                      <div className="flex items-center justify-between gap-1 mt-0.5">
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>הוצאות</div>
+                        <div className="text-sm font-bold" style={{ color: isOpen ? '#fca5a5' : '#ef4444' }}>{fmt(mo.expTotal)}</div>
+                      </div>
+                    )}
+                    <div className="text-[10px] mt-1" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>{mo.rows.length > 0 ? `${mo.rows.length} חשבוניות` : 'הוצאות בלבד'}</div>
                   </button>
                 )
               })}
@@ -3849,6 +3875,7 @@ function ExpensesTab() {
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
+  const [transferExpMonth, setTransferExpMonth] = useState<string>('')
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
   const [selectedExpYear, setSelectedExpYear] = useState<string>('2026')
   const [expSortField, setExpSortField] = useState<string>('default')
@@ -4580,27 +4607,42 @@ function ExpensesTab() {
                             {/* Transfer + Delete */}
                             <td className="px-3 py-2 whitespace-nowrap">
                               <div className={`flex items-center gap-1 transition-opacity ${(hoveredExpId === e.id || transferExpId === e.id) ? 'opacity-100' : 'opacity-0'}`}>
-                                {/* Transfer to month */}
+                                {/* Assign to month */}
                                 <div className="relative">
                                   <button
-                                    onClick={() => setTransferExpId(transferExpId === e.id ? null : e.id)}
-                                    title="העברה לחודש אחר"
+                                    onClick={() => { setTransferExpId(transferExpId === e.id ? null : e.id); setTransferExpMonth('') }}
+                                    title="שיוך לחודש"
                                     className="px-1.5 py-1 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
-                                  >העברה</button>
+                                  >שיוך לחודש</button>
                                   {transferExpId === e.id && (
-                                    <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl z-50 min-w-[160px] max-h-64 overflow-y-auto" dir="rtl">
-                                      <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-700">העבר לחודש:</div>
-                                      {ALL_MONTHS_FULL.map(mo => (
+                                    <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl z-50 min-w-[180px]" dir="rtl">
+                                      <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-700">שיוך לחודש:</div>
+                                      <div className="max-h-52 overflow-y-auto">
+                                        {ALL_MONTHS_FULL.map(mo => (
+                                          <button
+                                            key={mo.key}
+                                            onClick={() => setTransferExpMonth(mo.key)}
+                                            className={`w-full text-right px-3 py-1.5 text-xs transition-colors ${transferExpMonth === mo.key ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 font-bold' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-200 hover:text-indigo-700'}`}
+                                          >{mo.label}</button>
+                                        ))}
+                                      </div>
+                                      <div className="p-2 border-t border-gray-100 dark:border-gray-700 flex gap-2">
                                         <button
-                                          key={mo.key}
+                                          disabled={!transferExpMonth}
                                           onClick={async () => {
-                                            await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: mo.key }) })
-                                            setExpenses(prev => prev.map(x => x.id === e.id ? { ...x, month: mo.key } : x))
+                                            if (!transferExpMonth) return
+                                            await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: transferExpMonth }) })
+                                            setExpenses(prev => prev.map(x => x.id === e.id ? { ...x, month: transferExpMonth } : x))
                                             setTransferExpId(null)
+                                            setTransferExpMonth('')
                                           }}
-                                          className="w-full text-right px-3 py-1.5 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-200 hover:text-indigo-700 transition-colors"
-                                        >{mo.label}</button>
-                                      ))}
+                                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+                                        >אישור</button>
+                                        <button
+                                          onClick={() => { setTransferExpId(null); setTransferExpMonth('') }}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                        >ביטול</button>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
