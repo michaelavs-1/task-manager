@@ -1,6 +1,35 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 
+// Safe fetch — returns parsed JSON, or null on HTTP/network/parse failure.
+// Logs to console so we can debug without crashing the UI.
+async function safeFetch<T>(url: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const r = await fetch(url, init)
+    const j = await r.json().catch(() => null) as (T & { error?: string }) | null
+    if (!r.ok || (j && (j as { error?: string }).error)) {
+      console.warn('[accounting] API error', url, r.status, (j && (j as { error?: string }).error) || '')
+      return null
+    }
+    return (j as T) || null
+  } catch (e) {
+    console.warn('[accounting] fetch failed', url, e)
+    return null
+  }
+}
+
+// Banner for any tab whose API failed (likely SQL migration not run yet).
+function NoDataBanner({ message }: { message?: string }) {
+  return (
+    <div className="bg-amber-500/10 border border-amber-400/30 rounded-xl p-4 text-amber-200 text-sm">
+      {message || 'אין נתונים. ייתכן שצריך להריץ את מיגרציית SQL ב־Supabase: supabase/accounting_core.sql ואז supabase/accounting_seed.sql.'}
+    </div>
+  )
+}
+function Spinner() {
+  return <div className="text-white/50 text-sm py-6 text-center">טוען…</div>
+}
+
 export type AcctTab =
   | 'dashboard'
   | 'accounts'
@@ -85,22 +114,28 @@ function DashboardTab() {
   const today = new Date().toISOString().slice(0, 10)
   const ym = today.slice(0, 7)
 
+  const [loaded, setLoaded] = useState(false)
+  const [anyOk, setAnyOk] = useState(false)
+
   useEffect(() => {
     (async () => {
       const [tbR, pnlR, bsR, cfR, vatR] = await Promise.all([
-        fetch(`/api/accounting/reports/trial-balance?as_of=${today}`).then(r => r.json()).catch(() => null),
-        fetch(`/api/accounting/reports/pnl?year=${year}`).then(r => r.json()).catch(() => null),
-        fetch(`/api/accounting/reports/balance-sheet?as_of=${today}`).then(r => r.json()).catch(() => null),
-        fetch(`/api/accounting/reports/cash-flow?year=${year}`).then(r => r.json()).catch(() => null),
-        fetch(`/api/accounting/reports/vat-874?from=${ym}-01&to=${today}`).then(r => r.json()).catch(() => null),
+        safeFetch<{ totals: { debit: number; credit: number; balanced: boolean } }>(`/api/accounting/reports/trial-balance?as_of=${today}`),
+        safeFetch<{ total_revenue: number; total_expense: number; net_profit: number }>(`/api/accounting/reports/pnl?year=${year}`),
+        safeFetch<{ total_assets: number; total_liabilities: number; total_equity: number; balanced: boolean }>(`/api/accounting/reports/balance-sheet?as_of=${today}`),
+        safeFetch<{ opening_cash: number; closing_cash: number; operating: number; investing: number; financing: number }>(`/api/accounting/reports/cash-flow?year=${year}`),
+        safeFetch<{ vat_to_pay: number; output_vat: number; total_input_vat: number }>(`/api/accounting/reports/vat-874?from=${ym}-01&to=${today}`),
       ])
       setTb(tbR); setPnl(pnlR); setBs(bsR); setCf(cfR); setVat(vatR)
+      setAnyOk(Boolean(tbR || pnlR || bsR || cfR || vatR))
+      setLoaded(true)
     })()
   }, [today, year, ym])
 
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold text-white">דשבורד חשבונאי — {year}</h1>
+      {loaded && !anyOk && <NoDataBanner />}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiCard title="רווח לפני מס" value={pnl ? fmt(pnl.net_profit) : '...'} color="#10b981" subtitle={`הכנסות ${pnl ? fmt0(pnl.total_revenue) : '...'} – הוצאות ${pnl ? fmt0(pnl.total_expense) : '...'}`} />
         <KpiCard title="מזומן (תזרים)" value={cf ? fmt(cf.closing_cash) : '...'} color="#06b6d4" subtitle={`פתיחה ${cf ? fmt0(cf.opening_cash) : '...'} → סגירה`} />
@@ -165,8 +200,8 @@ function AccountsTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const r = await fetch('/api/accounting/accounts').then(x => x.json())
-    setRows(r.accounts || [])
+    const r = await safeFetch<{ accounts: Account[] }>('/api/accounting/accounts')
+    setRows(r?.accounts || [])
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -233,8 +268,8 @@ function JournalTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const r = await fetch(`/api/accounting/journal-entries?from=${from}&to=${to}&limit=500`).then(x => x.json())
-    setRows(r.entries || [])
+    const r = await safeFetch<{ entries: JE[] }>(`/api/accounting/journal-entries?from=${from}&to=${to}&limit=500`)
+    setRows(r?.entries || [])
     setLoading(false)
   }, [from, to])
   useEffect(() => { load() }, [load])
@@ -290,7 +325,7 @@ function TrialBalanceTab() {
   const [data, setData] = useState<{ rows: Array<{ code: string; name_he: string; account_type: string; balance_debit: number; balance_credit: number }>; totals: { debit: number; credit: number; balanced: boolean } } | null>(null)
 
   useEffect(() => {
-    fetch(`/api/accounting/reports/trial-balance?as_of=${asOf}`).then(r => r.json()).then(setData)
+    safeFetch<{ rows: Array<{ code: string; name_he: string; account_type: string; balance_debit: number; balance_credit: number }>; totals: { debit: number; credit: number; balanced: boolean } }>(`/api/accounting/reports/trial-balance?as_of=${asOf}`).then(setData)
   }, [asOf])
 
   return (
@@ -346,7 +381,7 @@ function PnlTab() {
   const year = new Date().getFullYear()
   const [yr, setYr] = useState(year)
   const [data, setData] = useState<{ revenue: Array<{ code: string; name_he: string; amount: number }>; expense: Array<{ code: string; name_he: string; amount: number }>; total_revenue: number; total_expense: number; net_profit: number } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/reports/pnl?year=${yr}`).then(r => r.json()).then(setData) }, [yr])
+  useEffect(() => { safeFetch<{ revenue: Array<{ code: string; name_he: string; amount: number }>; expense: Array<{ code: string; name_he: string; amount: number }>; total_revenue: number; total_expense: number; net_profit: number }>(`/api/accounting/reports/pnl?year=${yr}`).then(setData) }, [yr])
 
   return (
     <div>
@@ -396,7 +431,7 @@ function PnlTab() {
 function BalanceSheetTab() {
   const [asOf, setAsOf] = useState(new Date().toISOString().slice(0, 10))
   const [data, setData] = useState<{ assets: Array<{ code: string; name_he: string; amount: number }>; liabilities: Array<{ code: string; name_he: string; amount: number }>; equity: Array<{ code: string; name_he: string; amount: number }>; total_assets: number; total_liabilities: number; total_equity: number; total_liab_equity: number; balanced: boolean } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/reports/balance-sheet?as_of=${asOf}`).then(r => r.json()).then(setData) }, [asOf])
+  useEffect(() => { safeFetch<{ assets: Array<{ code: string; name_he: string; amount: number }>; liabilities: Array<{ code: string; name_he: string; amount: number }>; equity: Array<{ code: string; name_he: string; amount: number }>; total_assets: number; total_liabilities: number; total_equity: number; total_liab_equity: number; balanced: boolean }>(`/api/accounting/reports/balance-sheet?as_of=${asOf}`).then(setData) }, [asOf])
 
   const Block = ({ title, rows, total, color }: { title: string; rows: Array<{ code: string; name_he: string; amount: number }>; total: number; color: string }) => (
     <section className="bg-slate-900/60 rounded-xl border border-white/10 p-4">
@@ -443,9 +478,14 @@ function CashFlowTab() {
   const year = new Date().getFullYear()
   const [yr, setYr] = useState(year)
   const [data, setData] = useState<{ opening_cash: number; closing_cash: number; net_change: number; operating: number; investing: number; financing: number; monthly: Record<string, { operating: number; investing: number; financing: number; total: number }> } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/reports/cash-flow?year=${yr}`).then(r => r.json()).then(setData) }, [yr])
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    setLoaded(false)
+    safeFetch<{ opening_cash: number; closing_cash: number; net_change: number; operating: number; investing: number; financing: number; monthly: Record<string, { operating: number; investing: number; financing: number; total: number }> }>(`/api/accounting/reports/cash-flow?year=${yr}`)
+      .then(d => { setData(d); setLoaded(true) })
+  }, [yr])
 
-  const months = data ? Object.keys(data.monthly).sort() : []
+  const months = data?.monthly ? Object.keys(data.monthly).sort() : []
 
   return (
     <div>
@@ -453,6 +493,7 @@ function CashFlowTab() {
         <h1 className="text-2xl font-bold text-white">תזרים מזומנים — {yr}</h1>
         <input type="number" value={yr} onChange={e => setYr(Number(e.target.value))} className="px-2 py-1 bg-slate-800 border border-white/10 rounded text-white text-sm w-24" />
       </div>
+      {loaded && !data && <NoDataBanner />}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
         <KpiCard title="יתרת פתיחה" value={data ? fmt(data.opening_cash) : '...'} color="#94a3b8" />
         <KpiCard title="שוטף"       value={data ? fmt(data.operating)    : '...'} color="#10b981" />
@@ -497,7 +538,7 @@ function Vat874Tab() {
     const [y, m] = month.split('-').map(Number)
     const from = `${month}-01`
     const to   = new Date(y, m, 0).toISOString().slice(0, 10)
-    fetch(`/api/accounting/reports/vat-874?from=${from}&to=${to}`).then(r => r.json()).then(setData)
+    safeFetch<{ sales_total: number; output_vat: number; purchases_goods: number; purchases_assets: number; input_vat: number; input_vat_assets: number; total_input_vat: number; vat_to_pay: number }>(`/api/accounting/reports/vat-874?from=${from}&to=${to}`).then(setData)
   }, [month])
 
   const [y, m] = month.split('-').map(Number)
@@ -541,7 +582,7 @@ function Vat874Tab() {
 function Withholding856Tab() {
   const [yr, setYr] = useState(new Date().getFullYear())
   const [data, setData] = useState<{ inward: Array<{ vat_id: string; client: string; count: number; gross_payments: number; tax_withheld: number }>; totals: { inward_gross: number; inward_withheld: number } } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/reports/withholding-856?year=${yr}`).then(r => r.json()).then(setData) }, [yr])
+  useEffect(() => { safeFetch<{ inward: Array<{ vat_id: string; client: string; count: number; gross_payments: number; tax_withheld: number }>; totals: { inward_gross: number; inward_withheld: number } }>(`/api/accounting/reports/withholding-856?year=${yr}`).then(setData) }, [yr])
 
   return (
     <div>
@@ -584,7 +625,7 @@ function Withholding856Tab() {
 function Form6111Tab() {
   const [yr, setYr] = useState(new Date().getFullYear())
   const [data, setData] = useState<{ rows: Array<{ code_6111: string; total: number; accounts: Array<{ code: string; name_he: string; amount: number }> }> } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/reports/form-6111?year=${yr}`).then(r => r.json()).then(setData) }, [yr])
+  useEffect(() => { safeFetch<{ rows: Array<{ code_6111: string; total: number; accounts: Array<{ code: string; name_he: string; amount: number }> }> }>(`/api/accounting/reports/form-6111?year=${yr}`).then(setData) }, [yr])
 
   return (
     <div>
@@ -649,8 +690,8 @@ function FixedAssetsTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const r = await fetch('/api/accounting/fixed-assets').then(x => x.json())
-    setRows(r.assets || [])
+    const r = await safeFetch<{ assets: FA[] }>('/api/accounting/fixed-assets')
+    setRows(r?.assets || [])
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -712,8 +753,8 @@ function RecurringTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const r = await fetch('/api/accounting/recurring-invoices').then(x => x.json())
-    setRows(r.items || [])
+    const r = await safeFetch<{ items: Recurring[] }>('/api/accounting/recurring-invoices')
+    setRows(r?.items || [])
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -762,21 +803,21 @@ function BankTab() {
   const [reconciling, setReconciling] = useState(false)
 
   useEffect(() => {
-    fetch('/api/accounting/bank/accounts').then(r => r.json()).then(d => {
-      setAccounts(d.accounts || [])
-      if (!accountId && d.accounts?.[0]) setAccountId(d.accounts[0].id)
+    safeFetch<{ accounts: Array<{ id: string; name: string; bank: string; account_code: string }> }>('/api/accounting/bank/accounts').then(d => {
+      setAccounts(d?.accounts || [])
+      if (!accountId && d?.accounts?.[0]) setAccountId(d.accounts[0].id)
     })
   }, [accountId])
   useEffect(() => {
     if (!accountId) return
-    fetch(`/api/accounting/bank/transactions?account_id=${accountId}`).then(r => r.json()).then(d => setTxs(d.transactions || []))
+    safeFetch<{ transactions: Array<{ id: string; date: string; description: string; amount: number; match_status: string }> }>(`/api/accounting/bank/transactions?account_id=${accountId}`).then(d => setTxs(d?.transactions || []))
   }, [accountId])
 
   const reconcile = async () => {
     setReconciling(true)
     await fetch('/api/accounting/bank/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: accountId }) })
-    const r = await fetch(`/api/accounting/bank/transactions?account_id=${accountId}`).then(x => x.json())
-    setTxs(r.transactions || [])
+    const r = await safeFetch<{ transactions: Array<{ id: string; date: string; description: string; amount: number; match_status: string }> }>(`/api/accounting/bank/transactions?account_id=${accountId}`)
+    setTxs(r?.transactions || [])
     setReconciling(false)
   }
 
@@ -820,7 +861,7 @@ function BankTab() {
 function BudgetTab() {
   const [yr, setYr] = useState(new Date().getFullYear())
   const [data, setData] = useState<{ rows: Array<{ month: number; account_code: string; name_he: string; budget: number; actual: number; variance: number; variance_pct: number | null }> } | null>(null)
-  useEffect(() => { fetch(`/api/accounting/budgets/variance?year=${yr}`).then(r => r.json()).then(setData) }, [yr])
+  useEffect(() => { safeFetch<{ rows: Array<{ month: number; account_code: string; name_he: string; budget: number; actual: number; variance: number; variance_pct: number | null }> }>(`/api/accounting/budgets/variance?year=${yr}`).then(setData) }, [yr])
 
   return (
     <div>
@@ -859,8 +900,8 @@ function RemindersTab() {
   const [rows, setRows] = useState<Array<{ id: string; stage: string; scheduled_for: string; amount_due: number; days_past_due: number; status: string; invoices: { invoice_num: string; client: string } | null }>>([])
   const [scanning, setScanning] = useState(false)
   const load = useCallback(async () => {
-    const r = await fetch('/api/accounting/reminders').then(x => x.json())
-    setRows(r.reminders || [])
+    const r = await safeFetch<{ reminders: Array<{ id: string; stage: string; scheduled_for: string; amount_due: number; days_past_due: number; status: string; invoices: { invoice_num: string; client: string } | null }> }>('/api/accounting/reminders')
+    setRows(r?.reminders || [])
   }, [])
   useEffect(() => { load() }, [load])
   const scan = async () => {
