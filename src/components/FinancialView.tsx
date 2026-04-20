@@ -3642,6 +3642,7 @@ function ExpensesTab() {
   const [supplierSearch, setSupplierSearch] = useState('')
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
+  const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
 
   const fmt = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
   const fmtDec = (n: number) => n ? `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'
@@ -3987,7 +3988,7 @@ function ExpensesTab() {
                         const pencilBtn = (field: string, val: unknown) => (
                           <button
                             onClick={() => startCellEdit(e.id, field, val)}
-                            className="opacity-0 group-hover:opacity-50 hover:!opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-opacity shrink-0 ml-0.5"
+                            className={`${hoveredExpId === e.id ? 'opacity-50' : 'opacity-0'} hover:!opacity-100 p-0.5 rounded text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-opacity shrink-0 ml-0.5`}
                           >
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
@@ -4010,7 +4011,11 @@ function ExpensesTab() {
                         )
 
                         return (
-                          <tr key={e.id} className={`group ${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}`}>
+                          <tr key={e.id}
+                            className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}
+                            onMouseEnter={() => setHoveredExpId(e.id)}
+                            onMouseLeave={() => setHoveredExpId(null)}
+                          >
 
                             {/* פרויקט */}
                             <td className="px-3 py-2 text-xs">
@@ -4235,7 +4240,7 @@ function ExpensesTab() {
                                           setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: e.paid, payment_date: e.payment_date } : ex))
                                         }
                                       }}
-                                      className="opacity-0 group-hover:opacity-100 mr-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-all"
+                                      className={`${hoveredExpId === e.id ? 'opacity-100' : 'opacity-0'} mr-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-all`}
                                     >
                                       ✓ שולם
                                     </button>
