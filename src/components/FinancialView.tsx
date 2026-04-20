@@ -636,23 +636,28 @@ function FinancialDashboard() {
                     <table className="w-full text-xs mb-4">
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          {['לקוח', 'מס׳ חשבונית', 'יתרה לגבייה'].map(h => (
+                          {['לקוח', 'מס׳ חשבונית', 'חודש הוצאה', 'יתרה לגבייה'].map(h => (
                             <th key={h} className="py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {cfMap[cfOpenMonth].rows.map(({ inv, remaining }) => (
-                          <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                            <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
-                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
-                            <td className="py-2 font-bold text-left" style={{ color: '#10b981' }}>{fmt(remaining)}</td>
-                          </tr>
-                        ))}
+                        {cfMap[cfOpenMonth].rows.map(({ inv, remaining }) => {
+                          const issueKey = israeliToMonthKey(inv.date || '')
+                          const issueLabel = issueKey ? (() => { const [y, m] = issueKey.split('-'); return `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}` })() : '—'
+                          return (
+                            <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
+                              <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
+                              <td className="py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{issueLabel}</td>
+                              <td className="py-2 font-bold text-left" style={{ color: '#10b981' }}>{fmt(remaining)}</td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colSpan={2} className="pt-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ תשלומים מלקוחות</td>
+                          <td colSpan={3} className="pt-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ תשלומים מלקוחות</td>
                           <td className="pt-2 font-bold text-left" style={{ color: '#10b981' }}>{fmt(cfMap[cfOpenMonth].total)}</td>
                         </tr>
                       </tfoot>
