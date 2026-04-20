@@ -3877,6 +3877,7 @@ function ExpensesTab() {
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [transferExpMonth, setTransferExpMonth] = useState<string>('')
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
+  const [modalMonthOpen, setModalMonthOpen] = useState(false)
   const [selectedExpYear, setSelectedExpYear] = useState<string>('2026')
   const [expSortField, setExpSortField] = useState<string>('default')
   const [expSortDir, setExpSortDir] = useState<'asc' | 'desc'>('desc')
@@ -4299,7 +4300,9 @@ function ExpensesTab() {
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                       {rows.map((e, i) => {
-                        const balance = Math.max(0, roundCents(e.total - e.paid))
+                        const trueBalance = roundCents(e.total - e.paid)
+                        // For credit notes (negative total), "paid" means fully settled
+                        const balance = e.total < 0 ? Math.min(0, trueBalance) : Math.max(0, trueBalance)
                         const proj = e.project_id ? projMap[e.project_id] : null
 
                         // helpers for this row
@@ -4528,7 +4531,7 @@ function ExpensesTab() {
                             {/* סטטוס שולם */}
                             <td className="px-3 py-2 whitespace-nowrap">
                               {(() => {
-                                const isPaid = balance <= 0
+                                const isPaid = Math.abs(trueBalance) < 0.01
                                 return (
                                   <button
                                     onClick={async () => {
@@ -4686,11 +4689,35 @@ function ExpensesTab() {
               </button>
             </div>
             <div className="px-6 py-4 space-y-3">
-              {/* Month */}
+              {/* Month accordion picker */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">חודש</label>
-                <input type="month" value={modal.expense.month} onChange={e => upd('month', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setModalMonthOpen(o => !o)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300 text-right flex items-center justify-between"
+                  >
+                    <span>
+                      {modal.expense.month
+                        ? (() => { const [y, m] = modal.expense.month.split('-'); return `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}` })()
+                        : 'בחר חודש...'}
+                    </span>
+                    <span className="text-gray-400 text-xs">{modalMonthOpen ? '▲' : '▼'}</span>
+                  </button>
+                  {modalMonthOpen && (
+                    <div className="absolute top-full mt-1 right-0 left-0 bg-white dark:bg-gray-800 border border-violet-200 dark:border-gray-600 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto" dir="rtl">
+                      {ALL_MONTHS_FULL.map(mo => (
+                        <button
+                          key={mo.key}
+                          type="button"
+                          onClick={() => { upd('month', mo.key); setModalMonthOpen(false) }}
+                          className={`w-full text-right px-4 py-2 text-sm transition-colors ${modal.expense.month === mo.key ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 font-semibold' : 'hover:bg-violet-50 dark:hover:bg-violet-900/30 text-gray-700 dark:text-gray-200'}`}
+                        >{mo.label}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               {/* Supplier picker */}
               <div>
