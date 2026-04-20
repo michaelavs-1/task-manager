@@ -3673,6 +3673,7 @@ function ExpensesTab() {
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
+  const [selectedExpYear, setSelectedExpYear] = useState<string>('2026')
 
   const fmt = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
   const fmtDec = (n: number) => n ? `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'
@@ -3812,8 +3813,14 @@ function ExpensesTab() {
     setModal({ ...modal, expense: next })
   }
 
-  // filtered
+  // All months from data + available years
+  const allMonths = [...new Set(expenses.map(e => e.month).filter(Boolean))].sort()
+  const availableExpYears = [...new Set(allMonths.map(m => m.split('-')[0]))].sort()
+  const monthsForExpYear = allMonths.filter(m => m.startsWith(selectedExpYear))
+
+  // filtered (includes year + other filters)
   const filtered = expenses.filter(e => {
+    if (e.month && !e.month.startsWith(selectedExpYear)) return false
     if (filterProject && e.project_id !== filterProject) return false
     if (filterVat && e.vat_status !== filterVat) return false
     if (filterMonth && e.month !== filterMonth) return false
@@ -3822,16 +3829,14 @@ function ExpensesTab() {
     return true
   })
 
-  // Build months list: filtered data months + empty months up to 2026-12 (starting from earliest expense month)
-  const allMonths = [...new Set(expenses.map(e => e.month).filter(Boolean))].sort()
-  const earliestExpenseMonth = allMonths[0]
+  // Build months list: selected year only, with empty months padding
   const filteredMonthsSet = new Set(filtered.map(e => e.month).filter(Boolean))
   const monthsToShow: string[] = filterMonth
     ? [filterMonth]
     : (() => {
         const set = new Set(filteredMonthsSet)
         ALL_MONTHS_FULL
-          .filter(m => !earliestExpenseMonth || m.key >= earliestExpenseMonth)
+          .filter(m => m.key.startsWith(selectedExpYear))
           .forEach(m => set.add(m.key))
         return [...set].sort()
       })()
@@ -3882,13 +3887,51 @@ function ExpensesTab() {
         ))}
       </div>
 
+      {/* Year tabs + month sub-tabs */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Year selector */}
+          <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+            {availableExpYears.map(yr => {
+              const cnt = expenses.filter(e => e.month?.startsWith(yr)).length
+              return (
+                <button key={yr}
+                  onClick={() => { setSelectedExpYear(yr); setFilterMonth('') }}
+                  className={`px-4 py-1 rounded-md text-xs font-semibold transition-all ${selectedExpYear === yr ? 'bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+                >
+                  {yr} <span className={`text-xs font-normal ${selectedExpYear === yr ? 'text-violet-500' : 'text-gray-400'}`}>({cnt})</span>
+                </button>
+              )
+            })}
+          </div>
+          {/* Month sub-tabs */}
+          {monthsForExpYear.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto flex-wrap" style={{ scrollbarWidth: 'thin' }}>
+              <button
+                onClick={() => setFilterMonth('')}
+                className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${!filterMonth ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-violet-300 hover:text-violet-600'}`}
+              >
+                כל {selectedExpYear}
+              </button>
+              {monthsForExpYear.map(m => {
+                const cnt = expenses.filter(e => e.month === m).length
+                return (
+                  <button key={m}
+                    onClick={() => setFilterMonth(filterMonth === m ? '' : m)}
+                    className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border ${filterMonth === m ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-violet-300 hover:text-violet-600'}`}
+                  >
+                    {heMonth(m).replace(` ${selectedExpYear}`, '')}
+                    <span className={`text-xs font-normal mr-1 ${filterMonth === m ? 'text-violet-200' : 'text-gray-400'}`}>({cnt})</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Filters + Add */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3">
-        <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-          className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-          <option value="">כל החודשים</option>
-          {allMonths.map(m => <option key={m} value={m}>{heMonth(m)}</option>)}
-        </select>
         {/* Searchable project dropdown */}
         <div className="relative">
           <button
@@ -3946,7 +3989,7 @@ function ExpensesTab() {
         </select>
         {(filterMonth || filterProject || filterVat || filterInvoice) && (
           <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice('') }}
-            className="text-xs text-gray-400 hover:text-gray-600 underline">נקה</button>
+            className="text-xs text-gray-400 hover:text-gray-600 underline">נקה פילטרים</button>
         )}
         <div className="flex-1" />
         <button onClick={() => openAdd()}
@@ -3982,7 +4025,7 @@ function ExpensesTab() {
                 <svg className={`w-4 h-4 text-violet-500 transition-transform shrink-0 ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="font-bold text-gray-800 dark:text-white text-sm">{heMonth(month)}</span>
+                <span className="font-bold text-gray-800 dark:text-white text-sm">{heMonth(month).replace(` ${selectedExpYear}`, '')}</span>
                 <span className="text-xs text-gray-400 mr-1">({rows.length})</span>
                 <div className="flex-1" />
                 <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">שירותים: <span className="font-semibold text-gray-700 dark:text-gray-200">{fmt(mNet)}</span></span>
