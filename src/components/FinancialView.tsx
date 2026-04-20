@@ -3877,6 +3877,7 @@ function ExpensesTab() {
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [transferExpMonth, setTransferExpMonth] = useState<string>('')
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
+  const [expandedExpId, setExpandedExpId] = useState<number | null>(null)
   const [modalMonthOpen, setModalMonthOpen] = useState(false)
   const [selectedExpYear, setSelectedExpYear] = useState<string>('2026')
   const [expSortField, setExpSortField] = useState<string>('default')
@@ -4270,7 +4271,6 @@ function ExpensesTab() {
                           { label: 'פרויקט',        field: 'project' },
                           { label: 'ספק',            field: null },
                           { label: 'שם הספק',        field: 'supplier' },
-                          { label: 'תיאור הוצאה',   field: 'description' },
                           { label: 'סכום',           field: 'amount' },
                           { label: 'מע"מ',           field: null },
                           { label: 'סה"כ',           field: 'total' },
@@ -4333,9 +4333,12 @@ function ExpensesTab() {
                           </span>
                         )
 
+                        const isExpanded = expandedExpId === e.id
                         return (
-                          <tr key={e.id}
-                            className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''}
+                          <Fragment key={e.id}>
+                          <tr
+                            className={`cursor-pointer ${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''} ${isExpanded ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''}`}
+                            onClick={() => setExpandedExpId(isExpanded ? null : e.id)}
                             onMouseEnter={() => setHoveredExpId(e.id)}
                             onMouseLeave={() => setHoveredExpId(null)}
                           >
@@ -4460,23 +4463,6 @@ function ExpensesTab() {
                               )}
                             </td>
 
-                            {/* תיאור */}
-                            <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-[150px]">
-                              {isEC('description') ? (
-                                <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)}
-                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
-                                    className={inCls + ' w-36'} />
-                                  {sc}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-0.5">
-                                  <span className="truncate">{e.description || '—'}</span>
-                                  {pencilBtn('description', e.description)}
-                                </div>
-                              )}
-                            </td>
-
                             {/* סכום */}
                             <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-300 text-left whitespace-nowrap">
                               {isEC('amount') ? (
@@ -4529,7 +4515,7 @@ function ExpensesTab() {
                             </td>
 
                             {/* סטטוס שולם */}
-                            <td className="px-3 py-2 whitespace-nowrap">
+                            <td className="px-3 py-2 whitespace-nowrap" onClick={ev => ev.stopPropagation()}>
                               {(() => {
                                 const isPaid = Math.abs(trueBalance) < 0.01
                                 return (
@@ -4608,7 +4594,7 @@ function ExpensesTab() {
                             </td>
 
                             {/* Transfer + Delete */}
-                            <td className="px-3 py-2 whitespace-nowrap">
+                            <td className="px-3 py-2 whitespace-nowrap" onClick={ev => ev.stopPropagation()}>
                               <div className={`flex items-center gap-1 transition-opacity ${(hoveredExpId === e.id || transferExpId === e.id) ? 'opacity-100' : 'opacity-0'}`}>
                                 {/* Assign to month */}
                                 <div className="relative">
@@ -4649,19 +4635,53 @@ function ExpensesTab() {
                                     </div>
                                   )}
                                 </div>
-                                <button onClick={() => handleDelete(e.id)} disabled={deleting === e.id}
+                                <button onClick={ev => { ev.stopPropagation(); handleDelete(e.id) }} disabled={deleting === e.id}
                                   className="p-1 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="מחק">
                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                 </button>
                               </div>
                             </td>
                           </tr>
+                          {/* Accordion description row */}
+                          {isExpanded && (
+                            <tr className={`${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''} bg-indigo-50/30 dark:bg-indigo-900/10`}>
+                              <td colSpan={11} className="px-6 py-2 border-t border-indigo-100 dark:border-indigo-800">
+                                <div className="flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
+                                  <span className="text-xs font-semibold text-gray-400 shrink-0">תיאור:</span>
+                                  {isEC('description') ? (
+                                    <div className="flex items-center gap-1">
+                                      <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)}
+                                        onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
+                                        className="text-xs border border-violet-400 rounded px-2 py-0.5 bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-violet-500 w-72" />
+                                      <button onClick={() => saveCellEdit(e)} disabled={cellSaving}
+                                        className="p-0.5 rounded text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 transition-colors">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                      </button>
+                                      <button onClick={cancelCellEdit}
+                                        className="p-0.5 rounded text-gray-400 hover:text-rose-600 transition-colors">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs text-gray-600 dark:text-gray-300">{e.description || '—'}</span>
+                                      <button onClick={() => startCellEdit(e.id, 'description', e.description)}
+                                        className="p-0.5 rounded text-gray-300 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors">
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </Fragment>
                         )
                       })}
                     </tbody>
                     <tfoot className="border-t-2 border-gray-200 dark:border-gray-700">
                       <tr className="bg-gray-50 dark:bg-gray-900">
-                        <td colSpan={5} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
+                        <td colSpan={4} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 text-left">{fmtDec(rows.reduce((s,e)=>s+e.amount,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-500 text-left">{fmtDec(rows.reduce((s,e)=>s+e.vat,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-indigo-600 text-left">{fmtDec(mTotal)}</td>
