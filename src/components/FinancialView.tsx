@@ -4351,6 +4351,7 @@ function ExpensesTab() {
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
                         {([
+                          { label: '',               field: null },
                           { label: 'פרויקט',        field: 'project' },
                           { label: 'ספק',            field: null },
                           { label: 'שם הספק',        field: 'supplier' },
@@ -4421,10 +4422,14 @@ function ExpensesTab() {
                           <Fragment key={e.id}>
                           <tr
                             className={`cursor-pointer ${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''} ${isExpanded ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''}`}
-                            onClick={() => setExpandedExpId(isExpanded ? null : e.id)}
                             onMouseEnter={() => setHoveredExpId(e.id)}
                             onMouseLeave={() => setHoveredExpId(null)}
                           >
+                            {/* Expand arrow */}
+                            <td className="px-2 py-2 w-6" onClick={() => setExpandedExpId(isExpanded ? null : e.id)}>
+                              <span className="text-gray-400 text-[10px] transition-transform duration-200 inline-block select-none"
+                                style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                            </td>
 
                             {/* פרויקט */}
                             <td className="px-3 py-2 text-xs">
@@ -4711,7 +4716,7 @@ function ExpensesTab() {
                           {/* Accordion description row */}
                           {isExpanded && (
                             <tr className={`${i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/50' : ''} bg-indigo-50/30 dark:bg-indigo-900/10`}>
-                              <td colSpan={11} className="px-6 py-2 border-t border-indigo-100 dark:border-indigo-800">
+                              <td colSpan={12} className="px-6 py-2 border-t border-indigo-100 dark:border-indigo-800">
                                 <div className="flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
                                   <span className="text-xs font-semibold text-gray-400 shrink-0">תיאור:</span>
                                   {isEC('description') ? (
@@ -4747,7 +4752,7 @@ function ExpensesTab() {
                     </tbody>
                     <tfoot className="border-t-2 border-gray-200 dark:border-gray-700">
                       <tr className="bg-gray-50 dark:bg-gray-900">
-                        <td colSpan={4} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
+                        <td colSpan={5} className="px-3 py-2 text-xs font-bold text-gray-500">סה"כ חודש</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 text-left">{fmtDec(rows.reduce((s,e)=>s+e.amount,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-gray-500 text-left">{fmtDec(rows.reduce((s,e)=>s+e.vat,0))}</td>
                         <td className="px-3 py-2 text-xs font-bold text-indigo-600 text-left">{fmtDec(mTotal)}</td>
