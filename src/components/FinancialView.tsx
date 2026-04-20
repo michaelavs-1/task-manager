@@ -3929,6 +3929,7 @@ function ExpensesTab() {
   const [showSupplierDrop, setShowSupplierDrop] = useState(false)
   const [transferExpId, setTransferExpId] = useState<number | null>(null)
   const [transferExpMonth, setTransferExpMonth] = useState<string>('')
+  const [transferBtnRect, setTransferBtnRect] = useState<{ top: number; left: number } | null>(null)
   const [hoveredExpId, setHoveredExpId] = useState<number | null>(null)
   const [expandedExpId, setExpandedExpId] = useState<number | null>(null)
   const [modalMonthOpen, setModalMonthOpen] = useState(false)
@@ -4652,41 +4653,19 @@ function ExpensesTab() {
                                 {/* Assign to month */}
                                 <div className="relative">
                                   <button
-                                    onClick={() => { setTransferExpId(transferExpId === e.id ? null : e.id); setTransferExpMonth('') }}
+                                    onClick={(ev) => {
+                                      const rect = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+                                      if (transferExpId === e.id) {
+                                        setTransferExpId(null); setTransferBtnRect(null)
+                                      } else {
+                                        setTransferExpId(e.id)
+                                        setTransferBtnRect({ top: rect.bottom + 4, left: rect.left })
+                                      }
+                                      setTransferExpMonth('')
+                                    }}
                                     title="שיוך לחודש"
                                     className="px-1.5 py-1 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/30 text-gray-400 hover:text-violet-600 transition-colors text-[10px] font-semibold"
                                   >שיוך לחודש</button>
-                                  {transferExpId === e.id && (
-                                    <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl z-50 min-w-[180px]" dir="rtl">
-                                      <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-700">שיוך לחודש:</div>
-                                      <div className="max-h-52 overflow-y-auto">
-                                        {ALL_MONTHS_FULL.map(mo => (
-                                          <button
-                                            key={mo.key}
-                                            onClick={() => setTransferExpMonth(mo.key)}
-                                            className={`w-full text-right px-3 py-1.5 text-xs transition-colors ${transferExpMonth === mo.key ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 font-bold' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-200 hover:text-indigo-700'}`}
-                                          >{mo.label}</button>
-                                        ))}
-                                      </div>
-                                      <div className="p-2 border-t border-gray-100 dark:border-gray-700 flex gap-2">
-                                        <button
-                                          disabled={!transferExpMonth}
-                                          onClick={async () => {
-                                            if (!transferExpMonth) return
-                                            await fetch(`/api/expenses/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: transferExpMonth }) })
-                                            setExpenses(prev => prev.map(x => x.id === e.id ? { ...x, month: transferExpMonth } : x))
-                                            setTransferExpId(null)
-                                            setTransferExpMonth('')
-                                          }}
-                                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
-                                        >אישור</button>
-                                        <button
-                                          onClick={() => { setTransferExpId(null); setTransferExpMonth('') }}
-                                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                        >ביטול</button>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                                 <button onClick={ev => { ev.stopPropagation(); handleDelete(e.id) }} disabled={deleting === e.id}
                                   className="p-1 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50" title="מחק">
@@ -4749,6 +4728,46 @@ function ExpensesTab() {
             </div>
           )
         })
+      )}
+
+      {/* Transfer-to-month floating dropdown (fixed position to escape table overflow) */}
+      {transferExpId !== null && transferBtnRect && (
+        <>
+          <div className="fixed inset-0 z-[998]" onClick={() => { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('') }} />
+          <div
+            className="bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl min-w-[190px]"
+            style={{ position: 'fixed', top: transferBtnRect.top, left: transferBtnRect.left, zIndex: 999 }}
+            dir="rtl"
+            onClick={ev => ev.stopPropagation()}
+          >
+            <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 dark:border-gray-700">שיוך לחודש:</div>
+            <div className="max-h-52 overflow-y-auto">
+              {ALL_MONTHS_FULL.map(mo => (
+                <button
+                  key={mo.key}
+                  onClick={() => setTransferExpMonth(mo.key)}
+                  className={`w-full text-right px-3 py-1.5 text-xs transition-colors ${transferExpMonth === mo.key ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 font-bold' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-200 hover:text-indigo-700'}`}
+                >{mo.label}</button>
+              ))}
+            </div>
+            <div className="p-2 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+              <button
+                disabled={!transferExpMonth}
+                onClick={async () => {
+                  if (!transferExpMonth || transferExpId === null) return
+                  await fetch(`/api/expenses/${transferExpId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ month: transferExpMonth }) })
+                  setExpenses(prev => prev.map(x => x.id === transferExpId ? { ...x, month: transferExpMonth } : x))
+                  setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('')
+                }}
+                className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+              >אישור</button>
+              <button
+                onClick={() => { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('') }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >ביטול</button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Modal */}
