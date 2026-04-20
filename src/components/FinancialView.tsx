@@ -4112,6 +4112,13 @@ function ExpensesTab() {
   const [filterInvoice, setFilterInvoice] = useState<'' | 'yes' | 'no'>('')
   const [filterPayment, setFilterPayment] = useState<'all' | 'open' | 'closed'>('all')
   const [filterSupplier, setFilterSupplier] = useState('')
+  const [undoAction, setUndoAction] = useState<{ label: string; run: () => Promise<void> } | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pushUndo = (label: string, run: () => Promise<void>) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setUndoAction({ label, run })
+    undoTimerRef.current = setTimeout(() => setUndoAction(null), 8000)
+  }
   const [projDropOpen, setProjDropOpen] = useState(false)
   const [projDropSearch, setProjDropSearch] = useState('')
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
@@ -4169,14 +4176,29 @@ function ExpensesTab() {
   const handleSave = async () => {
     if (!modal) return
     setSaving(true)
+    const isEdit = modal.mode === 'edit'
+    const prevExpense = isEdit ? expenses.find(e => e.id === modal.expense.id) : null
     try {
       const body = modal.expense
-      if (modal.mode === 'add') {
-        await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!isEdit) {
+        const res = await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const d = await res.json().catch(() => null)
+        await loadAll()
+        if (d?.expense?.id) {
+          const newId = d.expense.id
+          pushUndo('הוספת הוצאה', async () => { await fetch(`/api/expenses/${newId}`, { method: 'DELETE' }); await loadAll() })
+        }
       } else {
         await fetch(`/api/expenses/${modal.expense.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        await loadAll()
+        if (prevExpense) {
+          const prev = prevExpense
+          pushUndo('עריכת הוצאה', async () => {
+            await fetch(`/api/expenses/${prev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prev) })
+            await loadAll()
+          })
+        }
       }
-      await loadAll()
       setModal(null)
     } catch {
       alert('שגיאה בשמירה')
@@ -4187,10 +4209,18 @@ function ExpensesTab() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('למחוק הוצאה זו?')) return
+    const prevExpense = expenses.find(e => e.id === id)
     setDeleting(id)
     await fetch(`/api/expenses/${id}`, { method: 'DELETE' })
     await loadAll()
     setDeleting(null)
+    if (prevExpense) {
+      const prev = prevExpense
+      pushUndo('מחיקת הוצאה', async () => {
+        await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prev) })
+        await loadAll()
+      })
+    }
   }
 
   const openAdd = (month?: string) => {
@@ -4218,6 +4248,7 @@ function ExpensesTab() {
     if (!editingCell) return
     setCellSaving(true)
     const val = cellValueRef.current
+    const prevValue = (expense as Record<string, unknown>)[editingCell.field]
     const updates: Record<string, unknown> = { [editingCell.field]: val }
     // Auto-recalculate dependent fields
     if (editingCell.field === 'amount') {
@@ -4245,12 +4276,19 @@ function ExpensesTab() {
       const responseData = await res.json().catch(() => null)
       if (!res.ok) throw new Error(responseData?.error || `HTTP ${res.status}`)
       // Update the single row in-place — no reload, no spinner
+      const savedId = editingCell.id
+      const savedField = editingCell.field
       if (responseData?.expense) {
-        setExpenses(prev => prev.map(ex => ex.id === editingCell.id ? (responseData.expense as Expense) : ex))
+        setExpenses(prev => prev.map(ex => ex.id === savedId ? (responseData.expense as Expense) : ex))
       }
       cellValueRef.current = null
       setEditingCell(null)
       setCellValue(null)
+      pushUndo(`שינוי ${savedField}`, async () => {
+        const res2 = await fetch(`/api/expenses/${savedId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [savedField]: prevValue }) })
+        const d2 = await res2.json().catch(() => null)
+        if (d2?.expense) setExpenses(prev => prev.map(ex => ex.id === savedId ? (d2.expense as Expense) : ex))
+      })
     } catch (err) {
       alert(`שגיאה בשמירה: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
@@ -5175,6 +5213,26 @@ function ExpensesTab() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Undo toast */}
+      {undoAction && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm" dir="rtl">
+          <span className="text-gray-300">{undoAction.label}</span>
+          <button
+            onClick={async () => {
+              const action = undoAction
+              setUndoAction(null)
+              if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+              await action.run()
+            }}
+            className="font-bold text-violet-300 hover:text-violet-100 transition-colors underline"
+          >בטל</button>
+          <button
+            onClick={() => { setUndoAction(null); if (undoTimerRef.current) clearTimeout(undoTimerRef.current) }}
+            className="text-gray-500 hover:text-gray-300 transition-colors text-xs mr-1"
+          >✕</button>
         </div>
       )}
     </div>
