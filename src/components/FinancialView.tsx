@@ -511,7 +511,8 @@ function FinancialDashboard() {
       {/* ── צפי תזרימי ── */}
       {(() => {
         type CfRow = { inv: FinDashInvoice; remaining: number }
-        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; expTotal: number }
+        type CfExpRow = { supplier: string; description: string; unpaid: number }
+        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; expRows: CfExpRow[]; expTotal: number }
         const cfMap: Record<string, CfMonth> = {}
         invoices.forEach(inv => {
           const remaining = Math.round(((inv.total || 0) - (inv.paid || 0) - (inv.tax_withheld || 0)) * 100) / 100
@@ -520,7 +521,7 @@ function FinancialDashboard() {
           if (!key) return
           if (!cfMap[key]) {
             const [y, m] = key.split('-')
-            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0, expTotal: 0 }
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0, expRows: [], expTotal: 0 }
           }
           cfMap[key].rows.push({ inv, remaining })
           cfMap[key].total += remaining
@@ -531,18 +532,20 @@ function FinancialDashboard() {
           const key = exp.month
           const unpaid = Math.round(((exp.total || 0) - (exp.paid || 0)) * 100) / 100
           if (unpaid <= 0) return
-          if (cfMap[key]) {
-            cfMap[key].expTotal += unpaid
-          } else {
+          if (!cfMap[key]) {
             const [y, m] = key.split('-')
             const mIdx = parseInt(m) - 1
             if (mIdx < 0 || mIdx > 11) return
-            cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, expTotal: unpaid }
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, expRows: [], expTotal: 0 }
           }
+          cfMap[key].expRows.push({ supplier: exp.supplier || '—', description: exp.description || '—', unpaid })
+          cfMap[key].expTotal += unpaid
         })
         const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
         if (cfMonths.length === 0) return null
-        const grandTotal = cfMonths.reduce((s, m) => s + m.total, 0)
+        const grandIncome = cfMonths.reduce((s, m) => s + m.total, 0)
+        const grandExp    = cfMonths.reduce((s, m) => s + m.expTotal, 0)
+        const grandNet    = grandIncome - grandExp
 
         return (
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.06)' }}>
@@ -550,14 +553,18 @@ function FinancialDashboard() {
             <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
               <div>
                 <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>צפי תזרימי</h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>הכנסות צפויות לפי חודש תשלום — רק שלא שולמו</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>תזרים צפוי לפי חודש — רק תשלומים שטרם בוצעו</p>
               </div>
-              <span className="text-base font-bold" style={{ color: '#6366f1' }}>{fmt(grandTotal)}</span>
+              <div className="text-right">
+                <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>סיכום נטו</div>
+                <span className="text-base font-bold" style={{ color: grandNet >= 0 ? '#6366f1' : '#ef4444' }}>{fmt(grandNet)}</span>
+              </div>
             </div>
             {/* Summary cards row */}
             <div className="flex gap-3 px-5 py-4 overflow-x-auto">
               {cfMonths.map(mo => {
                 const isOpen = cfOpenMonth === mo.key
+                const net = mo.total - mo.expTotal
                 return (
                   <button
                     key={mo.key}
@@ -566,23 +573,26 @@ function FinancialDashboard() {
                     style={{
                       background: isOpen ? '#6366f1' : 'var(--bg-secondary)',
                       border: `1.5px solid ${isOpen ? '#6366f1' : 'var(--border-color)'}`,
-                      minWidth: 130,
+                      minWidth: 148,
                     }}
                   >
-                    <div className="text-xs font-semibold mb-1" style={{ color: isOpen ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>{mo.label}</div>
+                    <div className="text-xs font-semibold mb-1.5" style={{ color: isOpen ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>{mo.label}</div>
                     {mo.total > 0 && (
-                      <div className="flex items-center justify-between gap-1">
-                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>הכנסות</div>
-                        <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : '#6366f1' }}>{fmt(mo.total)}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>תשלומים מלקוחות</div>
+                        <div className="text-sm font-bold" style={{ color: isOpen ? '#a5f3b0' : '#10b981' }}>{fmt(mo.total)}</div>
                       </div>
                     )}
                     {mo.expTotal > 0 && (
-                      <div className="flex items-center justify-between gap-1 mt-0.5">
-                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>הוצאות</div>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>תשלומי ספקים</div>
                         <div className="text-sm font-bold" style={{ color: isOpen ? '#fca5a5' : '#ef4444' }}>{fmt(mo.expTotal)}</div>
                       </div>
                     )}
-                    <div className="text-[10px] mt-1" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>{mo.rows.length > 0 ? `${mo.rows.length} חשבוניות` : 'הוצאות בלבד'}</div>
+                    <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${isOpen ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}` }}>
+                      <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
+                      <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
+                    </div>
                   </button>
                 )
               })}
@@ -590,30 +600,73 @@ function FinancialDashboard() {
             {/* Accordion detail */}
             {cfOpenMonth && cfMap[cfOpenMonth] && (
               <div className="border-t px-5 py-4" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      {['לקוח', 'מס׳ חשבונית', 'יתרה לגבייה'].map(h => (
-                        <th key={h} className="py-2 text-right font-semibold pb-2" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cfMap[cfOpenMonth].rows.map(({ inv, remaining }) => (
-                      <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                        <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
-                        <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
-                        <td className="py-2 font-bold text-left" style={{ color: '#f59e0b' }}>{fmt(remaining)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={2} className="pt-3 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ {cfMap[cfOpenMonth].label}</td>
-                      <td className="pt-3 font-bold text-left" style={{ color: '#6366f1' }}>{fmt(cfMap[cfOpenMonth].total)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                {/* Income rows */}
+                {cfMap[cfOpenMonth].rows.length > 0 && (
+                  <>
+                    <div className="text-xs font-bold mb-2" style={{ color: '#10b981' }}>תשלומים מלקוחות</div>
+                    <table className="w-full text-xs mb-4">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          {['לקוח', 'מס׳ חשבונית', 'יתרה לגבייה'].map(h => (
+                            <th key={h} className="py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cfMap[cfOpenMonth].rows.map(({ inv, remaining }) => (
+                          <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
+                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
+                            <td className="py-2 font-bold text-left" style={{ color: '#10b981' }}>{fmt(remaining)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={2} className="pt-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ תשלומים מלקוחות</td>
+                          <td className="pt-2 font-bold text-left" style={{ color: '#10b981' }}>{fmt(cfMap[cfOpenMonth].total)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </>
+                )}
+                {/* Expense rows */}
+                {cfMap[cfOpenMonth].expRows.length > 0 && (
+                  <>
+                    <div className="text-xs font-bold mb-2" style={{ color: '#ef4444' }}>תשלומי ספקים</div>
+                    <table className="w-full text-xs mb-4">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          {['ספק', 'תיאור', 'יתרה לתשלום'].map(h => (
+                            <th key={h} className="py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cfMap[cfOpenMonth].expRows.map((er, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{er.supplier}</td>
+                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{er.description}</td>
+                            <td className="py-2 font-bold text-left" style={{ color: '#ef4444' }}>{fmt(er.unpaid)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={2} className="pt-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ תשלומי ספקים</td>
+                          <td className="pt-2 font-bold text-left" style={{ color: '#ef4444' }}>{fmt(cfMap[cfOpenMonth].expTotal)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </>
+                )}
+                {/* Net summary row */}
+                <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1.5px solid var(--border-color)' }}>
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>סיכום נטו — {cfMap[cfOpenMonth].label}</span>
+                  <span className="text-sm font-bold" style={{ color: (cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal) >= 0 ? '#6366f1' : '#ef4444' }}>
+                    {fmt(cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal)}
+                  </span>
+                </div>
               </div>
             )}
           </div>
