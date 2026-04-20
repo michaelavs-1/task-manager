@@ -478,15 +478,15 @@ export function CampaignsView() {
               if (barbyViewMode === 'table') {
                 return (
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-2xl overflow-hidden shadow-sm">
-                    <table className="w-full text-sm" dir="rtl">
+                    <table className="w-full text-sm border-collapse" dir="rtl">
                       <thead>
-                        <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                        <tr className="bg-gray-50 dark:bg-gray-900">
                           {['תאריך','שם המופע','כרטיסים למכירה','כרטיסים מכורים','נותרו'].map(h=>(
-                            <th key={h} className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
+                            <th key={h} className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border border-gray-200 dark:border-gray-600">{h}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                      <tbody>
                         {camps.map(camp => (
                           <TicketsTableRow key={camp.id} campaign={camp} />
                         ))}
@@ -1018,19 +1018,19 @@ function TicketsTableRow({ campaign }: { campaign: Campaign }) {
   const remaining = forSale != null && soldNum != null ? forSale - soldNum : forSale != null ? forSale : null
   return (
     <tr className="hover:bg-pink-50/30 dark:hover:bg-gray-750 transition-colors">
-      <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm font-medium">
+      <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm font-medium border border-gray-100 dark:border-gray-700">
         {campaign.launch_date ? new Date(campaign.launch_date).toLocaleDateString('he-IL') : '—'}
       </td>
-      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">
+      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white border border-gray-100 dark:border-gray-700">
         {campaign.requester || campaign.name}
       </td>
-      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">
+      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm border border-gray-100 dark:border-gray-700">
         {forSale != null ? forSale : '—'}
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+      <td className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-700">
         {soldNum != null ? soldNum.toLocaleString() : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 border border-gray-100 dark:border-gray-700">
         {remaining != null ? (
           <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${remaining <= 0 ? 'bg-red-100 text-red-600' : remaining <= 20 ? 'bg-orange-100 text-orange-600' : 'bg-indigo-50 text-indigo-600'}`}>
             {remaining <= 0 ? 'אזלו' : remaining}

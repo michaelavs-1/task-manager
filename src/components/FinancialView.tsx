@@ -451,69 +451,8 @@ function FinancialDashboard() {
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6" dir="rtl">
 
-      {/* ── GL — מקור האמת ── */}
-      <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.07)' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>מאזן ניהולי — נתוני האמת (GL)</h2>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>יתרות מוצהרות</span>
-          {glLoading && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>טוען...</span>}
-        </div>
-        {gl && !glLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {[
-              { label: 'הכנסות',        value: fmt(gl.revenue),         color: '#6366f1' },
-              { label: 'עלות המכר',     value: fmt(gl.costOfRevenue),   color: '#ef4444' },
-              { label: 'הוצ׳ תפעוליות', value: fmt(gl.opExpenses),      color: '#f97316' },
-              { label: 'רווח גולמי',    value: fmt(gl.grossProfit),     color: gl.grossProfit >= 0 ? '#10b981' : '#ef4444' },
-              { label: 'בנק',           value: fmt(gl.bank),            color: '#3b82f6' },
-              { label: 'חייבים',        value: fmt(gl.receivables),     color: '#f59e0b' },
-              { label: 'מע״מ נטו',      value: fmt(Math.abs(gl.vatNet)), color: gl.vatNet >= 0 ? '#f59e0b' : '#10b981',
-                sub: gl.vatNet >= 0 ? 'לתשלום' : 'להחזר' },
-            ].map(c => (
-              <div key={c.label} className="rounded-xl p-3 flex flex-col gap-1" style={{ background: 'var(--bg-secondary)' }}>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                </div>
-                <div className="text-base font-bold tracking-tight" style={{ color: c.color }}>{c.value}</div>
-                {c.sub && <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.sub}</div>}
-              </div>
-            ))}
-          </div>
-        ) : !glLoading ? (
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>אין נתוני GL — הרץ את תהליך הבקפיל כדי ליצור רשומות יומן</p>
-        ) : null}
-      </div>
 
-      {/* ── KPI Cards — full financial snapshot ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          // Row 1 — headline P&L picture (all values before VAT, matching revenue convention)
-          { label: 'הכנסות (לפני מע״מ)',  value: fmt(totalRevenue),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
-          { label: 'הוצאות (לפני מע״מ)',  value: fmt(totalExpNet),   color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-          { label: 'רווח גולמי',          value: fmt(grossProfit),   color: grossProfit >= 0 ? '#10b981' : '#ef4444', bg: grossProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', sub: `${grossProfitPct.toFixed(1)}% מההכנסות` },
-          { label: 'יתרת מע"מ',       value: fmt(vatBalance),    color: vatBalance >= 0 ? '#f59e0b' : '#10b981', bg: 'rgba(245,158,11,0.08)', sub: vatBalance >= 0 ? 'לתשלום' : 'להחזר' },
-          // Row 2 — cashflow / collection picture
-          { label: 'תשלומים',          value: fmt(totalPaid),     color: '#10b981', bg: 'rgba(16,185,129,0.08)', sub: `${collectionPct.toFixed(0)}% נגבה` },
-          { label: 'נותר לגבייה',      value: fmt(totalRemain),   color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-          { label: 'ניכוי מס במקור',   value: fmt(totalWithheld), color: '#a855f7', bg: 'rgba(168,85,247,0.08)', sub: totalRevenue > 0 ? `${(totalWithheld / totalRevenue * 100).toFixed(1)}% מההכנסות` : undefined },
-          { label: 'חשבוניות פתוחות',  value: String(openCount),  color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
-        ].map(card => (
-          <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: card.color }} />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-bold tracking-tight" style={{ color: card.color }}>{card.value}</div>
-            </div>
-            {card.sub && (
-              <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{card.sub}</div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* ── צפי תזרימי ── */}
+      {/* ── תזרים ── */}
       {(() => {
         type CfRow = { inv: FinDashInvoice; remaining: number }
         type CfExpRow = { supplier: string; project: string; unpaid: number }
@@ -570,7 +509,7 @@ function FinancialDashboard() {
             {/* Header */}
             <div className="px-5 py-4 border-b flex items-start justify-between gap-4" style={{ borderColor: 'var(--border-color)' }}>
               <div className="flex-1">
-                <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>צפי תזרימי</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>תזרים</h3>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>תזרים צפוי לפי חודש — רק תשלומים שטרם בוצעו</p>
                 {/* Bank balance input */}
                 <div className="flex items-center gap-2 mt-3">
@@ -723,6 +662,69 @@ function FinancialDashboard() {
           </div>
         )
       })()}
+
+      {/* ── GL — מקור האמת ── */}
+      <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.07)' }}>
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>מאזן ניהולי — נתוני האמת (GL)</h2>
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>יתרות מוצהרות</span>
+          {glLoading && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>טוען...</span>}
+        </div>
+        {gl && !glLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { label: 'הכנסות',        value: fmt(gl.revenue),         color: '#6366f1' },
+              { label: 'עלות המכר',     value: fmt(gl.costOfRevenue),   color: '#ef4444' },
+              { label: 'הוצ׳ תפעוליות', value: fmt(gl.opExpenses),      color: '#f97316' },
+              { label: 'רווח גולמי',    value: fmt(gl.grossProfit),     color: gl.grossProfit >= 0 ? '#10b981' : '#ef4444' },
+              { label: 'בנק',           value: fmt(gl.bank),            color: '#3b82f6' },
+              { label: 'חייבים',        value: fmt(gl.receivables),     color: '#f59e0b' },
+              { label: 'מע״מ נטו',      value: fmt(Math.abs(gl.vatNet)), color: gl.vatNet >= 0 ? '#f59e0b' : '#10b981',
+                sub: gl.vatNet >= 0 ? 'לתשלום' : 'להחזר' },
+            ].map(c => (
+              <div key={c.label} className="rounded-xl p-3 flex flex-col gap-1" style={{ background: 'var(--bg-secondary)' }}>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
+                </div>
+                <div className="text-base font-bold tracking-tight" style={{ color: c.color }}>{c.value}</div>
+                {c.sub && <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.sub}</div>}
+              </div>
+            ))}
+          </div>
+        ) : !glLoading ? (
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>אין נתוני GL — הרץ את תהליך הבקפיל כדי ליצור רשומות יומן</p>
+        ) : null}
+      </div>
+
+      {/* ── KPI Cards — full financial snapshot ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          // Row 1 — headline P&L picture (all values before VAT, matching revenue convention)
+          { label: 'הכנסות (לפני מע״מ)',  value: fmt(totalRevenue),  color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+          { label: 'הוצאות (לפני מע״מ)',  value: fmt(totalExpNet),   color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+          { label: 'רווח גולמי',          value: fmt(grossProfit),   color: grossProfit >= 0 ? '#10b981' : '#ef4444', bg: grossProfit >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', sub: `${grossProfitPct.toFixed(1)}% מההכנסות` },
+          { label: 'יתרת מע"מ',       value: fmt(vatBalance),    color: vatBalance >= 0 ? '#f59e0b' : '#10b981', bg: 'rgba(245,158,11,0.08)', sub: vatBalance >= 0 ? 'לתשלום' : 'להחזר' },
+          // Row 2 — cashflow / collection picture
+          { label: 'תשלומים',          value: fmt(totalPaid),     color: '#10b981', bg: 'rgba(16,185,129,0.08)', sub: `${collectionPct.toFixed(0)}% נגבה` },
+          { label: 'נותר לגבייה',      value: fmt(totalRemain),   color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+          { label: 'ניכוי מס במקור',   value: fmt(totalWithheld), color: '#a855f7', bg: 'rgba(168,85,247,0.08)', sub: totalRevenue > 0 ? `${(totalWithheld / totalRevenue * 100).toFixed(1)}% מההכנסות` : undefined },
+          { label: 'חשבוניות פתוחות',  value: String(openCount),  color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+        ].map(card => (
+          <div key={card.label} className="rounded-2xl p-5 flex flex-col gap-3" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{card.label}</span>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: card.color }} />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold tracking-tight" style={{ color: card.color }}>{card.value}</div>
+            </div>
+            {card.sub && (
+              <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{card.sub}</div>
+            )}
+          </div>
+        ))}
+      </div>
+
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
