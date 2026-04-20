@@ -4002,7 +4002,7 @@ function ExpensesTab() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        {['פרויקט','ספק','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית',''].map(h => (
+                        {['פרויקט','ספק','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','סטטוס','תאריך תשלום','יתרה לתשלום','חשבונית',''].map(h => (
                           <th key={h} className="px-3 py-2 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -4235,48 +4235,40 @@ function ExpensesTab() {
                               )}
                             </td>
 
-                            {/* שולם */}
-                            <td className="px-3 py-2 text-xs font-semibold text-emerald-600 text-left whitespace-nowrap">
-                              {isEC('paid') ? (
-                                <div className="flex items-center gap-1">
-                                  <input autoFocus type="number" step="0.01" value={String(cellValue ?? '')} onChange={ev => updCV(parseFloat(ev.target.value) || 0)}
-                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
-                                    className={inCls + ' w-20 text-left'} />
-                                  {sc}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-0.5">
-                                  <span>{e.paid ? fmtDec(e.paid) : '—'}</span>
-                                  {pencilBtn('paid', e.paid)}
-                                  {balance > 0 && (
-                                    <button
-                                      title="סמן כשולם במלואו"
-                                      onClick={async () => {
-                                        const today = new Date()
-                                        const dd = String(today.getDate()).padStart(2,'0')
-                                        const mm = String(today.getMonth()+1).padStart(2,'0')
-                                        const yy = String(today.getFullYear()).slice(-2)
-                                        const todayStr = `${dd}.${mm}.${yy}`
-                                        setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: ex.total, payment_date: todayStr } : ex))
-                                        const res = await fetch(`/api/expenses/${e.id}`, {
-                                          method: 'PATCH',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ paid: e.total, payment_date: todayStr })
-                                        })
-                                        const data = await res.json().catch(() => null)
-                                        if (res.ok && data?.expense) {
-                                          setExpenses(prev => prev.map(ex => ex.id === e.id ? (data.expense as Expense) : ex))
-                                        } else {
-                                          setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: e.paid, payment_date: e.payment_date } : ex))
-                                        }
-                                      }}
-                                      className={`${hoveredExpId === e.id ? 'opacity-100' : 'opacity-0'} mr-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-all`}
-                                    >
-                                      ✓ שולם
-                                    </button>
-                                  )}
-                                </div>
-                              )}
+                            {/* סטטוס שולם */}
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {(() => {
+                                const isPaid = balance <= 0
+                                return (
+                                  <button
+                                    onClick={async () => {
+                                      const today = new Date()
+                                      const dd = String(today.getDate()).padStart(2,'0')
+                                      const mm = String(today.getMonth()+1).padStart(2,'0')
+                                      const yy = String(today.getFullYear()).slice(-2)
+                                      const todayStr = `${dd}.${mm}.${yy}`
+                                      const newPaid  = isPaid ? 0 : e.total
+                                      const newDate  = isPaid ? '' : todayStr
+                                      setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: newPaid, payment_date: newDate } : ex))
+                                      const res = await fetch(`/api/expenses/${e.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ paid: newPaid, payment_date: newDate })
+                                      })
+                                      const data = await res.json().catch(() => null)
+                                      if (res.ok && data?.expense) {
+                                        setExpenses(prev => prev.map(ex => ex.id === e.id ? (data.expense as Expense) : ex))
+                                      } else {
+                                        setExpenses(prev => prev.map(ex => ex.id === e.id ? { ...ex, paid: e.paid, payment_date: e.payment_date } : ex))
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:ring-2 hover:ring-offset-1 ${isPaid ? 'bg-emerald-100 text-emerald-700 hover:ring-emerald-300' : 'bg-gray-100 text-gray-500 hover:ring-gray-300 dark:bg-gray-700 dark:text-gray-400'}`}
+                                    title={isPaid ? `שולם ${fmtDec(e.paid)} — לחץ לביטול` : 'לחץ לסימון כשולם'}
+                                  >
+                                    {isPaid ? `✓ שולם ${fmtDec(e.paid)}` : 'לא שולם'}
+                                  </button>
+                                )
+                              })()}
                             </td>
 
                             {/* תאריך תשלום */}
