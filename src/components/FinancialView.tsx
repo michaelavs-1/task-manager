@@ -1502,6 +1502,26 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         )}
       </div>
 
+      {/* Always-visible search bar */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="relative flex-1 max-w-sm">
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי מס' חשבונית או שם לקוח..."
+            className="w-full border border-gray-200 rounded-xl pr-9 pl-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
+        {search && <span className="text-xs text-indigo-600 font-medium">{filtered.length} תוצאות</span>}
+      </div>
+
       {/* Filters — hidden by default, toggleable */}
       {showFilters && (
         <div className="flex flex-wrap gap-2 flex-shrink-0">
@@ -3205,6 +3225,8 @@ function ExpensesTab() {
   const [filterVat, setFilterVat] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterInvoice, setFilterInvoice] = useState<'' | 'yes' | 'no'>('')
+  const [projDropOpen, setProjDropOpen] = useState(false)
+  const [projDropSearch, setProjDropSearch] = useState('')
   const [modal, setModal] = useState<null | { mode: 'add' | 'edit'; expense: Omit<Expense, 'id'> & { id?: number } }>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
@@ -3426,11 +3448,50 @@ function ExpensesTab() {
           <option value="">כל החודשים</option>
           {allMonths.map(m => <option key={m} value={m}>{heMonth(m)}</option>)}
         </select>
-        <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
-          className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-          <option value="">כל הפרויקטים</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
+        {/* Searchable project dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => { setProjDropOpen(o => !o); setProjDropSearch('') }}
+            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white flex items-center gap-2 min-w-[150px]"
+          >
+            <span className="flex-1 text-right truncate">
+              {filterProject ? (projects.find(p => p.id === filterProject)?.name ?? 'כל הפרויקטים') : 'כל הפרויקטים'}
+            </span>
+            <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${projDropOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {projDropOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl w-56">
+              <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+                <input
+                  autoFocus
+                  type="text"
+                  value={projDropSearch}
+                  onChange={e => setProjDropSearch(e.target.value)}
+                  placeholder="חיפוש פרויקט..."
+                  className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                />
+              </div>
+              <div className="max-h-52 overflow-y-auto py-1">
+                <button
+                  type="button"
+                  onClick={() => { setFilterProject(''); setProjDropOpen(false) }}
+                  className={`w-full text-right px-3 py-1.5 text-sm hover:bg-violet-50 dark:hover:bg-violet-900/20 ${!filterProject ? 'font-bold text-violet-600' : 'text-gray-700 dark:text-gray-200'}`}
+                >כל הפרויקטים</button>
+                {projects
+                  .filter(p => !projDropSearch || p.name.toLowerCase().includes(projDropSearch.toLowerCase()))
+                  .map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setFilterProject(p.id); setProjDropOpen(false) }}
+                      className={`w-full text-right px-3 py-1.5 text-sm hover:bg-violet-50 dark:hover:bg-violet-900/20 truncate ${filterProject === p.id ? 'font-bold text-violet-600' : 'text-gray-700 dark:text-gray-200'}`}
+                    >{p.name}</button>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
         <select value={filterVat} onChange={e => setFilterVat(e.target.value)}
           className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
           <option value="">כל סטטוס מע"מ</option>
@@ -3500,7 +3561,7 @@ function ExpensesTab() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-900">
                       <tr>
-                        {['פרויקט','ספק','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית','הערות',''].map(h => (
+                        {['פרויקט','ספק','שם הספק','תיאור הוצאה','סכום','מע"מ','סה"כ','שולם','תאריך תשלום','יתרה לתשלום','חשבונית',''].map(h => (
                           <th key={h} className="px-3 py-2 text-right text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -3814,23 +3875,6 @@ function ExpensesTab() {
                                   ? <span className="text-emerald-500 text-sm">✔</span>
                                   : <span className="text-rose-400 text-xs font-bold">✗</span>}
                               </button>
-                            </td>
-
-                            {/* הערות */}
-                            <td className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 max-w-[120px]">
-                              {isEC('notes') ? (
-                                <div className="flex items-center gap-1">
-                                  <input autoFocus type="text" value={String(cellValue ?? '')} onChange={ev => updCV(ev.target.value)}
-                                    onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
-                                    className={inCls + ' w-28'} />
-                                  {sc}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-0.5">
-                                  <span className="truncate">{e.notes || ''}</span>
-                                  {pencilBtn('notes', e.notes)}
-                                </div>
-                              )}
                             </td>
 
                             {/* Delete only */}
