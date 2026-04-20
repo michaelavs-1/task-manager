@@ -384,18 +384,30 @@ function FinancialDashboard() {
   const collectionPct  = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0
 
   // ── Monthly breakdown ──
-  type MonthData = { label: string; sortKey: string; revenue: number; paid: number; withheld: number; count: number }
+  type MonthData = { label: string; sortKey: string; revenue: number; paid: number; withheld: number; count: number; expenses: number }
   const monthMap: Record<string, MonthData> = {}
   invoices.forEach(inv => {
     if (!inv.date) return
     const d = new Date(israeliToISO(inv.date))
     if (isNaN(d.getTime())) return
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
-    if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, withheld: 0, count: 0 }
+    if (!monthMap[key]) monthMap[key] = { label: `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`, sortKey: key, revenue: 0, paid: 0, withheld: 0, count: 0, expenses: 0 }
     monthMap[key].revenue  += inv.before_vat || 0
     monthMap[key].paid     += inv.paid  || 0
     monthMap[key].withheld += inv.tax_withheld || 0
     monthMap[key].count    += 1
+  })
+  // Merge expenses into monthMap (using expense.month key like "2026-01")
+  expenses.forEach(e => {
+    if (!e.month) return
+    const key = e.month
+    if (monthMap[key]) {
+      monthMap[key].expenses += e.amount || 0
+    } else {
+      const [y, mo] = key.split('-')
+      const monthIdx = parseInt(mo) - 1
+      monthMap[key] = { label: `${MONTH_NAMES_HE[monthIdx]} ${y}`, sortKey: key, revenue: 0, paid: 0, withheld: 0, count: 0, expenses: e.amount || 0 }
+    }
   })
   const months = Object.values(monthMap).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12)
 
@@ -410,7 +422,7 @@ function FinancialDashboard() {
   const topClients = Object.values(clientMap).sort((a,b) => b.revenue - a.revenue).slice(0, 8)
 
   // ── Bar chart helpers ──
-  const maxRev = Math.max(...months.map(m => m.revenue), 1)
+  const maxRev = Math.max(...months.map(m => Math.max(m.revenue, m.expenses)), 1)
 
   // ── Donut helper ──
   function DonutArc({ pct, color, r = 44, stroke = 10 }: { pct: number; color: string; r?: number; stroke?: number }) {
@@ -502,28 +514,42 @@ function FinancialDashboard() {
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* Bar chart - monthly revenue */}
+        {/* Bar chart - monthly revenue + expenses */}
         <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>הכנסות לפי חודש</h3>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>הכנסות והוצאות לפי חודש</h3>
           {months.length === 0 ? (
             <div className="text-sm text-center py-8" style={{ color: 'var(--text-secondary)' }}>אין נתונים</div>
           ) : (
-            <div className="flex items-end gap-2 overflow-x-auto" style={{ height: 168, paddingTop: 32 }}>
+            <div className="flex items-end gap-1.5 overflow-x-auto" style={{ height: 168, paddingTop: 32 }}>
               {months.map(m => {
-                const revH = Math.round((m.revenue / maxRev) * 130)
-                const paidH = Math.round((m.paid / maxRev) * 130)
+                const revH  = Math.round((m.revenue  / maxRev) * 130)
+                const paidH = Math.round((m.paid     / maxRev) * 130)
+                const expH  = Math.round((m.expenses / maxRev) * 130)
+                const profit = m.revenue - m.expenses
                 return (
-                  <div key={m.sortKey} className="flex flex-col items-center gap-1 flex-1 min-w-[36px]"
+                  <div key={m.sortKey} className="flex flex-col items-center gap-1 flex-1 min-w-[40px]"
                     onMouseEnter={() => setHoveredBar(m.sortKey)}
                     onMouseLeave={() => setHoveredBar(null)}>
-                    <div className="relative w-full flex flex-col justify-end" style={{ height: 130 }}>
-                      {/* Revenue bar */}
-                      <div className="absolute bottom-0 left-0 right-0 rounded-t-lg transition-all" style={{ height: revH, background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.3)' }} />
-                      {/* Paid bar */}
-                      <div className="absolute bottom-0 left-1 right-1 rounded-t-lg transition-all" style={{ height: paidH, background: 'linear-gradient(to top, #6366f1, #818cf8)' }} />
-                      {/* Tooltip */}
-                      <div className={`absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs px-2 py-1 rounded-lg transition-opacity z-10 pointer-events-none ${hoveredBar === m.sortKey ? 'opacity-100' : 'opacity-0'}`} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: 10 }}>
-                        {fmt(m.revenue)}
+                    {/* Tooltip */}
+                    <div className={`absolute bottom-full mb-1 whitespace-nowrap text-xs px-2.5 py-1.5 rounded-lg transition-opacity z-20 pointer-events-none ${hoveredBar === m.sortKey ? 'opacity-100' : 'opacity-0'}`}
+                      style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontSize: 10, position: 'relative', bottom: 'auto', marginBottom: 4, transform: 'none' }}>
+                      <div className="flex flex-col gap-0.5 text-right">
+                        <span style={{ color: '#6366f1' }}>📈 {fmt(m.revenue)}</span>
+                        <span style={{ color: '#ef4444' }}>💸 {fmt(m.expenses)}</span>
+                        <span style={{ color: profit >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>רווח: {fmt(profit)}</span>
+                      </div>
+                    </div>
+                    <div className="relative w-full flex gap-0.5 items-end" style={{ height: 130 }}>
+                      {/* Revenue side (left) */}
+                      <div className="relative flex-1 flex flex-col justify-end" style={{ height: 130 }}>
+                        {/* Revenue bg */}
+                        <div className="absolute bottom-0 left-0 right-0 rounded-t-md transition-all" style={{ height: revH, background: 'rgba(99,102,241,0.22)', border: '1px solid rgba(99,102,241,0.35)' }} />
+                        {/* Paid solid */}
+                        <div className="absolute bottom-0 left-0 right-0 rounded-t-md transition-all" style={{ height: paidH, background: 'linear-gradient(to top, #6366f1, #818cf8)' }} />
+                      </div>
+                      {/* Expenses side (right) */}
+                      <div className="relative flex-1 flex flex-col justify-end" style={{ height: 130 }}>
+                        <div className="absolute bottom-0 left-0 right-0 rounded-t-md transition-all" style={{ height: expH, background: expH > 0 ? 'rgba(239,68,68,0.55)' : 'transparent', border: expH > 0 ? '1px solid rgba(239,68,68,0.5)' : 'none' }} />
                       </div>
                     </div>
                     <span className="text-center leading-tight" style={{ color: 'var(--text-secondary)', fontSize: 9 }}>{m.label.split(' ')[0]}</span>
@@ -532,9 +558,10 @@ function FinancialDashboard() {
               })}
             </div>
           )}
-          <div className="flex gap-4 mt-3">
-            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.4)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות</span></div>
+          <div className="flex gap-4 mt-3 flex-wrap">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(99,102,241,0.35)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: '#6366f1' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>תשלומים</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded" style={{ background: 'rgba(239,68,68,0.55)' }} /><span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הוצאות</span></div>
           </div>
         </div>
 
@@ -572,22 +599,25 @@ function FinancialDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: 'var(--bg-secondary)' }}>
-                  {['חודש','הכנסות','תשלומים','ניכוי מס','נותר','חשבוניות'].map(h => (
-                    <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                  {['חודש','הכנסות','הוצאות','רווח','תשלומים','ניכוי מס','נותר','חשבוניות'].map(h => (
+                    <th key={h} className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {[...months].map((m, i) => {
-                  const rem = m.revenue - m.paid - m.withheld
+                {[...months].reverse().map((m, i) => {
+                  const rem    = m.revenue - m.paid - m.withheld
+                  const profit = m.revenue - m.expenses
                   return (
                     <tr key={m.sortKey} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.label}</td>
-                      <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmt(m.revenue)}</td>
-                      <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmt(m.paid)}</td>
-                      <td className="px-4 py-2.5 text-xs" style={{ color: '#a855f7' }}>{m.withheld > 0 ? fmt(m.withheld) : '—'}</td>
-                      <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{fmt(rem)}</td>
-                      <td className="px-4 py-2.5 text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{m.count}</td>
+                      <td className="px-3 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.label}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{m.revenue > 0 ? fmt(m.revenue) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs" style={{ color: '#ef4444' }}>{m.expenses > 0 ? fmt(m.expenses) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs font-bold" style={{ color: profit >= 0 ? '#10b981' : '#ef4444' }}>{m.revenue > 0 || m.expenses > 0 ? fmt(profit) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs" style={{ color: '#10b981' }}>{m.paid > 0 ? fmt(m.paid) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs" style={{ color: '#a855f7' }}>{m.withheld > 0 ? fmt(m.withheld) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmt(rem) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-center" style={{ color: 'var(--text-secondary)' }}>{m.count || '—'}</td>
                     </tr>
                   )
                 })}
