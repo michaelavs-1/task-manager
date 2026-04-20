@@ -1727,7 +1727,7 @@ function InvoicesTab() {
   const [editPaymentDateId, setEditPaymentDateId] = useState<number | null>(null)
   const [editPaymentDateVal, setEditPaymentDateVal] = useState('')
   const [statusPickerId, setStatusPickerId] = useState<number | null>(null)
-  const [statusPickerRect, setStatusPickerRect] = useState<{ top: number; right: number } | null>(null)
+  const [statusPickerRect, setStatusPickerRect] = useState<{ top: number; left: number } | null>(null)
   const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
   const [editNotesId, setEditNotesId] = useState<number | null>(null)
   const [editNotesVal, setEditNotesVal] = useState('')
@@ -2223,7 +2223,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                         onClick={e => {
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                           if (statusPickerId === inv.id) { setStatusPickerId(null); setStatusPickerRect(null) }
-                          else { setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right }) }
+                          else {
+                            const left = Math.max(4, Math.min(rect.left, window.innerWidth - 124))
+                            setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, left })
+                          }
                         }}
                         className={`px-2 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                       >
@@ -2535,7 +2538,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   onClick={e => {
                                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                                     if (statusPickerId === inv.id) { setStatusPickerId(null); setStatusPickerRect(null) }
-                                    else { setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, right: window.innerWidth - rect.right }) }
+                                    else {
+                                      const left = Math.max(4, Math.min(rect.left, window.innerWidth - 124))
+                                      setStatusPickerId(inv.id); setStatusPickerRect({ top: rect.bottom + 4, left })
+                                    }
                                   }}
                                   className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${STATUS_STYLE[st]} hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 transition-all`}
                                 >
@@ -2674,7 +2680,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             <div className="fixed inset-0 z-[998]" onClick={() => { setStatusPickerId(null); setStatusPickerRect(null) }} />
             <div
               className="bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]"
-              style={{ position: 'fixed', top: statusPickerRect.top, right: statusPickerRect.right, zIndex: 999 }}
+              style={{ position: 'fixed', top: statusPickerRect.top, left: statusPickerRect.left, zIndex: 999 }}
               dir="rtl"
               onClick={e => e.stopPropagation()}
             >
