@@ -1618,11 +1618,16 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                             <span className="mr-2 text-xs text-indigo-400">({group.rows.length} חשבוניות)</span>
                             {mOpen > 0 && <span className="mr-1 text-xs text-red-400">{mOpen} פתוחות</span>}
                           </td>
-                          <td colSpan={6} />
+                          {/* Empty: פרויקט, תאריך, סוג, מי הוציא, לפני מע"מ */}
+                          <td colSpan={5} />
+                          {/* סה"כ */}
                           <td className="px-4 py-3 text-xs font-bold text-indigo-600">{fmt(mTotal)}</td>
+                          {/* שולם */}
                           <td className="px-4 py-3 text-xs font-bold text-emerald-600">{fmt(mPaid)}</td>
+                          {/* יתרה */}
                           <td className="px-4 py-3 text-xs font-bold" style={{ color: mRem > 0 ? '#f59e0b' : '#10b981' }}>{mRem > 0 ? fmt(mRem) : '✓'}</td>
-                          <td colSpan={2} />
+                          {/* Empty: ת. תשלום, סטטוס, פעולות */}
+                          <td colSpan={3} />
                         </tr>
 
                         {/* Invoice rows for this month */}
