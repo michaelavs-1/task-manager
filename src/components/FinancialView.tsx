@@ -335,6 +335,7 @@ function FinancialDashboard() {
   const [gl, setGl] = useState<GlSummary | null>(null)
   const [glLoading, setGlLoading] = useState(true)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
+  const [cfOpenMonth, setCfOpenMonth] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -506,6 +507,92 @@ function FinancialDashboard() {
           </div>
         ))}
       </div>
+
+      {/* ── צפי תזרימי ── */}
+      {(() => {
+        type CfRow = { inv: FinDashInvoice; remaining: number }
+        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number }
+        const cfMap: Record<string, CfMonth> = {}
+        invoices.forEach(inv => {
+          const remaining = Math.round(((inv.total || 0) - (inv.paid || 0) - (inv.tax_withheld || 0)) * 100) / 100
+          if (remaining < 1) return
+          const key = israeliToMonthKey(inv.payment_date || '')
+          if (!key) return
+          if (!cfMap[key]) {
+            const [y, m] = key.split('-')
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0 }
+          }
+          cfMap[key].rows.push({ inv, remaining })
+          cfMap[key].total += remaining
+        })
+        const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
+        if (cfMonths.length === 0) return null
+        const grandTotal = cfMonths.reduce((s, m) => s + m.total, 0)
+
+        return (
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.06)' }}>
+            {/* Header */}
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>צפי תזרימי</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>הכנסות צפויות לפי חודש תשלום — רק שלא שולמו</p>
+              </div>
+              <span className="text-base font-bold" style={{ color: '#6366f1' }}>{fmt(grandTotal)}</span>
+            </div>
+            {/* Summary cards row */}
+            <div className="flex gap-3 px-5 py-4 overflow-x-auto">
+              {cfMonths.map(mo => {
+                const isOpen = cfOpenMonth === mo.key
+                return (
+                  <button
+                    key={mo.key}
+                    onClick={() => setCfOpenMonth(isOpen ? null : mo.key)}
+                    className="flex-shrink-0 rounded-xl px-4 py-3 text-right transition-all"
+                    style={{
+                      background: isOpen ? '#6366f1' : 'var(--bg-secondary)',
+                      border: `1.5px solid ${isOpen ? '#6366f1' : 'var(--border-color)'}`,
+                      minWidth: 130,
+                    }}
+                  >
+                    <div className="text-xs font-semibold mb-1" style={{ color: isOpen ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)' }}>{mo.label}</div>
+                    <div className="text-base font-bold" style={{ color: isOpen ? '#fff' : '#6366f1' }}>{fmt(mo.total)}</div>
+                    <div className="text-[10px] mt-0.5" style={{ color: isOpen ? 'rgba(255,255,255,0.6)' : 'var(--text-secondary)' }}>{mo.rows.length} חשבוניות</div>
+                  </button>
+                )
+              })}
+            </div>
+            {/* Accordion detail */}
+            {cfOpenMonth && cfMap[cfOpenMonth] && (
+              <div className="border-t px-5 py-4" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      {['לקוח', 'מס׳ חשבונית', 'יתרה לגבייה'].map(h => (
+                        <th key={h} className="py-2 text-right font-semibold pb-2" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cfMap[cfOpenMonth].rows.map(({ inv, remaining }) => (
+                      <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client || '—'}</td>
+                        <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
+                        <td className="py-2 font-bold text-left" style={{ color: '#f59e0b' }}>{fmt(remaining)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={2} className="pt-3 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ {cfMap[cfOpenMonth].label}</td>
+                      <td className="pt-3 font-bold text-left" style={{ color: '#6366f1' }}>{fmt(cfMap[cfOpenMonth].total)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -769,56 +856,6 @@ function FinancialDashboard() {
         ) : null
       })()}
 
-      {/* ── צפי תזרימי — unpaid invoices grouped by payment month ── */}
-      {(() => {
-        // Build map: paymentMonthKey → { label, invoices[], totalRemaining }
-        type CashFlowMonth = { key: string; label: string; rows: { inv: FinDashInvoice; remaining: number }[]; total: number }
-        const cfMap: Record<string, CashFlowMonth> = {}
-        invoices.forEach(inv => {
-          const remaining = Math.max(0, (inv.total || 0) - (inv.paid || 0) - (inv.tax_withheld || 0))
-          if (remaining < 1) return               // skip fully paid
-          const pd = inv.payment_date || ''
-          const key = israeliToMonthKey(pd)
-          if (!key) return                        // skip if no payment month set
-          if (!cfMap[key]) {
-            const [y, m] = key.split('-')
-            const label = `${MONTH_NAMES_HE[parseInt(m) - 1]} ${y}`
-            cfMap[key] = { key, label, rows: [], total: 0 }
-          }
-          cfMap[key].rows.push({ inv, remaining })
-          cfMap[key].total += remaining
-        })
-        const cfMonths = Object.values(cfMap).sort((a, b) => a.key.localeCompare(b.key))
-        if (cfMonths.length === 0) return null
-
-        return (
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-color)' }}>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>צפי תזרימי</h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>הכנסות צפויות לפי חודש תשלום</p>
-            </div>
-            <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
-              {cfMonths.map(mo => (
-                <div key={mo.key} className="px-5 py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{mo.label}</span>
-                    <span className="text-sm font-bold" style={{ color: '#6366f1' }}>{fmt(mo.total)}</span>
-                  </div>
-                  <div className="space-y-1">
-                    {mo.rows.map(({ inv, remaining }) => (
-                      <div key={inv.id} className="flex items-center justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        <span className="truncate max-w-[200px]">{inv.client || '—'}{inv.invoice_num ? ` · ${inv.invoice_num}` : ''}</span>
-                        <span className="font-medium" style={{ color: '#f59e0b' }}>{fmt(remaining)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
-
       {/* ── Monthly Accordion ── */}
       <MonthlyAccordion invoices={invoices} />
 
@@ -966,8 +1003,10 @@ function invoiceStatus(inv: InvoiceRow): 'paid' | 'partial' | 'unpaid' {
   // Tax withheld at source counts toward "fully paid" even though it didn't land in our account
   const settled = (inv.paid || 0) + (inv.tax_withheld || 0)
   const remaining = roundCents(inv.total - settled)
-  if (inv.total > 0 && remaining < 1) return 'paid'
-  if (settled > 0) return 'partial'
+  // Use absolute value for remaining so negative invoices (credit notes) are handled correctly
+  if (Math.abs(remaining) < 1) return 'paid'
+  if (inv.total > 0 && settled > 0) return 'partial'
+  if (inv.total < 0 && settled < 0) return 'partial'
   return 'unpaid'
 }
 
@@ -1916,12 +1955,15 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <td className="px-4 py-3">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap relative">
                       {editPaymentDateId === inv.id ? (
-                        <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 min-w-[170px]" dir="rtl">
+                        <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 min-w-[170px] space-y-2" dir="rtl">
                           <select
                             autoFocus
                             value={editPaymentDateVal}
-                            onChange={e => { setEditPaymentDateVal(e.target.value); savePaymentDate(inv.id, e.target.value) }}
-                            onKeyDown={e => { if (e.key === 'Escape') setEditPaymentDateId(null) }}
+                            onChange={e => setEditPaymentDateVal(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && editPaymentDateVal) savePaymentDate(inv.id)
+                              if (e.key === 'Escape') setEditPaymentDateId(null)
+                            }}
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                           >
                             <option value="">בחר חודש...</option>
@@ -1929,6 +1971,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <option key={o.key} value={o.key}>{o.label}</option>
                             ))}
                           </select>
+                          <div className="flex gap-2 pt-1 border-t border-gray-100">
+                            <button onClick={() => savePaymentDate(inv.id)} disabled={!editPaymentDateVal} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#6366f1,#7c3aed)' }}>אישור</button>
+                            <button onClick={() => setEditPaymentDateId(null)} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                          </div>
                         </div>
                       ) : null}
                       <button
@@ -2075,9 +2121,11 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             const groups = Object.values(mGroups).sort((a,b) => a.key.localeCompare(b.key))
             const COLS = 14
             const TH = 'px-4 py-3 text-right font-semibold'
+            const anyGroupOpen = groups.some(g => !collapsedMonths.has(g.key))
 
             return (
               <table className="w-full text-sm border-collapse">
+                {anyGroupOpen && (
                 <thead>
                   <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide [&>th]:sticky [&>th]:top-0 [&>th]:bg-gray-50 [&>th]:z-10">
                     <th className="px-3 py-3 w-8" />
@@ -2096,6 +2144,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     <th className="px-4 py-3 text-center font-semibold">פעולות</th>
                   </tr>
                 </thead>
+                )}
                 <tbody>
                   {groups.length === 0 ? (
                     <tr><td colSpan={COLS} className="text-center py-12 text-gray-400">לא נמצאו חשבוניות</td></tr>
@@ -2215,12 +2264,15 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                               <td className="px-4 py-2.5 text-xs">{remaining >= 1 ? <span className="text-red-500 font-semibold">{fmt(remaining)}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap relative">
                                 {editPaymentDateId === inv.id ? (
-                                  <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 min-w-[170px]" dir="rtl">
+                                  <div className="absolute z-50 left-0 top-full mt-1 bg-white border border-indigo-200 rounded-2xl shadow-2xl p-3 min-w-[170px] space-y-2" dir="rtl">
                                     <select
                                       autoFocus
                                       value={editPaymentDateVal}
-                                      onChange={e => { setEditPaymentDateVal(e.target.value); savePaymentDate(inv.id, e.target.value) }}
-                                      onKeyDown={e => { if (e.key === 'Escape') setEditPaymentDateId(null) }}
+                                      onChange={e => setEditPaymentDateVal(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter' && editPaymentDateVal) savePaymentDate(inv.id)
+                                        if (e.key === 'Escape') setEditPaymentDateId(null)
+                                      }}
                                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                                     >
                                       <option value="">בחר חודש...</option>
@@ -2228,6 +2280,10 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                         <option key={o.key} value={o.key}>{o.label}</option>
                                       ))}
                                     </select>
+                                    <div className="flex gap-2 pt-1 border-t border-gray-100">
+                                      <button onClick={() => savePaymentDate(inv.id)} disabled={!editPaymentDateVal} className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#6366f1,#7c3aed)' }}>אישור</button>
+                                      <button onClick={() => setEditPaymentDateId(null)} className="flex-1 py-1.5 rounded-xl text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                                    </div>
                                   </div>
                                 ) : null}
                                 <button
@@ -4480,7 +4536,7 @@ function ExpensesTab() {
 
                             {/* Transfer + Delete */}
                             <td className="px-3 py-2 whitespace-nowrap">
-                              <div className={`flex items-center gap-1 transition-opacity ${hoveredExpId === e.id ? 'opacity-100' : 'opacity-0'}`}>
+                              <div className={`flex items-center gap-1 transition-opacity ${(hoveredExpId === e.id || transferExpId === e.id) ? 'opacity-100' : 'opacity-0'}`}>
                                 {/* Transfer to month */}
                                 <div className="relative">
                                   <button
