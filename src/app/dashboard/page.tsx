@@ -38,6 +38,7 @@ export default function Dashboard() {
   const setActiveFinTab  = (f: FinTab)  => { setActiveFinTabRaw(f);  localStorage.setItem('dash_fin_tab',  f) }
   const setActiveAcctTab = (a: AcctTab) => { setActiveAcctTabRaw(a); localStorage.setItem('dash_acct_tab', a) }
   const [showNewTask, setShowNewTask] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [filter, setFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all")
   const [viewByEmployee, setViewByEmployee] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
@@ -622,6 +623,7 @@ export default function Dashboard() {
                       onStatusChange={updateTaskStatus}
                       onDelete={deleteTask}
                       onArchive={archiveTask}
+                      onEdit={setEditingTask}
                       onNavigateToArtist={(name) => { setSelectedArtistName(name); setActiveTab("artists") }}
                       userEmail={empUser?.email}
                       onRemindAll={() => {
@@ -646,6 +648,7 @@ export default function Dashboard() {
                     onStatusChange={updateTaskStatus}
                     onDelete={deleteTask}
                     onArchive={archiveTask}
+                    onEdit={setEditingTask}
                   />
                 ))
               )}
@@ -711,6 +714,17 @@ export default function Dashboard() {
           onCreated={() => { setShowNewTask(false); loadTasks() }}
         />
       )}
+
+      {/* Edit Task Modal */}
+      {editingTask && (
+        <NewTaskModal
+          users={users}
+          creatorId={userId}
+          taskToEdit={editingTask}
+          onClose={() => setEditingTask(null)}
+          onCreated={() => { setEditingTask(null); loadTasks() }}
+        />
+      )}
     </div>
   )
 }
@@ -722,6 +736,7 @@ function EmployeeSection({
   onStatusChange,
   onDelete,
   onArchive,
+  onEdit,
   onNavigateToArtist,
   userEmail,
   onRemindAll,
@@ -733,6 +748,7 @@ function EmployeeSection({
   onStatusChange: (taskId: string, status: Task["status"]) => void
   onDelete: (taskId: string) => void
   onArchive: (taskId: string) => void
+  onEdit?: (task: Task) => void
   onNavigateToArtist?: (projectName: string) => void
   userEmail?: string
   onRemindAll?: () => void
@@ -772,6 +788,7 @@ function EmployeeSection({
                 onStatusChange={onStatusChange}
                 onDelete={onDelete}
                 onArchive={onArchive}
+                onEdit={onEdit}
                 onNavigateToArtist={onNavigateToArtist}
                 onRemind={onRemindTask ? () => onRemindTask(task) : undefined}
                 hasEmail={!!userEmail}

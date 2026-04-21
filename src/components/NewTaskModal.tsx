@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
-import type { User } from "@/lib/supabase"
+import type { User, Task } from "@/lib/supabase"
 import { useEsc } from "@/hooks/useEsc"
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   creatorId: string
   onClose: () => void
   onCreated: () => void
+  taskToEdit?: Task
 }
 
 interface Project {
@@ -47,14 +48,15 @@ function buildTaskEmailHtml({
 </div>`
 }
 
-export default function NewTaskModal({ users, creatorId, onClose, onCreated }: Props) {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [assignedTo, setAssignedTo] = useState("")
+export default function NewTaskModal({ users, creatorId, onClose, onCreated, taskToEdit }: Props) {
+  const isEdit = !!taskToEdit
+  const [title, setTitle] = useState(taskToEdit?.title ?? "")
+  const [description, setDescription] = useState(taskToEdit?.description ?? "")
+  const [assignedTo, setAssignedTo] = useState((taskToEdit as any)?.assigned_user?.id ?? taskToEdit?.assigned_to ?? "")
   const [projectId, setProjectId] = useState("")
-  const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium")
-  const [hasDeadline, setHasDeadline] = useState(false)
-  const [dueDate, setDueDate] = useState("")
+  const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">(taskToEdit?.priority ?? "medium")
+  const [hasDeadline, setHasDeadline] = useState(!!taskToEdit?.due_date)
+  const [dueDate, setDueDate] = useState(taskToEdit?.due_date ? taskToEdit.due_date.slice(0, 10) : "")
   const [saving, setSaving] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   useEsc(true, onClose)
@@ -63,7 +65,14 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
 
   useEffect(() => {
     supabase.from("projects").select("id, name").order("category").order("name").then(({ data }) => {
-      if (data) setProjects(data)
+      if (data) {
+        setProjects(data)
+        // Pre-select the project matching the task's project name
+        if (taskToEdit?.project) {
+          const match = data.find((p: Project) => p.name === taskToEdit.project)
+          if (match) setProjectId(match.id)
+        }
+      }
     })
   }, [])
 
@@ -72,6 +81,25 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
     if (!assignedTo || !title.trim()) return
     setSaving(true)
     const proj = projects.find(p => p.id === projectId)
+
+    if (isEdit && taskToEdit) {
+      // Update existing task
+      const { error } = await supabase.from("tasks").update({
+        title: title.trim(),
+        description,
+        assigned_to: assignedTo,
+        priority,
+        project: proj?.name || null,
+        due_date: hasDeadline && dueDate ? dueDate : null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskToEdit.id)
+      setSaving(false)
+      if (error) { alert("שגיאה בעדכון המשימה: " + error.message); return }
+      onCreated()
+      return
+    }
+
+    // Create new task
     const { error } = await supabase.from("tasks").insert({
       title: title.trim(),
       description,
@@ -109,7 +137,7 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
           subject: `משימה חדשה: ${title.trim()}`,
           html,
         }),
-      }).catch(() => {}) // fire-and-forget, don't block UX
+      }).catch(() => {})
     }
 
     onCreated()
@@ -120,8 +148,8 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">צור משימה חדשה</h2>
-            <p className="text-xs text-slate-400 mt-0.5">ניתנה: {today}</p>
+            <h2 className="text-base font-semibold text-slate-900">{isEdit ? 'ערוך משימה' : 'צור משימה חדשה'}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{isEdit ? taskToEdit?.title : `ניתנה: ${today}`}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -222,7 +250,7 @@ export default function NewTaskModal({ users, creatorId, onClose, onCreated }: P
               ביטול
             </button>
             <button type="submit" disabled={saving || !title.trim() || !assignedTo} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
-              {saving ? "..." : "צור משימה"}
+              {saving ? "..." : isEdit ? "שמור שינויים" : "צור משימה"}
             </button>
           </div>
         </form>
