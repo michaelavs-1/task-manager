@@ -60,11 +60,9 @@ export function MeetingsView() {
     loadArtists()
   }, [])
 
-  function loadArtists() {
-    try {
-      const s = localStorage.getItem('barby_artists_bank_v1')
-      if (s) setArtists(JSON.parse(s))
-    } catch {}
+  async function loadArtists() {
+    const { data } = await supabase.from('projects').select('name, category').order('name')
+    if (data) setArtists(data.map((p: { name: string; category: string }) => p.name))
   }
 
   async function loadSettings() {
