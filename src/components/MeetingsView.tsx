@@ -52,6 +52,11 @@ export function MeetingsView() {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [projectFilter, setProjectFilter] = useState('')
   const audioRefsRef = useRef<Record<string, HTMLAudioElement>>({})
+  const [showNewMeetingForm, setShowNewMeetingForm] = useState(false)
+  const [newMeetingTitle, setNewMeetingTitle] = useState('')
+  const [newMeetingDate, setNewMeetingDate] = useState(new Date().toISOString().slice(0, 10))
+  const [newMeetingProject, setNewMeetingProject] = useState('')
+  const [newMeetingSummary, setNewMeetingSummary] = useState('')
 
 
   useEffect(() => {
@@ -177,6 +182,16 @@ export function MeetingsView() {
       if (!tr.ok) throw new Error(td.error?.message || 'שגיאת תמלול')
       const transcript = td.text
 
+      // Hallucination guard: if Whisper returned no real content, skip GPT
+      if (!transcript || transcript.trim().length < 15) {
+        const summary = 'לא זוהה טקסט בהקלטה'
+        const updated = meetings.map(m => m.id === meeting.id ? { ...m, transcript: transcript || '', summary } : m)
+        if (currentMeeting?.id === meeting.id) setCurrentMeeting({ ...meeting, transcript: transcript || '', summary })
+        saveMeetingsList(updated)
+        setProcessing(false); setProcessStep(null)
+        return
+      }
+
       setProcessStep('summarizing')
       const sr = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -202,6 +217,26 @@ export function MeetingsView() {
     } finally { setProcessing(false); setProcessStep(null) }
   }
 
+  function saveManualMeeting() {
+    if (!newMeetingTitle.trim()) return
+    const m: Meeting = {
+      id: Date.now().toString(),
+      title: newMeetingTitle.trim(),
+      date: new Date(newMeetingDate).toISOString(),
+      duration: 0,
+      summary: newMeetingSummary.trim() || undefined,
+      project: newMeetingProject || undefined,
+    }
+    const updated = [m, ...meetings]
+    saveMeetingsList(updated)
+    setNewMeetingTitle('')
+    setNewMeetingDate(new Date().toISOString().slice(0, 10))
+    setNewMeetingProject('')
+    setNewMeetingSummary('')
+    setShowNewMeetingForm(false)
+    setSubTab('list')
+  }
+
   const fmtDate = (iso: string) => {
     try { return new Date(iso).toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) }
     catch { return iso }
@@ -212,14 +247,23 @@ export function MeetingsView() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">פגישות</h1>
-        <button onClick={() => setShowSettings(!showSettings)}
-          className={'p-2 rounded-xl transition-colors ' + (showSettings ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800')}
-          title="הגדרות OpenAI">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowNewMeetingForm(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            פגישה חדשה
+          </button>
+          <button onClick={() => setShowSettings(!showSettings)}
+            className={'p-2 rounded-xl transition-colors ' + (showSettings ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800')}
+            title="הגדרות OpenAI">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Settings panel */}
@@ -429,6 +473,22 @@ export function MeetingsView() {
                   {m.summary
                     ? <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">סוכם</span>
                     : <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">ממתין</span>}
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      if (confirm('למחוק פגישה זו?')) {
+                        const updated = meetings.filter(m2 => m2.id !== m.id)
+                        saveMeetingsList(updated)
+                        if (expandedMeeting === m.id) setExpandedMeeting(null)
+                      }
+                    }}
+                    className="p-1 text-gray-300 hover:text-red-500 transition-colors rounded"
+                    title="מחק פגישה"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                   <svg className={`w-4 h-4 text-gray-400 transition-transform ${expandedMeeting === m.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </div>
               </button>
@@ -478,6 +538,67 @@ export function MeetingsView() {
               )}
             </div>
           ))}
+          </div>
+        </div>
+      )}
+
+      {/* New Meeting Modal */}
+      {showNewMeetingForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNewMeetingForm(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">פגישה חדשה</h2>
+              <button onClick={() => setShowNewMeetingForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">כותרת הפגישה</label>
+                <input
+                  type="text"
+                  value={newMeetingTitle}
+                  onChange={e => setNewMeetingTitle(e.target.value)}
+                  placeholder="שם הפגישה..."
+                  autoFocus
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">תאריך</label>
+                <input
+                  type="date"
+                  value={newMeetingDate}
+                  onChange={e => setNewMeetingDate(e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">אומן / פרויקט</label>
+                <select
+                  value={newMeetingProject}
+                  onChange={e => setNewMeetingProject(e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600"
+                >
+                  <option value="">ללא שיוך</option>
+                  {artists.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">סיכום (אופציונלי)</label>
+                <textarea
+                  value={newMeetingSummary}
+                  onChange={e => setNewMeetingSummary(e.target.value)}
+                  placeholder="נושאים, החלטות, משימות..."
+                  rows={4}
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600 resize-none"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowNewMeetingForm(false)} className="flex-1 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">ביטול</button>
+                <button onClick={saveManualMeeting} disabled={!newMeetingTitle.trim()} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">שמור פגישה</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

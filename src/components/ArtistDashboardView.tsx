@@ -354,23 +354,53 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedArtist.category === 'artist' && (() => {
+                  {/* Facebook — always visible; if no link → open social modal */}
+                  {(() => {
                     const fbLink = links.find(l => l.category === 'פייסבוק')
-                    return fbLink ? (
+                    return (
                       <button
-                        onClick={() => setShowFbModal(true)}
-                        title="פייסבוק"
-                        className="px-2 py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#166FE5] transition-colors flex items-center"
+                        onClick={() => fbLink ? setShowFbModal(true) : openSocialModal()}
+                        title={fbLink ? 'פייסבוק' : 'הוסף קישור פייסבוק'}
+                        className={`px-2 py-1.5 rounded-lg transition-colors flex items-center ${fbLink ? 'bg-[#1877F2] hover:bg-[#166FE5]' : 'bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 dark:hover:bg-gray-600'}`}
                       >
-                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <svg className={`w-4 h-4 ${fbLink ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor">
                           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                         </svg>
                       </button>
-                    ) : null
+                    )
                   })()}
-                  {selectedArtist.category === 'artist' && (
-                    <button onClick={() => openSocialModal()} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors" title="רשתות חברתיות">⚙️</button>
-                  )}
+                  {/* Instagram — always visible */}
+                  {(() => {
+                    const igLink = links.find(l => l.category === 'אינסטגרם')
+                    return (
+                      <button
+                        onClick={() => igLink ? window.open(igLink.url, '_blank') : openSocialModal()}
+                        title={igLink ? 'אינסטגרם' : 'הוסף קישור אינסטגרם'}
+                        className={`px-2 py-1.5 rounded-lg transition-colors flex items-center ${igLink ? 'hover:opacity-90' : 'bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 dark:hover:bg-gray-600'}`}
+                        style={igLink ? { background: 'radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%)' } : undefined}
+                      >
+                        <svg className={`w-4 h-4 ${igLink ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                      </button>
+                    )
+                  })()}
+                  {/* TikTok — always visible */}
+                  {(() => {
+                    const ttLink = links.find(l => l.category === 'טיקטוק')
+                    return (
+                      <button
+                        onClick={() => ttLink ? window.open(ttLink.url, '_blank') : openSocialModal()}
+                        title={ttLink ? 'טיקטוק' : 'הוסף קישור טיקטוק'}
+                        className={`px-2 py-1.5 rounded-lg transition-colors flex items-center ${ttLink ? 'bg-black hover:bg-gray-900' : 'bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 dark:hover:bg-gray-600'}`}
+                      >
+                        <svg className={`w-4 h-4 ${ttLink ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.72a8.17 8.17 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.15z"/>
+                        </svg>
+                      </button>
+                    )
+                  })()}
+                  <button onClick={() => openSocialModal()} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors" title="ערוך רשתות חברתיות">⚙️</button>
                   <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">✏️ ערוך</button>
                 </div>
               </div>
@@ -792,29 +822,29 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
       {/* Facebook embed modal */}
       {showFbModal && selectedArtist && (() => {
         const fbUrl = links.find(l => l.category === 'פייסבוק')?.url || ''
-        const pluginSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=520&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
+        const pluginSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=900&height=900&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
         return (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowFbModal(false)}>
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ width: 540, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3" onClick={() => setShowFbModal(false)}>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ width: 'min(960px, 95vw)', height: '94vh' }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   <span className="font-semibold text-sm text-gray-800 dark:text-white">{selectedArtist.name} · Facebook</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors">פתח בדפדפן ↗</a>
-                  <button onClick={() => setShowFbModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                  <button onClick={() => setShowFbModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                   </button>
                 </div>
               </div>
-              <div className="flex-1 overflow-hidden flex items-start justify-center bg-gray-50 dark:bg-gray-900 p-2">
+              <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 flex justify-center">
                 <iframe
                   src={pluginSrc}
-                  width="520"
-                  height="600"
-                  style={{ border: 'none', overflow: 'hidden', borderRadius: 8 }}
-                  scrolling="no"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 'none', minHeight: 800 }}
+                  scrolling="yes"
                   frameBorder="0"
                   allowFullScreen
                   allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
