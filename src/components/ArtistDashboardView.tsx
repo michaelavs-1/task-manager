@@ -41,7 +41,6 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'overview',   label: 'סקירה כללית' },
   { id: 'shows',      label: 'הופעות' },
   { id: 'tasks',      label: 'משימות' },
-  { id: 'campaigns',  label: 'קמפיינים' },
   { id: 'meetings',   label: 'פגישות' },
   { id: 'links',      label: 'קישורים' },
   { id: 'financial',  label: 'ביצועי הזמר' },
@@ -60,6 +59,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [eventsError, setEventsError] = useState('')
   const [showPastEvents, setShowPastEvents] = useState(false)
+  const [showsFilter, setShowsFilter] = useState<'all' | 'open' | 'soldout'>('all')
   const [meetings, setMeetings] = useState<MeetingNote[]>([])
   const [loadingMeetings, setLoadingMeetings] = useState(false)
   const [showMeetingForm, setShowMeetingForm] = useState(false)
@@ -83,6 +83,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [linkCategory, setLinkCategory] = useState(LINK_CATS[0])
   const [savingLink, setSavingLink] = useState(false)
   const [showSocialModal, setShowSocialModal] = useState(false)
+  const [showFbModal, setShowFbModal] = useState(false)
   const [socialFb, setSocialFb] = useState('')
   const [socialIg, setSocialIg] = useState('')
   const [socialTiktok, setSocialTiktok] = useState('')
@@ -97,6 +98,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [uploadingMedia, setUploadingMedia] = useState(false)
   useEsc(showSocialModal,          () => { if (!savingSocial) setShowSocialModal(false) })
+  useEsc(showFbModal,              () => setShowFbModal(false))
   useEsc(showAddModal,             () => setShowAddModal(false))
   useEsc(deleteConfirmId !== null, () => setDeleteConfirmId(null))
 
@@ -352,6 +354,20 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {selectedArtist.category === 'artist' && (() => {
+                    const fbLink = links.find(l => l.category === 'פייסבוק')
+                    return fbLink ? (
+                      <button
+                        onClick={() => setShowFbModal(true)}
+                        title="פייסבוק"
+                        className="px-2 py-1.5 rounded-lg bg-[#1877F2] hover:bg-[#166FE5] transition-colors flex items-center"
+                      >
+                        <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                      </button>
+                    ) : null
+                  })()}
                   {selectedArtist.category === 'artist' && (
                     <button onClick={() => openSocialModal()} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors" title="רשתות חברתיות">⚙️</button>
                   )}
@@ -499,18 +515,39 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 loadingEvents ? <div className="text-center py-10 text-slate-400">טוען...</div> :
                 eventsError ? <div className="text-center py-10 text-red-500 text-sm">{eventsError}</div> : (
                   <>
-                    {upcomingEvents.length > 0 && <section className="mb-6">
-                      <SHead>הופעות קרובות</SHead>
-                      <div className="space-y-2">{upcomingEvents.map(e => <EventRow key={e.id} event={e} />)}</div>
-                    </section>}
-                    {pastEvents.length > 0 && <section>
-                      <div className="flex items-center gap-3 mb-3">
-                        <SHead>הופעות עבר ({pastEvents.length})</SHead>
-                        <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? 'הסתר' : 'הצג'}</button>
-                      </div>
-                      {showPastEvents && <div className="space-y-2">{pastEvents.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>}
-                    </section>}
-                    {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="🤔" msg="אין הופעות" />}
+                    {/* Filter tabs */}
+                    <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 w-fit">
+                      {([['all','הכל'],['open','קופה פתוחה'],['soldout','מכורות']] as const).map(([val, label]) => (
+                        <button key={val} onClick={() => setShowsFilter(val)}
+                          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${showsFilter === val ? 'bg-white dark:bg-gray-600 shadow text-indigo-700 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                        >{label}</button>
+                      ))}
+                    </div>
+
+                    {showsFilter === 'all' ? (
+                      <>
+                        {upcomingEvents.length > 0 && <section className="mb-6">
+                          <SHead>הופעות קרובות</SHead>
+                          <div className="space-y-2">{upcomingEvents.map(e => <EventRow key={e.id} event={e} />)}</div>
+                        </section>}
+                        {pastEvents.length > 0 && <section>
+                          <div className="flex items-center gap-3 mb-3">
+                            <SHead>הופעות עבר ({pastEvents.length})</SHead>
+                            <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? 'הסתר' : 'הצג'}</button>
+                          </div>
+                          {showPastEvents && <div className="space-y-2">{pastEvents.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>}
+                        </section>}
+                        {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="🤔" msg="אין הופעות" />}
+                      </>
+                    ) : (() => {
+                      const allNonCancelled = events.filter(e => e.status !== 'בוטל')
+                      const filtered = showsFilter === 'open'
+                        ? allNonCancelled.filter(e => e.status === 'קופה פתוחה' || e.event_type === 'קופה פתוחה')
+                        : allNonCancelled.filter(e => e.status === 'מכורות' || e.event_type === 'מכורות')
+                      return filtered.length === 0
+                        ? <Empty icon="🎫" msg={showsFilter === 'open' ? 'אין הופעות עם קופה פתוחה' : 'אין הופעות מכורות'} />
+                        : <div className="space-y-2">{filtered.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>
+                    })()}
                   </>
                 )}
               </div>
@@ -534,33 +571,6 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
-            {tab === 'campaigns' && (
-              <div>
-                <SHead>קמפיינים ({campaigns.length})</SHead>
-                {campaigns.length === 0 ? <Empty icon="📣" msg="אין קמפיינים עצמו" sub="קמפיינים יפשרו בפחות שנך אחרן" /> : (
-                  <div className="space-y-2">
-                    {campaigns.map(c => (
-                      <div key={c.id} className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-xl px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'פעיל' ? 'bg-green-100 text-green-700' : c.status === 'סיים' ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-amber-100 text-amber-700'}`}>{c.status || '–'}</span>
-                            {c.group_title && <span className="text-xs text-slate-400">{c.group_title}</span>}
-                          </div>
-                          <div className="text-right flex-1">
-                            <p className="font-medium text-slate-800 dark:text-white text-sm">{c.name}</p>
-                            <div className="flex items-center gap-3 mt-0.5 justify-end text-xs text-slate-400">
-                              {c.launch_date && <span>{fmtDate(c.launch_date)}</span>}
-                              {c.platforms && <span>{c.platforms}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {tab === 'meetings' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
@@ -778,6 +788,42 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
           </div>
         </div>
       )}
+
+      {/* Facebook embed modal */}
+      {showFbModal && selectedArtist && (() => {
+        const fbUrl = links.find(l => l.category === 'פייסבוק')?.url || ''
+        const pluginSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=520&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowFbModal(false)}>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ width: 540, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  <span className="font-semibold text-sm text-gray-800 dark:text-white">{selectedArtist.name} · Facebook</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors">פתח בדפדפן ↗</a>
+                  <button onClick={() => setShowFbModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden flex items-start justify-center bg-gray-50 dark:bg-gray-900 p-2">
+                <iframe
+                  src={pluginSrc}
+                  width="520"
+                  height="600"
+                  style={{ border: 'none', overflow: 'hidden', borderRadius: 8 }}
+                  scrolling="no"
+                  frameBorder="0"
+                  allowFullScreen
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                />
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Social links modal */}
       {showSocialModal && selectedArtist && (
