@@ -4439,6 +4439,20 @@ function ExpensesTab() {
 
       {/* Filters + Add */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3">
+        {/* Supplier search — far right */}
+        <div className="relative flex items-center">
+          <svg className="absolute right-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input
+            type="text"
+            value={filterSupplier}
+            onChange={e => setFilterSupplier(e.target.value)}
+            placeholder="חיפוש ספק..."
+            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg pr-8 pl-3 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300 w-40"
+          />
+          {filterSupplier && (
+            <button onClick={() => setFilterSupplier('')} className="absolute left-2 text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>
+          )}
+        </div>
         {/* Searchable project dropdown */}
         <div className="relative">
           <button
@@ -4501,20 +4515,6 @@ function ExpensesTab() {
               className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${filterPayment === val ? 'bg-white dark:bg-gray-600 shadow text-violet-700 dark:text-violet-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
             >{label}</button>
           ))}
-        </div>
-        {/* Supplier search */}
-        <div className="relative flex items-center">
-          <svg className="absolute right-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          <input
-            type="text"
-            value={filterSupplier}
-            onChange={e => setFilterSupplier(e.target.value)}
-            placeholder="חיפוש ספק..."
-            className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg pr-8 pl-3 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300 w-40"
-          />
-          {filterSupplier && (
-            <button onClick={() => setFilterSupplier('')} className="absolute left-2 text-gray-400 hover:text-gray-600 text-sm leading-none">✕</button>
-          )}
         </div>
         {(filterMonth || filterProject || filterVat || filterInvoice || filterPayment !== 'all' || filterSupplier) && (
           <button onClick={() => { setFilterMonth(''); setFilterProject(''); setFilterVat(''); setFilterInvoice(''); setFilterPayment('all'); setFilterSupplier('') }}
