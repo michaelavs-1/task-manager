@@ -5,7 +5,7 @@ import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 import { useEsc } from '@/hooks/useEsc'
 
-type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media'
+type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media' | 'streams'
 type Project = {
   id: string; name: string; category: string
   status?: string; genre?: string; audience?: string
@@ -45,6 +45,7 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'links',      label: 'קישורים' },
   { id: 'financial',  label: 'ביצועי הזמר' },
   { id: 'media',      label: 'מדיה' },
+  { id: 'streams',    label: 'ניטור השמעות' },
 ]
 
 function fmtNum(v: string | null) { if (!v) return '–'; const n = parseFloat(v); return isNaN(n) ? '–' : n.toLocaleString('he-IL', { maximumFractionDigits: 0 }) }
@@ -758,6 +759,79 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
+            {tab === 'streams' && (
+              <div className="space-y-5">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">נתוני השמעות ייטענו כאן לאחר חיבור המקור</p>
+                  <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-2.5 py-1 rounded-full font-semibold">בקרוב</span>
+                </div>
+
+                {/* Placeholder stat cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'סה"כ השמעות', icon: '🎧', color: 'text-indigo-600', sub: 'כל הפלטפורמות' },
+                    { label: 'Spotify', icon: '🟢', color: 'text-green-600', sub: 'חודש נוכחי' },
+                    { label: 'YouTube', icon: '🔴', color: 'text-red-500', sub: 'צפיות' },
+                    { label: 'Apple Music', icon: '⚪', color: 'text-slate-600', sub: 'חודש נוכחי' },
+                  ].map(({ label, icon, color, sub }) => (
+                    <div key={label} className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-4 text-right">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-lg">{icon}</span>
+                        <div className="h-4 w-16 bg-slate-100 dark:bg-gray-700 rounded animate-pulse" />
+                      </div>
+                      <div className={`text-xl font-bold ${color} mb-0.5`}>—</div>
+                      <div className="text-xs text-slate-400">{label}</div>
+                      <div className="text-xs text-slate-300 dark:text-slate-600">{sub}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Placeholder chart area */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-5">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">מגמת השמעות — 30 יום אחרונים</p>
+                  <div className="flex items-end gap-1 h-28">
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <div key={i} className="flex-1 bg-slate-100 dark:bg-gray-700 rounded-sm animate-pulse" style={{ height: `${20 + Math.random() * 60}%`, animationDelay: `${i * 40}ms` }} />
+                    ))}
+                  </div>
+                  <p className="text-center text-xs text-slate-300 dark:text-slate-600 mt-3">נתונים אמיתיים יוצגו לאחר חיבור</p>
+                </div>
+
+                {/* Catalogue placeholder */}
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-5">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">רפרטואר — ביצועי שירים</p>
+                  <div className="space-y-2.5">
+                    {['שיר א׳', 'שיר ב׳', 'שיר ג׳'].map((name, i) => (
+                      <div key={name} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-300 dark:text-slate-600 w-4 text-left">{i + 1}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-slate-400">{name}</span>
+                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 dark:bg-gray-700 rounded-full">
+                            <div className="h-1.5 bg-indigo-200 dark:bg-indigo-900 rounded-full" style={{ width: `${70 - i * 20}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-center text-xs text-slate-300 dark:text-slate-600 mt-4">הרפרטואר יושלם לאחר חיבור מקור הנתונים</p>
+                </div>
+
+                {/* Connect CTA */}
+                <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 p-6 text-center">
+                  <div className="text-2xl mb-2">📊</div>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-1">חיבור מקור נתונים</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">ניתן לחבר Spotify for Artists, YouTube Analytics, או כל API אחר</p>
+                  <button disabled className="px-4 py-2 text-sm font-semibold bg-indigo-100 text-indigo-400 rounded-lg cursor-not-allowed opacity-60">
+                    חבר מקור — בקרוב
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">בחר זמר</div>
