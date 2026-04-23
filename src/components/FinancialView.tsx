@@ -581,18 +581,19 @@ function FinancialDashboard() {
         const grandIncome  = cfMonths.reduce((s, m) => s + m.total, 0)
         const grandFrc     = cfMonths.reduce((s, m) => s + m.frcTotal, 0)
         const grandExp     = cfMonths.reduce((s, m) => s + m.expTotal, 0)
-        // grandNet includes forecast so it's consistent with per-month running balance
-        const grandNet     = grandIncome + grandFrc - grandExp
+        // grandNet = ACTUAL only (confirmed invoices + expenses, no forecast)
+        // Forecast shown separately — it's projected income, not confirmed
+        const grandNet     = grandIncome - grandExp
         const bankNum      = parseFloat(bankBalance.replace(/,/g, '')) || 0
         const grandWithBank = grandNet + bankNum
-        // Running balance per month: closing balance = opening + month net
+        // Running balance per month: ACTUAL only (no forecast), so it matches header
         let running = bankNum
         const runningByMonth: Record<string, number> = {}
         const openingByMonth: Record<string, number> = {}
         cfMonths.forEach(mo => {
-          openingByMonth[mo.key] = running          // balance BEFORE this month
-          running += (mo.total + mo.frcTotal - mo.expTotal)
-          runningByMonth[mo.key] = running          // balance AFTER this month
+          openingByMonth[mo.key] = running              // balance BEFORE this month
+          running += (mo.total - mo.expTotal)           // actual only — no frcTotal
+          runningByMonth[mo.key] = running              // balance AFTER this month
         })
 
         return (
@@ -618,14 +619,22 @@ function FinancialDashboard() {
                   </div>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0">
-                <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>סיכום נטו</div>
-                <div className="text-base font-bold" style={{ color: grandNet >= 0 ? '#6366f1' : '#ef4444' }}>{fmt(grandNet)}</div>
+              <div className="text-right flex-shrink-0 space-y-1.5">
+                <div>
+                  <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>סיכום נטו (מאושר)</div>
+                  <div className="text-base font-bold" style={{ color: grandNet >= 0 ? '#6366f1' : '#ef4444' }}>{fmt(grandNet)}</div>
+                </div>
+                {grandFrc > 0 && (
+                  <div>
+                    <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>+ צפי הכנסות</div>
+                    <div className="text-sm font-semibold" style={{ color: '#818cf8' }}>{fmt(grandFrc)}</div>
+                  </div>
+                )}
                 {bankNum !== 0 && (
-                  <>
-                    <div className="text-[10px] mt-1.5" style={{ color: 'var(--text-secondary)' }}>כולל יתרה בחשבון</div>
+                  <div>
+                    <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>יתרה בחשבון לאחר תקופה</div>
                     <div className="text-base font-bold" style={{ color: grandWithBank >= 0 ? '#10b981' : '#ef4444' }}>{fmt(grandWithBank)}</div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -667,7 +676,7 @@ function FinancialDashboard() {
                     )}
                     <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${isOpen ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}` }}>
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
-                      <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net + mo.frcTotal)}</div>
+                      <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
                     </div>
                     {bankNum !== 0 && (
                       <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
@@ -797,8 +806,8 @@ function FinancialDashboard() {
                 {/* Net summary row */}
                 <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1.5px solid var(--border-color)' }}>
                   <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>סיכום נטו — {cfMap[cfOpenMonth].label}</span>
-                  <span className="text-sm font-bold" style={{ color: (cfMap[cfOpenMonth].total + cfMap[cfOpenMonth].frcTotal - cfMap[cfOpenMonth].expTotal) >= 0 ? '#6366f1' : '#ef4444' }}>
-                    {fmt(cfMap[cfOpenMonth].total + cfMap[cfOpenMonth].frcTotal - cfMap[cfOpenMonth].expTotal)}
+                  <span className="text-sm font-bold" style={{ color: (cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal) >= 0 ? '#6366f1' : '#ef4444' }}>
+                    {fmt(cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal)}
                   </span>
                 </div>
               </div>
