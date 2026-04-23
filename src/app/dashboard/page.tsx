@@ -604,6 +604,37 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Status filter buttons */}
+            <div className="flex gap-1.5 mb-4 flex-wrap">
+              {([
+                { key: 'all',         label: 'הכל',     color: '#6366F1', count: tasks.length },
+                { key: 'pending',     label: 'ממתינה',  color: '#F59E0B', count: tasks.filter(t => t.status === 'pending').length },
+                { key: 'in_progress', label: 'בתהליך',  color: '#3B82F6', count: tasks.filter(t => t.status === 'in_progress').length },
+                { key: 'completed',   label: 'הושלמה',  color: '#10B981', count: tasks.filter(t => t.status === 'completed').length },
+              ] as const).map(({ key, label, color, count }) => {
+                const active = filter === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all"
+                    style={{
+                      background: active ? color : 'var(--bg-card)',
+                      color: active ? 'white' : 'var(--text-secondary)',
+                      border: `1.5px solid ${active ? color : 'var(--border-color)'}`,
+                      boxShadow: active ? `0 2px 8px ${color}40` : 'none',
+                    }}
+                  >
+                    {label}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                      style={{ background: active ? 'rgba(255,255,255,0.25)' : `${color}18`, color: active ? 'white' : color }}>
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Task List */}
             <div className="space-y-3">
               {filteredTasks.length === 0 ? (
