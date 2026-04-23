@@ -1567,6 +1567,12 @@ function InvoiceModal({
   })
   const [clientQuery, setClientQuery] = useState(initial.client || '')
   const [clientOpen, setClientOpen] = useState(false)
+  // today's ISO string for date validation
+  const todayISO = new Date().toISOString().slice(0, 10)
+  // dateMode: 'today' = locked to today, 'other' = free picker (past only)
+  const [dateMode, setDateMode] = useState<'today' | 'other'>(() =>
+    initial.date && initial.date !== isoToIsraeli(todayISO) ? 'other' : 'today'
+  )
   useEsc(true, onClose)
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -1632,12 +1638,37 @@ function InvoiceModal({
           {/* Date picker */}
           <div>
             <label className="block text-xs text-gray-400 mb-1">תאריך <span className="text-red-400">*</span></label>
-            <input
-              type="date"
-              value={israeliToISO(form.date)}
-              onChange={e => setForm(f => ({ ...f, date: isoToIsraeli(e.target.value) }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-            />
+            {/* Toggle: היום / תאריך אחר */}
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 mb-2">
+              {(['today', 'other'] as const).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setDateMode(mode)
+                    if (mode === 'today') {
+                      setForm(f => ({ ...f, date: isoToIsraeli(todayISO) }))
+                    }
+                  }}
+                  className={`flex-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${dateMode === mode ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  {mode === 'today' ? 'היום' : 'תאריך אחר'}
+                </button>
+              ))}
+            </div>
+            {dateMode === 'today' ? (
+              <div className="w-full border border-indigo-200 bg-indigo-50 rounded-xl px-3 py-2 text-sm text-indigo-700 font-medium text-center">
+                {new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </div>
+            ) : (
+              <input
+                type="date"
+                value={israeliToISO(form.date)}
+                max={todayISO}
+                onChange={e => setForm(f => ({ ...f, date: isoToIsraeli(e.target.value) }))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+              />
+            )}
           </div>
 
           <div>
