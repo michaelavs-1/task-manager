@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbSGGOVXESrSzFqHyFXdGNbpW_s7O6AVR8JF8MLzSXsLpJ5XCv3syW038Vp0pIapEWfYJ35hDXH_GJ/pub?gid=177365110&single=true&output=csv'
@@ -183,7 +185,7 @@ export async function GET() {
   // Dry-run: return what would be inserted
   try {
     const { prepared, skipped } = await prepareExpenses()
-    const existing = await supabase.from('expenses').select('id').eq('month', MONTH)
+    const existing = await getSupabase().from('expenses').select('id').eq('month', MONTH)
     return NextResponse.json({
       month: MONTH,
       existing_in_db: existing.data?.length || 0,
@@ -202,7 +204,7 @@ export async function POST(req: Request) {
     const url = new URL(req.url)
     const force = url.searchParams.get('force') === '1'
 
-    const existing = await supabase.from('expenses').select('id').eq('month', MONTH)
+    const existing = await getSupabase().from('expenses').select('id').eq('month', MONTH)
     const existingCount = existing.data?.length || 0
     if (existingCount > 0 && !force) {
       return NextResponse.json({
@@ -216,7 +218,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ inserted: 0, skipped: skipped.length, error: 'no rows parsed' })
     }
 
-    const { data, error } = await supabase.from('expenses').insert(prepared).select('id')
+    const { data, error } = await getSupabase().from('expenses').insert(prepared).select('id')
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({
       month: MONTH,

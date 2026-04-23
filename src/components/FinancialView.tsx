@@ -1487,6 +1487,7 @@ function ModalField({ label, value, onChange, type = 'text', placeholder = '' }:
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        onFocus={e => e.target.select()}
         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
       />
     </div>
@@ -1747,6 +1748,7 @@ function InvoiceModal({
               type="number"
               value={form.tax_withheld}
               onChange={set('tax_withheld')}
+              onFocus={e => e.target.select()}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
             />
           </div>

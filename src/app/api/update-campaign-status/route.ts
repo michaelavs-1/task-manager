@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const MONDAY_API_URL = 'https://api.monday.com/v2'
 
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const { data: campaign, error: fetchError } = await supabase
+    const { data: campaign, error: fetchError } = await getSupabase()
       .from('campaigns')
       .select('project_name')
       .eq('id', campaignId)
@@ -115,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Persist to Supabase
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from('campaigns')
       .update({ status: statusLabel, group_title: newGroupTitle })
       .eq('id', campaignId)
