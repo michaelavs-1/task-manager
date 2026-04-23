@@ -4151,8 +4151,9 @@ function ExpensesTab() {
   const fmt = (n: number) => n ? `₪${Math.round(n).toLocaleString('he-IL')}` : '—'
   const fmtDec = (n: number) => n ? `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'
 
-  const loadAll = async () => {
-    setLoading(true)
+  const loadAll = async (silent = false) => {
+    // Only show full-screen spinner on first load; subsequent refreshes are silent
+    if (!silent) setLoading(true)
     try {
       const [expRes, projRes, supRes] = await Promise.all([
         fetch('/api/expenses').then(r => r.json()),
@@ -4163,11 +4164,10 @@ function ExpensesTab() {
       setExpenses(list)
       setProjects(projRes.projects || [])
       setSuppliers(supRes.suppliers || [])
-      // Accordions default to closed — user opens the months they want to view
     } catch {
       // silent
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -4183,19 +4183,19 @@ function ExpensesTab() {
       if (!isEdit) {
         const res = await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         const d = await res.json().catch(() => null)
-        await loadAll()
+        await loadAll(true)
         if (d?.expense?.id) {
           const newId = d.expense.id
-          pushUndo('הוספת הוצאה', async () => { await fetch(`/api/expenses/${newId}`, { method: 'DELETE' }); await loadAll() })
+          pushUndo('הוספת הוצאה', async () => { await fetch(`/api/expenses/${newId}`, { method: 'DELETE' }); await loadAll(true) })
         }
       } else {
         await fetch(`/api/expenses/${modal.expense.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        await loadAll()
+        await loadAll(true)
         if (prevExpense) {
           const prev = prevExpense
           pushUndo('עריכת הוצאה', async () => {
             await fetch(`/api/expenses/${prev.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prev) })
-            await loadAll()
+            await loadAll(true)
           })
         }
       }
@@ -4212,13 +4212,13 @@ function ExpensesTab() {
     const prevExpense = expenses.find(e => e.id === id)
     setDeleting(id)
     await fetch(`/api/expenses/${id}`, { method: 'DELETE' })
-    await loadAll()
+    await loadAll(true)
     setDeleting(null)
     if (prevExpense) {
       const prev = prevExpense
       pushUndo('מחיקת הוצאה', async () => {
         await fetch('/api/expenses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prev) })
-        await loadAll()
+        await loadAll(true)
       })
     }
   }
@@ -4297,24 +4297,28 @@ function ExpensesTab() {
   }
 
   const upd = (field: string, val: unknown) => {
-    if (!modal) return
-    const next = { ...modal.expense, [field]: val } as typeof modal.expense
-    // auto-calculate vat + total when amount changes and status is מורשה
-    if (field === 'amount' || field === 'vat_status') {
-      const amt = field === 'amount' ? Number(val) : next.amount
-      const status = field === 'vat_status' ? String(val) : next.vat_status
-      if (status === 'מורשה' || status === 'חברה') {
-        next.vat = roundCents(amt * VAT_RATE)
-        next.total = roundCents(amt + next.vat)
-      } else {
-        next.vat = 0
-        next.total = roundCents(amt)
+    // Use functional update to avoid stale-closure bugs when upd() is called
+    // multiple times in the same event handler (e.g. supplier + vat_status).
+    setModal(prev => {
+      if (!prev) return prev
+      const next = { ...prev.expense, [field]: val } as typeof prev.expense
+      // auto-calculate vat + total when amount or vat_status changes
+      if (field === 'amount' || field === 'vat_status') {
+        const amt = field === 'amount' ? Number(val) : next.amount
+        const status = field === 'vat_status' ? String(val) : next.vat_status
+        if (status === 'מורשה' || status === 'חברה') {
+          next.vat = roundCents(amt * VAT_RATE)
+          next.total = roundCents(amt + next.vat)
+        } else {
+          next.vat = 0
+          next.total = roundCents(amt)
+        }
       }
-    }
-    if (field === 'vat') {
-      next.total = roundCents(next.amount + Number(val))
-    }
-    setModal({ ...modal, expense: next })
+      if (field === 'vat') {
+        next.total = roundCents(next.amount + Number(val))
+      }
+      return { ...prev, expense: next }
+    })
   }
 
   // All months from data + available years
