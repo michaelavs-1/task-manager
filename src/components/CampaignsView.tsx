@@ -28,7 +28,7 @@ type Campaign = {
   budget_type: string | null; budget_intensity: string | null
   needs_michael_call: string | null; territory: string | null; ad_number: string | null
   board: string; relevant_link: string | null; facebook_link: string | null
-  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string; contact_name?: string | null
+  instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string; contact_name?: string | null; media_budget: number | null
  dark_media_link: string | null
  show_time: string | null
 }
@@ -1055,6 +1055,8 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [localTicketsSold, setLocalTicketsSold] = useState<string>(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   const [localTicketsForSale, setLocalTicketsForSale] = useState<number | null>(campaign.tickets_for_sale ?? null)
   const [ticketsForSaleInput, setTicketsForSaleInput] = useState<string>(campaign.tickets_for_sale != null ? String(campaign.tickets_for_sale) : '')
+  const [mediaBudgetInput, setMediaBudgetInput] = useState<string>(campaign.media_budget != null ? String(campaign.media_budget) : '')
+  const [savingBudget, setSavingBudget] = useState(false)
   const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string; path: string}[]>([])
   const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false)
   const [showMediaPopup, setShowMediaPopup] = useState(false)
@@ -1080,6 +1082,9 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   useEffect(() => {
     setLocalTicketsSold(campaign.tickets_sold != null ? String(campaign.tickets_sold) : '')
   }, [campaign.tickets_sold])
+  useEffect(() => {
+    setMediaBudgetInput(campaign.media_budget != null ? String(campaign.media_budget) : '')
+  }, [campaign.media_budget])
   const ticketsSoldNum = localTicketsSold !== '' ? parseInt(localTicketsSold) : null
   // Compute remaining from the LIVE input value so it reflects the user's typing immediately
   const liveForSale = ticketsForSaleInput !== '' ? parseInt(ticketsForSaleInput) : (localTicketsForSale ?? null)
@@ -1461,6 +1466,37 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             )}
           </div>
 
+
+          {/* Media budget */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">תקציב רכישת מדיה (₪)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={mediaBudgetInput}
+                onChange={e => setMediaBudgetInput(e.target.value)}
+                placeholder="0"
+                className="w-28 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-700 dark:text-white"
+              />
+              <button
+                onClick={async () => {
+                  setSavingBudget(true)
+                  const val = mediaBudgetInput !== '' ? parseFloat(mediaBudgetInput) : null
+                  await supabase.from('campaigns').update({ media_budget: val, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+                  setSavingBudget(false)
+                }}
+                disabled={savingBudget || mediaBudgetInput === (campaign.media_budget != null ? String(campaign.media_budget) : '')}
+                className="px-3 py-1 text-xs font-semibold rounded-lg transition-colors bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {savingBudget ? '...' : 'שמור'}
+              </button>
+              {campaign.media_budget != null && (
+                <span className="text-xs text-gray-400">₪{campaign.media_budget.toLocaleString('he-IL')}</span>
+              )}
+            </div>
+          </div>
 
           <div className="pt-3 border-t border-gray-200 dark:border-gray-600 flex gap-2">
             <button onClick={() => setShowMediaPopup(true)} className="flex-1 py-2 rounded-xl text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-1">
