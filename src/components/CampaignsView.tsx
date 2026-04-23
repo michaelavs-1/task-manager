@@ -427,7 +427,7 @@ export function CampaignsView() {
               </button>
             ))}
           </div>
-          {barbySubTab !== 'pixels' && barbySubTab !== 'stats' && barbySubTab !== 'tracking' && barbySubTab !== 'media' && (
+          {barbySubTab !== 'pixels' && (
             <input
               type="text"
               placeholder="חפש קמפיין..."
