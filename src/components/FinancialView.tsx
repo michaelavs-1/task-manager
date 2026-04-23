@@ -403,8 +403,6 @@ function FinancialDashboard() {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [forecasts, setForecasts] = useState<ForecastInvoice[]>([])
   const [loading, setLoading] = useState(true)
-  const [gl, setGl] = useState<GlSummary | null>(null)
-  const [glLoading, setGlLoading] = useState(true)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
   const [cfOpenMonth, setCfOpenMonth] = useState<string | null>(null)
   const [bankBalance, setBankBalance] = useState<string>('')
@@ -425,11 +423,6 @@ function FinancialDashboard() {
       })
       .catch(() => setLoading(false))
 
-    fetch('/api/accounting/balances')
-      .then(r => r.json())
-      .then(d => { if (d.summary) setGl(d.summary) })
-      .catch(() => {})
-      .finally(() => setGlLoading(false))
   }, [])
 
   if (loading) return (
@@ -816,38 +809,6 @@ function FinancialDashboard() {
         )
       })()}
 
-      {/* ── GL — מקור האמת ── */}
-      <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid #6366f1', boxShadow: '0 0 0 3px rgba(99,102,241,0.07)' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>מאזן ניהולי — נתוני האמת (GL)</h2>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>יתרות מוצהרות</span>
-          {glLoading && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>טוען...</span>}
-        </div>
-        {gl && !glLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {[
-              { label: 'הכנסות',        value: fmt(gl.revenue),         color: '#6366f1' },
-              { label: 'עלות המכר',     value: fmt(gl.costOfRevenue),   color: '#ef4444' },
-              { label: 'הוצ׳ תפעוליות', value: fmt(gl.opExpenses),      color: '#f97316' },
-              { label: 'רווח גולמי',    value: fmt(gl.grossProfit),     color: gl.grossProfit >= 0 ? '#10b981' : '#ef4444' },
-              { label: 'בנק',           value: fmt(gl.bank),            color: '#3b82f6' },
-              { label: 'חייבים',        value: fmt(gl.receivables),     color: '#f59e0b' },
-              { label: 'מע״מ נטו',      value: fmt(Math.abs(gl.vatNet)), color: gl.vatNet >= 0 ? '#f59e0b' : '#10b981',
-                sub: gl.vatNet >= 0 ? 'לתשלום' : 'להחזר' },
-            ].map(c => (
-              <div key={c.label} className="rounded-xl p-3 flex flex-col gap-1" style={{ background: 'var(--bg-secondary)' }}>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                </div>
-                <div className="text-base font-bold tracking-tight" style={{ color: c.color }}>{c.value}</div>
-                {c.sub && <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.sub}</div>}
-              </div>
-            ))}
-          </div>
-        ) : !glLoading ? (
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>אין נתוני GL — הרץ את תהליך הבקפיל כדי ליצור רשומות יומן</p>
-        ) : null}
-      </div>
 
       {/* ── KPI Cards — full financial snapshot ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
