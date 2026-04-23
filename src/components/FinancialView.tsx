@@ -4614,12 +4614,7 @@ function ExpensesTab() {
             </div>
           )}
         </div>
-        <select value={filterVat} onChange={e => setFilterVat(e.target.value)}
-          className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-          <option value="">כל סטטוס מע"מ</option>
-          {['מורשה','פטור','חברה','עמותה'].map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        <select value={filterInvoice} onChange={e => setFilterInvoice(e.target.value as '' | 'yes' | 'no')}
+<select value={filterInvoice} onChange={e => setFilterInvoice(e.target.value as '' | 'yes' | 'no')}
           className="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
           <option value="">כל החשבוניות</option>
           <option value="yes">יש חשבונית</option>
