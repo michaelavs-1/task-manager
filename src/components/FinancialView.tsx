@@ -581,16 +581,18 @@ function FinancialDashboard() {
         const grandIncome  = cfMonths.reduce((s, m) => s + m.total, 0)
         const grandFrc     = cfMonths.reduce((s, m) => s + m.frcTotal, 0)
         const grandExp     = cfMonths.reduce((s, m) => s + m.expTotal, 0)
-        const grandNet     = grandIncome - grandExp
-        const grandNetFrc  = grandIncome + grandFrc - grandExp
+        // grandNet includes forecast so it's consistent with per-month running balance
+        const grandNet     = grandIncome + grandFrc - grandExp
         const bankNum      = parseFloat(bankBalance.replace(/,/g, '')) || 0
         const grandWithBank = grandNet + bankNum
-        // Running balance per month (actual + forecast)
+        // Running balance per month: closing balance = opening + month net
         let running = bankNum
         const runningByMonth: Record<string, number> = {}
+        const openingByMonth: Record<string, number> = {}
         cfMonths.forEach(mo => {
+          openingByMonth[mo.key] = running          // balance BEFORE this month
           running += (mo.total + mo.frcTotal - mo.expTotal)
-          runningByMonth[mo.key] = running
+          runningByMonth[mo.key] = running          // balance AFTER this month
         })
 
         return (
@@ -680,6 +682,17 @@ function FinancialDashboard() {
             {/* Accordion detail */}
             {cfOpenMonth && cfMap[cfOpenMonth] && (
               <div className="border-t px-5 py-4" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
+                {/* Opening balance from previous month */}
+                {openingByMonth[cfOpenMonth] !== undefined && (
+                  <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px dashed var(--border-color)' }}>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                      יתרה מחודש קודם
+                    </span>
+                    <span className="text-sm font-bold" style={{ color: openingByMonth[cfOpenMonth] >= 0 ? '#10b981' : '#ef4444' }}>
+                      {fmt(openingByMonth[cfOpenMonth])}
+                    </span>
+                  </div>
+                )}
                 {/* Income rows */}
                 {cfMap[cfOpenMonth].rows.length > 0 && (
                   <>
