@@ -1735,7 +1735,7 @@ function InvoicesTab() {
   function toggleExpanded(id: number) {
     setExpandedInvIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   }
-  const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed'>('all')
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'open' | 'closed' | 'cancelled'>('all')
   const [filterMonth, setFilterMonth] = useState<string>('')
 const [filterYear, setFilterYear] = useState<string | null>(null)
     const [groupByMonth, setGroupByMonth] = useState(true)
@@ -1809,7 +1809,12 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     const st = invoiceStatus(inv)
     const remaining = Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0))))
     const matchSearch = !q || inv.client.toLowerCase().includes(q) || inv.invoice_num.includes(q) || inv.issued_by.toLowerCase().includes(q)
-    const matchPayment = paymentFilter === 'all' || (paymentFilter === 'open' && remaining > 0) || (paymentFilter === 'closed' && remaining === 0)
+    const isCancelled = st === 'cancelled'
+    const matchPayment =
+      (paymentFilter === 'all'       && !isCancelled) ||
+      (paymentFilter === 'open'      && !isCancelled && remaining > 0) ||
+      (paymentFilter === 'closed'    && !isCancelled && remaining === 0) ||
+      (paymentFilter === 'cancelled' && isCancelled)
     const matchYear = !inv.date || israeliToISO(inv.date).startsWith(selectedYear)
     const matchMonth = !filterMonth || (inv.date && israeliToISO(inv.date).startsWith(filterMonth))
     return matchSearch
@@ -1999,16 +2004,23 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         {/* Payment status tabs */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
           {([
-            { key: 'all', label: 'הכל', count: invoices.length },
-            { key: 'open', label: 'פתוחות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) > 0).length },
-            { key: 'closed', label: 'סגורות', count: invoices.filter(inv => Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) === 0).length },
+            { key: 'all',       label: 'הכל',      count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled').length },
+            { key: 'open',      label: 'פתוחות',   count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled' && Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) > 0).length },
+            { key: 'closed',    label: 'סגורות',   count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled' && Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) === 0).length },
+            { key: 'cancelled', label: 'מבוטלות',  count: invoices.filter(inv => invoiceStatus(inv) === 'cancelled').length },
           ] as const).map(({ key, label, count }) => (
             <button
               key={key}
               onClick={() => setPaymentFilter(key)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${paymentFilter === key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                paymentFilter === key
+                  ? key === 'cancelled'
+                    ? 'bg-white shadow text-gray-500'
+                    : 'bg-white shadow text-gray-800'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
-              {label} <span className={`text-xs font-normal ${paymentFilter === key ? 'text-indigo-500' : 'text-gray-400'}`}>({count})</span>
+              {label} <span className={`text-xs font-normal ${paymentFilter === key ? (key === 'cancelled' ? 'text-gray-400' : 'text-indigo-500') : 'text-gray-400'}`}>({count})</span>
             </button>
           ))}
         </div>
