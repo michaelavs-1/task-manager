@@ -427,17 +427,19 @@ export function CampaignsView() {
               </button>
             ))}
           </div>
-          <input
-            type="text"
-            placeholder="חפש קמפיין..."
-            value={campaignSearch}
-            onChange={e => setCampaignSearch(e.target.value)}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
-          />
+          {barbySubTab !== 'pixels' && barbySubTab !== 'stats' && barbySubTab !== 'tracking' && barbySubTab !== 'media' && (
+            <input
+              type="text"
+              placeholder="חפש קמפיין..."
+              value={campaignSearch}
+              onChange={e => setCampaignSearch(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
+            />
+          )}
           {(barbySubTab === 'active' || barbySubTab === 'ended' || barbySubTab === 'archive') && (
             <div className="flex justify-end">
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
