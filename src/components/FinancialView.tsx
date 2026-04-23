@@ -624,9 +624,22 @@ function FinancialDashboard() {
                   </div>
                 )}
                 {bankNum !== 0 && (
-                  <div>
-                    <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>יתרה בחשבון לאחר תקופה</div>
-                    <div className="text-base font-bold" style={{ color: grandWithBank >= 0 ? '#10b981' : '#ef4444' }}>{fmt(grandWithBank)}</div>
+                  <div className="rounded-xl px-3 py-2 mt-1" style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <div className="text-[10px] mb-1 font-semibold" style={{ color: 'var(--text-secondary)' }}>יתרה חזויה לאחר תקופה</div>
+                    <div className="text-[10px] space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
+                      <div className="flex justify-between gap-3">
+                        <span>יתרה נוכחית</span>
+                        <span style={{ color: '#10b981' }}>{fmt(bankNum)}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span>נטו צפוי</span>
+                        <span style={{ color: grandNet >= 0 ? '#10b981' : '#ef4444' }}>{fmt(grandNet)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between gap-3 mt-1.5 pt-1.5" style={{ borderTop: '1px solid rgba(99,102,241,0.2)' }}>
+                      <span className="text-[10px] font-bold" style={{ color: 'var(--text-primary)' }}>=</span>
+                      <span className="text-sm font-bold" style={{ color: grandWithBank >= 0 ? '#10b981' : '#ef4444' }}>{fmt(grandWithBank)}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -671,12 +684,7 @@ function FinancialDashboard() {
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
                       <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
                     </div>
-                    {bankNum !== 0 && (
-                      <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
-                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>יתרה בחשבון</div>
-                        <div className="text-xs font-bold" style={{ color: isOpen ? (runningAfter >= 0 ? '#bbf7d0' : '#fca5a5') : (runningAfter >= 0 ? '#10b981' : '#ef4444') }}>{fmt(runningAfter)}</div>
-                      </div>
-                    )}
+                    {/* Running balance removed from cards — shown in accordion instead */}
                   </button>
                 )
               })}
@@ -684,8 +692,8 @@ function FinancialDashboard() {
             {/* Accordion detail */}
             {cfOpenMonth && cfMap[cfOpenMonth] && (
               <div className="border-t px-5 py-4" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
-                {/* Opening balance from previous month */}
-                {openingByMonth[cfOpenMonth] !== undefined && (
+                {/* Opening balance from previous month — only shown when bank balance entered */}
+                {bankNum !== 0 && openingByMonth[cfOpenMonth] !== undefined && (
                   <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px dashed var(--border-color)' }}>
                     <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
                       יתרה מחודש קודם
