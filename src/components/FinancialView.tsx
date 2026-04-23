@@ -5175,18 +5175,46 @@ function ExpensesTab() {
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 </div>
               </div>
-              {/* Paid + Payment date */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">שולם</label>
-                  <input type="number" step="0.01" value={modal.expense.paid || ''} onChange={e => upd('paid', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">תאריך תשלום</label>
-                  <input type="text" value={modal.expense.payment_date} onChange={e => upd('payment_date', e.target.value)} placeholder="DD.MM.YY"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
-                </div>
+              {/* Paid checkbox + conditional payment date */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={!!(modal.expense.paid && modal.expense.paid > 0)}
+                    onChange={e => {
+                      const isPaid = e.target.checked
+                      const today = new Date().toISOString().split('T')[0]
+                      setModal({
+                        ...modal,
+                        expense: {
+                          ...modal.expense,
+                          paid: isPaid ? modal.expense.total : 0,
+                          payment_date: isPaid ? today : '',
+                        }
+                      })
+                    }}
+                    className="w-4 h-4 rounded text-violet-600 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-violet-600 transition-colors">
+                    האם שולם?
+                  </span>
+                  {!!(modal.expense.paid && modal.expense.paid > 0) && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-0.5 rounded-full font-semibold">
+                      ✓ שולם
+                    </span>
+                  )}
+                </label>
+                {!!(modal.expense.paid && modal.expense.paid > 0) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">תאריך תשלום</label>
+                    <input
+                      type="date"
+                      value={modal.expense.payment_date}
+                      onChange={e => upd('payment_date', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+                    />
+                  </div>
+                )}
               </div>
               {/* Has invoice + notes */}
               <div className="flex items-center gap-3">
