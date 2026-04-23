@@ -468,7 +468,7 @@ export function CampaignsView() {
       ) : selectedBoard === 'barbie' && barbySubTab === 'tracking' ? (
         <TicketTrackingView />
       ) : selectedBoard === 'barbie' && barbySubTab === 'stats' ? (
-        <StatisticsView />
+        <StatisticsView search={campaignSearch} />
       ) : selectedBoard === 'barbie' && barbySubTab === 'media' ? (
         <MediaLibraryView />
       ) : selectedBoard === 'barbie' ? (

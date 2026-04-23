@@ -17,7 +17,7 @@ type CampaignRow = {
   tickets_sold: number | null
 }
 
-export function StatisticsView() {
+export function StatisticsView({ search = '' }: { search?: string }) {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([])
   const [snapshots, setSnapshots] = useState<TicketSnapshot[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,8 +54,10 @@ export function StatisticsView() {
   const upcoming = useMemo(() => campaigns.filter(c => {
     if (!c.launch_date) return false
     const d = new Date(c.launch_date + 'T00:00:00')
-    return d >= today
-  }), [campaigns])
+    if (d < today) return false
+    if (search.trim()) return c.name.toLowerCase().includes(search.toLowerCase())
+    return true
+  }), [campaigns, search])
 
   const totalCapacity = upcoming.reduce((s, c) => s + (c.tickets_for_sale || 0), 0)
   const totalSold = upcoming.reduce((s, c) => s + (c.tickets_sold || 0), 0)
