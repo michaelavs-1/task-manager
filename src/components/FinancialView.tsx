@@ -401,6 +401,7 @@ function FinancialDashboard() {
   const [invoices, setInvoices] = useState<FinDashInvoice[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
+  const [forecasts, setForecasts] = useState<ForecastInvoice[]>([])
   const [loading, setLoading] = useState(true)
   const [gl, setGl] = useState<GlSummary | null>(null)
   const [glLoading, setGlLoading] = useState(true)
@@ -413,11 +414,13 @@ function FinancialDashboard() {
       fetch('/api/invoices').then(r => r.json()),
       fetch('/api/expenses').then(r => r.json()),
       fetch('/api/projects').then(r => r.json()).catch(() => ({ projects: [] })),
+      fetch('/api/forecasts').then(r => r.json()).catch(() => ({ forecasts: [] })),
     ])
-      .then(([invData, expData, projData]) => {
+      .then(([invData, expData, projData, frcData]) => {
         setInvoices(invData.invoices || [])
         setExpenses(expData.expenses || [])
         setProjects((projData.projects || []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })))
+        setForecasts(frcData.forecasts || [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -526,20 +529,36 @@ function FinancialDashboard() {
       {/* ── תזרים ── */}
       {(() => {
         type CfRow = { inv: FinDashInvoice; remaining: number }
+        type CfFrcRow = { client: string; description: string; total: number; confidence: string }
         type CfExpRow = { supplier: string; project: string; unpaid: number }
-        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; expRows: CfExpRow[]; expTotal: number }
+        type CfMonth = { key: string; label: string; rows: CfRow[]; total: number; frcRows: CfFrcRow[]; frcTotal: number; expRows: CfExpRow[]; expTotal: number }
         const cfMap: Record<string, CfMonth> = {}
+
+        const ensureMonth = (key: string) => {
+          if (!cfMap[key]) {
+            const [y, m] = key.split('-')
+            const mIdx = parseInt(m) - 1
+            if (mIdx < 0 || mIdx > 11) return false
+            cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, frcRows: [], frcTotal: 0, expRows: [], expTotal: 0 }
+          }
+          return true
+        }
+
         invoices.forEach(inv => {
           const remaining = Math.round(((inv.total || 0) - (inv.paid || 0) - (inv.tax_withheld || 0)) * 100) / 100
           if (remaining < 1) return
           const key = israeliToMonthKey(inv.payment_date || '')
-          if (!key) return
-          if (!cfMap[key]) {
-            const [y, m] = key.split('-')
-            cfMap[key] = { key, label: `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`, rows: [], total: 0, expRows: [], expTotal: 0 }
-          }
+          if (!key || !ensureMonth(key)) return
           cfMap[key].rows.push({ inv, remaining })
           cfMap[key].total += remaining
+        })
+
+        // Forecast invoices — add to their expected_date month
+        forecasts.forEach(f => {
+          const key = f.expected_date   // already "YYYY-MM"
+          if (!key || !ensureMonth(key)) return
+          cfMap[key].frcRows.push({ client: f.client, description: f.description, total: f.total, confidence: f.confidence })
+          cfMap[key].frcTotal += f.total
         })
         // Aggregate unpaid expenses per month
         expenses.forEach(exp => {
@@ -548,10 +567,7 @@ function FinancialDashboard() {
           const unpaid = Math.round(((exp.total || 0) - (exp.paid || 0)) * 100) / 100
           if (unpaid <= 0) return
           if (!cfMap[key]) {
-            const [y, m] = key.split('-')
-            const mIdx = parseInt(m) - 1
-            if (mIdx < 0 || mIdx > 11) return
-            cfMap[key] = { key, label: `${MONTH_NAMES_HE[mIdx]} ${y}`, rows: [], total: 0, expRows: [], expTotal: 0 }
+            if (!ensureMonth(key)) return
           }
           const projName = exp.project_id ? (projects.find(p => p.id === exp.project_id)?.name || exp.description || exp.project_id) : (exp.description || '—')
           cfMap[key].expRows.push({ supplier: exp.supplier || '—', project: projName, unpaid })
@@ -562,16 +578,18 @@ function FinancialDashboard() {
           .filter(m => m.key >= currentMonthKey)
           .sort((a, b) => a.key.localeCompare(b.key))
         if (cfMonths.length === 0) return null
-        const grandIncome = cfMonths.reduce((s, m) => s + m.total, 0)
-        const grandExp    = cfMonths.reduce((s, m) => s + m.expTotal, 0)
-        const grandNet    = grandIncome - grandExp
-        const bankNum     = parseFloat(bankBalance.replace(/,/g, '')) || 0
+        const grandIncome  = cfMonths.reduce((s, m) => s + m.total, 0)
+        const grandFrc     = cfMonths.reduce((s, m) => s + m.frcTotal, 0)
+        const grandExp     = cfMonths.reduce((s, m) => s + m.expTotal, 0)
+        const grandNet     = grandIncome - grandExp
+        const grandNetFrc  = grandIncome + grandFrc - grandExp
+        const bankNum      = parseFloat(bankBalance.replace(/,/g, '')) || 0
         const grandWithBank = grandNet + bankNum
-        // Running balance per month: starts with bank balance, accumulates each month's net
+        // Running balance per month (actual + forecast)
         let running = bankNum
         const runningByMonth: Record<string, number> = {}
         cfMonths.forEach(mo => {
-          running += (mo.total - mo.expTotal)
+          running += (mo.total + mo.frcTotal - mo.expTotal)
           runningByMonth[mo.key] = running
         })
 
@@ -633,6 +651,12 @@ function FinancialDashboard() {
                         <div className="text-sm font-bold" style={{ color: isOpen ? '#a5f3b0' : '#10b981' }}>{fmt(mo.total)}</div>
                       </div>
                     )}
+                    {mo.frcTotal > 0 && (
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>צפי הכנסות</div>
+                        <div className="text-sm font-bold" style={{ color: isOpen ? '#c7d2fe' : '#818cf8' }}>{fmt(mo.frcTotal)}</div>
+                      </div>
+                    )}
                     {mo.expTotal > 0 && (
                       <div className="flex items-center justify-between gap-2 mt-0.5">
                         <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>תשלומי ספקים</div>
@@ -641,7 +665,7 @@ function FinancialDashboard() {
                     )}
                     <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${isOpen ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}` }}>
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
-                      <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
+                      <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net + mo.frcTotal)}</div>
                     </div>
                     {bankNum !== 0 && (
                       <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
@@ -691,6 +715,42 @@ function FinancialDashboard() {
                     </table>
                   </>
                 )}
+                {/* Forecast rows */}
+                {cfMap[cfOpenMonth].frcRows.length > 0 && (
+                  <>
+                    <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#6366f1' }}>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                      צפי הכנסות (לא מופק עדיין)
+                    </div>
+                    <table className="w-full text-xs mb-4">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          {['לקוח', 'תיאור', 'סבירות', 'סכום'].map(h => (
+                            <th key={h} className="py-2 text-right font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cfMap[cfOpenMonth].frcRows.map((fr, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td className="py-2 font-medium" style={{ color: 'var(--text-primary)' }}>{fr.client || '—'}</td>
+                            <td className="py-2" style={{ color: 'var(--text-secondary)' }}>{fr.description || '—'}</td>
+                            <td className="py-2">
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${CONFIDENCE_STYLE[fr.confidence] || 'bg-gray-100 text-gray-600'}`}>{fr.confidence}</span>
+                            </td>
+                            <td className="py-2 font-bold text-left" style={{ color: '#818cf8' }}>{fmt(fr.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td colSpan={3} className="pt-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>סה"כ צפי</td>
+                          <td className="pt-2 font-bold text-left" style={{ color: '#818cf8' }}>{fmt(cfMap[cfOpenMonth].frcTotal)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </>
+                )}
                 {/* Expense rows */}
                 {cfMap[cfOpenMonth].expRows.length > 0 && (
                   <>
@@ -724,8 +784,8 @@ function FinancialDashboard() {
                 {/* Net summary row */}
                 <div className="flex items-center justify-between pt-2 mt-1" style={{ borderTop: '1.5px solid var(--border-color)' }}>
                   <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>סיכום נטו — {cfMap[cfOpenMonth].label}</span>
-                  <span className="text-sm font-bold" style={{ color: (cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal) >= 0 ? '#6366f1' : '#ef4444' }}>
-                    {fmt(cfMap[cfOpenMonth].total - cfMap[cfOpenMonth].expTotal)}
+                  <span className="text-sm font-bold" style={{ color: (cfMap[cfOpenMonth].total + cfMap[cfOpenMonth].frcTotal - cfMap[cfOpenMonth].expTotal) >= 0 ? '#6366f1' : '#ef4444' }}>
+                    {fmt(cfMap[cfOpenMonth].total + cfMap[cfOpenMonth].frcTotal - cfMap[cfOpenMonth].expTotal)}
                   </span>
                 </div>
               </div>
