@@ -2415,9 +2415,18 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             // Build month groups from filtered
             const mGroups: Record<string, { key: string; label: string; rows: InvoiceRow[] }> = {}
             filtered.forEach(inv => {
-              if (!inv.date) return
+              if (!inv.date) {
+                // No date — put in a catch-all group so it's never invisible
+                if (!mGroups['0000-00']) mGroups['0000-00'] = { key: '0000-00', label: 'ללא תאריך', rows: [] }
+                mGroups['0000-00'].rows.push(inv)
+                return
+              }
               const d = new Date(israeliToISO(inv.date))
-              if (isNaN(d.getTime())) return
+              if (isNaN(d.getTime())) {
+                if (!mGroups['0000-00']) mGroups['0000-00'] = { key: '0000-00', label: 'ללא תאריך', rows: [] }
+                mGroups['0000-00'].rows.push(inv)
+                return
+              }
               const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
               const label = `${MONTH_NAMES_HE[d.getMonth()]} ${d.getFullYear()}`
               if (!mGroups[key]) mGroups[key] = { key, label, rows: [] }
@@ -2733,7 +2742,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
       {/* Create / Edit Modal */}
       {modalInv !== null && (
         <InvoiceModal
-          initial={modalInv === 'new' ? EMPTY_FORM : { ...modalInv }}
+          initial={modalInv === 'new' ? { ...EMPTY_FORM, date: isoToIsraeli(new Date().toISOString().slice(0, 10)) } : { ...modalInv }}
           clientOptions={clients}
           clientList={clientList}
           projectList={projectList}
