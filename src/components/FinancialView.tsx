@@ -5636,8 +5636,31 @@ export function ForecastTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">חודש צפוי</label>
-                  <input type="month" value={modal.item.expected_date} onChange={e => upd('expected_date', e.target.value)}
-                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                  {/* Two selects instead of type="month" — Safari doesn't support type="month" */}
+                  <div className="flex gap-1">
+                    {(() => {
+                      const [curY, curM] = (modal.item.expected_date || new Date().toISOString().slice(0,7)).split('-')
+                      const now = new Date()
+                      const years = Array.from({ length: 5 }, (_, i) => String(now.getFullYear() + i - 1))
+                      const months = [
+                        ['01','ינואר'],['02','פברואר'],['03','מרץ'],['04','אפריל'],
+                        ['05','מאי'],['06','יוני'],['07','יולי'],['08','אוגוסט'],
+                        ['09','ספטמבר'],['10','אוקטובר'],['11','נובמבר'],['12','דצמבר'],
+                      ]
+                      return (
+                        <>
+                          <select value={curM} onChange={e => upd('expected_date', `${curY}-${e.target.value}`)}
+                            className="flex-1 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700">
+                            {months.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          </select>
+                          <select value={curY} onChange={e => upd('expected_date', `${e.target.value}-${curM}`)}
+                            className="w-20 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700">
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                          </select>
+                        </>
+                      )
+                    })()}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">סבירות</label>
