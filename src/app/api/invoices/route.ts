@@ -33,18 +33,20 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('invoices')
     .insert({
-      issued_by:   body.issued_by   ?? '',
-      sent_to:     body.sent_to     ?? '',
-      date:        body.date        ?? '',
-      doc_type:    body.doc_type    ?? '',
-      invoice_num: body.invoice_num ?? '',
-      client:      body.client      ?? '',
+      issued_by:    body.issued_by    ?? '',
+      sent_to:      body.sent_to      ?? '',
+      date:         body.date         ?? '',
+      doc_type:     body.doc_type     ?? '',
+      invoice_num:  body.invoice_num  ?? '',
+      client:       body.client       ?? '',
+      client_id:    body.client_id    ? Number(body.client_id) : null,
+      payment_date: body.payment_date ?? '',
       before_vat:   Number(body.before_vat)   || 0,
       total:        Number(body.total)        || 0,
       paid:         Number(body.paid)         || 0,
       tax_withheld: Number(body.tax_withheld) || 0,
-      notes:        body.notes       ?? '',
-      project_id:   body.project_id  ?? null,
+      notes:        body.notes        ?? '',
+      project_id:   body.project_id   ?? null,
     })
     .select()
     .single()
