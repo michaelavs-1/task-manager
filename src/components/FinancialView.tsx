@@ -684,7 +684,12 @@ function FinancialDashboard() {
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
                       <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
                     </div>
-                    {/* Running balance removed from cards — shown in accordion instead */}
+                    {bankNum !== 0 && (
+                      <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
+                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>יתרה חזויה</div>
+                        <div className="text-xs font-bold" style={{ color: isOpen ? (runningAfter >= 0 ? '#bbf7d0' : '#fca5a5') : (runningAfter >= 0 ? '#10b981' : '#ef4444') }}>{fmt(runningAfter)}</div>
+                      </div>
+                    )}
                   </button>
                 )
               })}
