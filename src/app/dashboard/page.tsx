@@ -643,17 +643,46 @@ export default function Dashboard() {
                   )
                 })()
               ) : (
-                filteredTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isManager={userRole === "manager"}
-                    onStatusChange={updateTaskStatus}
-                    onDelete={deleteTask}
-                    onArchive={archiveTask}
-                    onEdit={setEditingTask}
-                  />
-                ))
+                (() => {
+                  // Group by status when showing all, flat list when filtered
+                  if (filter !== 'all') {
+                    return filteredTasks.map((task) => (
+                      <TaskCard key={task.id} task={task} isManager={userRole === "manager"}
+                        onStatusChange={updateTaskStatus} onDelete={deleteTask} onArchive={archiveTask} onEdit={setEditingTask} />
+                    ))
+                  }
+                  const STATUS_GROUPS = [
+                    { key: 'pending',     label: 'ממתינה',  color: '#F59E0B', dot: 'bg-yellow-400' },
+                    { key: 'in_progress', label: 'בתהליך',  color: '#6366F1', dot: 'bg-indigo-400' },
+                    { key: 'completed',   label: 'הושלמה',  color: '#10B981', dot: 'bg-green-400' },
+                  ]
+                  return STATUS_GROUPS.map(({ key, label, color, dot }) => {
+                    const group = filteredTasks.filter(t => t.status === key)
+                    if (!group.length) return null
+                    return (
+                      <div key={key}>
+                        {/* Section header */}
+                        <div className="flex items-center gap-2 mb-2 mt-1 px-1">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                          <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>
+                            {label}
+                          </span>
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: `${color}18`, color }}>
+                            {group.length}
+                          </span>
+                          <div className="flex-1 h-px" style={{ background: `${color}30` }} />
+                        </div>
+                        {/* Tasks in this group */}
+                        <div className="space-y-3 mb-4">
+                          {group.map((task) => (
+                            <TaskCard key={task.id} task={task} isManager={userRole === "manager"}
+                              onStatusChange={updateTaskStatus} onDelete={deleteTask} onArchive={archiveTask} onEdit={setEditingTask} />
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()
               )}
             </div>
           </div>
