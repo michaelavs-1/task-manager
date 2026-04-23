@@ -361,6 +361,9 @@ export default function Dashboard() {
             { tab: 'authority_payments' as FinTab, label: 'תשלומי רשויות', icon: (
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" /></svg>
             )},
+            { tab: 'forecast' as FinTab, label: 'צפי הכנסות', icon: (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+            )},
           ] as { tab: FinTab; label: string; icon: React.ReactNode }[]).map(({ tab, label, icon }) => {
             const isActive = activeFinTab === tab
             return (

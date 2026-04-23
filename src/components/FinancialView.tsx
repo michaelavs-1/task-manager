@@ -2,7 +2,7 @@
 import { useState, useEffect, Fragment, useRef } from 'react'
 import { useEsc } from '../hooks/useEsc'
 
-export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses' | 'authority_payments'
+export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses' | 'authority_payments' | 'forecast'
 
 const INVOICES_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1B031KurcxK-aeiGz8SYYDLlNCcNYvQombA9VIDhKGMo/edit?gid=584902190'
 
@@ -5283,6 +5283,369 @@ function ExpensesTab() {
   )
 }
 
+// ─────────────────────────────────────────────────────────
+// ForecastTab — pipeline of planned future invoices
+// ─────────────────────────────────────────────────────────
+type ForecastInvoice = {
+  id: number
+  client: string
+  client_id: number | null
+  project_id: string | null
+  description: string
+  expected_date: string   // "YYYY-MM"
+  amount_before_vat: number
+  vat: number
+  total: number
+  confidence: string      // 'בטוח' | 'סביר' | 'אפשרי'
+  notes: string
+}
+
+const EMPTY_FORECAST: Omit<ForecastInvoice, 'id'> = {
+  client: '', client_id: null, project_id: null, description: '',
+  expected_date: new Date().toISOString().slice(0, 7),
+  amount_before_vat: 0, vat: 0, total: 0, confidence: 'סביר', notes: '',
+}
+
+const CONFIDENCE_STYLE: Record<string, string> = {
+  'בטוח':  'bg-emerald-100 text-emerald-700',
+  'סביר':  'bg-blue-100 text-blue-700',
+  'אפשרי': 'bg-amber-100 text-amber-700',
+}
+
+function fmtMonth(ym: string) {
+  if (!ym) return '—'
+  try {
+    const [y, m] = ym.split('-')
+    const d = new Date(Number(y), Number(m) - 1, 1)
+    return d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
+  } catch { return ym }
+}
+
+export function ForecastTab() {
+  const [forecasts, setForecasts] = useState<ForecastInvoice[]>([])
+  const [projects,  setProjects]  = useState<{ id: string; name: string; category: string }[]>([])
+  const [clientList, setClientList] = useState<ClientRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<{ mode: 'add' | 'edit'; item: Omit<ForecastInvoice, 'id'> & { id?: number } } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<number | null>(null)
+  const [confidenceFilter, setConfidenceFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [clientQuery, setClientQuery] = useState('')
+  const [clientOpen, setClientOpen] = useState(false)
+
+  const loadAll = async (silent = false) => {
+    if (!silent) setLoading(true)
+    const [fRes, pRes, cRes] = await Promise.all([
+      fetch('/api/forecasts').then(r => r.json()),
+      fetch('/api/projects').then(r => r.json()),
+      fetch('/api/clients').then(r => r.json()),
+    ])
+    setForecasts(fRes.forecasts || [])
+    setProjects(pRes.projects || [])
+    setClientList(cRes.clients || [])
+    if (!silent) setLoading(false)
+  }
+
+  useEffect(() => { loadAll() }, [])
+
+  const upd = (field: string, val: unknown) => {
+    setModal(prev => {
+      if (!prev) return prev
+      const next = { ...prev.item, [field]: val }
+      if (field === 'amount_before_vat') {
+        const amt = Number(val)
+        next.vat = roundCents(amt * VAT_RATE)
+        next.total = roundCents(amt + next.vat)
+      }
+      if (field === 'vat') {
+        next.total = roundCents(next.amount_before_vat + Number(val))
+      }
+      return { ...prev, item: next }
+    })
+  }
+
+  const handleSave = async () => {
+    if (!modal) return
+    setSaving(true)
+    if (modal.mode === 'add') {
+      const res = await fetch('/api/forecasts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modal.item) })
+      const d = await res.json()
+      if (!d.error) setForecasts(prev => [...prev, d])
+    } else {
+      const res = await fetch(`/api/forecasts/${modal.item.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modal.item) })
+      const d = await res.json()
+      if (!d.error) setForecasts(prev => prev.map(f => f.id === d.id ? d : f))
+    }
+    setSaving(false)
+    setModal(null)
+    setClientQuery('')
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('למחוק צפי זה?')) return
+    setDeleting(id)
+    await fetch(`/api/forecasts/${id}`, { method: 'DELETE' })
+    setForecasts(prev => prev.filter(f => f.id !== id))
+    setDeleting(null)
+  }
+
+  const openAdd = () => {
+    setModal({ mode: 'add', item: { ...EMPTY_FORECAST } })
+    setClientQuery('')
+  }
+  const openEdit = (f: ForecastInvoice) => {
+    setModal({ mode: 'edit', item: { ...f } })
+    setClientQuery(f.client)
+  }
+
+  const filtered = forecasts.filter(f => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || f.client.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)
+    const matchConf = confidenceFilter === 'all' || f.confidence === confidenceFilter
+    return matchSearch && matchConf
+  })
+
+  // Group by expected_date month
+  const months = [...new Set(filtered.map(f => f.expected_date))].sort()
+  const grouped = months.map(mo => ({
+    mo,
+    rows: filtered.filter(f => f.expected_date === mo),
+  }))
+
+  const totalAll    = filtered.reduce((s, f) => s + f.total, 0)
+  const totalBetach = forecasts.filter(f => f.confidence === 'בטוח').reduce((s, f) => s + f.total, 0)
+  const totalSavir  = forecasts.filter(f => f.confidence === 'סביר').reduce((s, f) => s + f.total, 0)
+  const fmtF = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+
+  const clientNames = clientList.map(c => c.name).sort()
+  const filteredClients = clientNames.filter(c => c.toLowerCase().includes(clientQuery.toLowerCase()))
+
+  useEsc(modal !== null, () => setModal(null))
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="inline-block w-6 h-6 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" />
+    </div>
+  )
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-4" dir="rtl">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'סה"כ צפי', val: fmtF(totalAll), color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', dot: 'bg-indigo-400' },
+          { label: 'בטוח', val: fmtF(totalBetach), color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', dot: 'bg-emerald-400' },
+          { label: 'סביר', val: fmtF(totalSavir), color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', dot: 'bg-blue-400' },
+          { label: 'רשומות', val: String(forecasts.length), color: 'text-gray-600', bg: 'bg-gray-50 dark:bg-gray-800', dot: 'bg-gray-400' },
+        ].map(({ label, val, color, bg, dot }) => (
+          <div key={label} className={`${bg} rounded-2xl p-4 border border-gray-100 dark:border-gray-700`}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className={`w-2 h-2 rounded-full ${dot}`} />
+              <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
+            </div>
+            <div className={`text-xl font-bold ${color}`}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          {(['all', 'בטוח', 'סביר', 'אפשרי'] as const).map(key => (
+            <button key={key} onClick={() => setConfidenceFilter(key)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${confidenceFilter === key ? 'bg-white dark:bg-gray-700 shadow text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              {key === 'all' ? 'הכל' : key}
+              <span className="text-xs font-normal text-gray-400 mr-1">
+                ({key === 'all' ? forecasts.length : forecasts.filter(f => f.confidence === key).length})
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="relative flex-1 max-w-xs">
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש לקוח / תיאור..."
+            className="w-full border border-gray-200 dark:border-gray-600 rounded-xl pr-9 pl-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white dark:bg-gray-800" />
+        </div>
+        <button onClick={openAdd}
+          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הוסף צפי
+        </button>
+      </div>
+
+      {/* Table grouped by month */}
+      {grouped.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <svg className="w-12 h-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          <p className="text-sm font-medium">אין רשומות צפי</p>
+          <button onClick={openAdd} className="mt-3 text-xs text-indigo-500 hover:text-indigo-700 font-medium">+ הוסף ראשון</button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {grouped.map(({ mo, rows }) => {
+            const mTotal = rows.reduce((s, r) => s + r.total, 0)
+            return (
+              <div key={mo} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{fmtMonth(mo)}</span>
+                  <span className="text-sm font-semibold text-indigo-600">{fmtF(mTotal)}</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-700">
+                      <th className="px-4 py-2 text-right font-semibold">לקוח</th>
+                      <th className="px-4 py-2 text-right font-semibold">תיאור</th>
+                      <th className="px-4 py-2 text-right font-semibold">פרויקט</th>
+                      <th className="px-4 py-2 text-right font-semibold">סה"כ</th>
+                      <th className="px-4 py-2 text-right font-semibold">סבירות</th>
+                      <th className="px-4 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(row => {
+                      const proj = projects.find(p => p.id === row.project_id)
+                      return (
+                        <tr key={row.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.client || '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs truncate">{row.description || '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{proj?.name || '—'}</td>
+                          <td className="px-4 py-3 font-bold text-indigo-600">{fmtF(row.total)}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${CONFIDENCE_STYLE[row.confidence] || 'bg-gray-100 text-gray-600'}`}>{row.confidence}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openEdit(row)} className="p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-colors" title="ערוך">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              </button>
+                              <button onClick={() => handleDelete(row.id)} disabled={deleting === row.id} className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors" title="מחק">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">{modal.mode === 'add' ? 'צפי חדש' : 'ערוך צפי'}</h2>
+              <button onClick={() => setModal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              {/* Client */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">לקוח</label>
+                <div className="relative">
+                  <input type="text" value={clientOpen ? clientQuery : (modal.item.client || '')}
+                    onChange={e => { setClientQuery(e.target.value); upd('client', e.target.value); setClientOpen(true) }}
+                    onFocus={() => { setClientQuery(modal.item.client || ''); setClientOpen(true) }}
+                    onBlur={() => setTimeout(() => setClientOpen(false), 150)}
+                    placeholder="הקלד או בחר לקוח..."
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                  {clientOpen && filteredClients.length > 0 && (
+                    <ul className="absolute z-50 right-0 left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-40 overflow-y-auto text-sm">
+                      {filteredClients.map(c => (
+                        <li key={c} onMouseDown={() => { upd('client', c); const m = clientList.find(cl => cl.name === c); if (m) upd('client_id', m.id); setClientQuery(c); setClientOpen(false) }}
+                          className="px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-gray-800 dark:text-white">{c}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">תיאור</label>
+                <input type="text" value={modal.item.description} onChange={e => upd('description', e.target.value)} placeholder="תיאור הצפי..."
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+              </div>
+              {/* Expected month + Confidence */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">חודש צפוי</label>
+                  <input type="month" value={modal.item.expected_date} onChange={e => upd('expected_date', e.target.value)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">סבירות</label>
+                  <select value={modal.item.confidence} onChange={e => upd('confidence', e.target.value)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700">
+                    <option value="בטוח">בטוח</option>
+                    <option value="סביר">סביר</option>
+                    <option value="אפשרי">אפשרי</option>
+                  </select>
+                </div>
+              </div>
+              {/* Amounts */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">לפני מע"מ</label>
+                  <input type="number" step="0.01" value={modal.item.amount_before_vat || ''} onChange={e => upd('amount_before_vat', parseFloat(e.target.value) || 0)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">מע"מ</label>
+                  <input type="number" step="0.01" value={modal.item.vat || ''} onChange={e => upd('vat', parseFloat(e.target.value) || 0)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">סה"כ</label>
+                  <input type="number" step="0.01" value={modal.item.total || ''} onChange={e => upd('total', parseFloat(e.target.value) || 0)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                </div>
+              </div>
+              {/* Project */}
+              {projects.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">פרויקט</label>
+                  <select value={modal.item.project_id || ''} onChange={e => upd('project_id', e.target.value || null)}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700">
+                    <option value="">— ללא שיוך —</option>
+                    {['artist','production'].map(cat => {
+                      const items = projects.filter(p => p.category === cat)
+                      if (!items.length) return null
+                      return (
+                        <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
+                          {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                </div>
+              )}
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">הערות</label>
+                <textarea value={modal.item.notes} onChange={e => upd('notes', e.target.value)} rows={2} placeholder="הערות נוספות..."
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700 resize-none" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setModal(null)} className="flex-1 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">ביטול</button>
+                <button onClick={handleSave} disabled={saving} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {saving ? 'שומר...' : modal.mode === 'add' ? 'הוסף' : 'שמור שינויים'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function FinancialView({ activeTab }: { activeTab: FinTab }) {
   return (
     <div className="flex flex-col h-full bg-gray-50" dir="rtl">
@@ -5300,6 +5663,8 @@ export function FinancialView({ activeTab }: { activeTab: FinTab }) {
       {activeTab === 'expenses' && <ExpensesTab />}
 
       {activeTab === 'authority_payments' && <AuthorityPaymentsTab />}
+
+      {activeTab === 'forecast' && <ForecastTab />}
 
       {activeTab === 'old_table' && (
         <div className="flex-1 flex flex-col min-h-0">
