@@ -432,6 +432,10 @@ export function CampaignsView() {
             placeholder="חפש קמפיין..."
             value={campaignSearch}
             onChange={e => setCampaignSearch(e.target.value)}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 dark:bg-gray-800 dark:text-white"
           />
           {(barbySubTab === 'active' || barbySubTab === 'ended' || barbySubTab === 'archive') && (
