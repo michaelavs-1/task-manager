@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { bookExpenseIncurred } from '@/lib/accounting'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('expenses')
     .select('*')
     .order('month', { ascending: true })
@@ -20,7 +22,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('expenses')
     .insert([{
       project_id: body.project_id || null,
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
         month:  data.month || '',
         project_id: data.project_id || null,
       })
-      await supabase.from('expenses').update({ je_id: jeId }).eq('id', data.id)
+      await getSupabase().from('expenses').update({ je_id: jeId }).eq('id', data.id)
     }
   } catch (e) {
     console.error('[expenses POST] JE booking failed:', (e as Error).message)

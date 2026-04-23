@@ -1,21 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET() {
   // Fetch clients + aggregate invoice stats in one query
-  const { data: clients, error: ce } = await supabase
+  const { data: clients, error: ce } = await getSupabase()
     .from('clients')
     .select('*')
     .order('name', { ascending: true })
   if (ce) return NextResponse.json({ error: ce.message }, { status: 500 })
 
   // Aggregate invoice totals per client
-  const { data: invs, error: ie } = await supabase
+  const { data: invs, error: ie } = await getSupabase()
     .from('invoices')
     .select('client_id, total, paid')
   if (ie) return NextResponse.json({ error: ie.message }, { status: 500 })
@@ -41,7 +43,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('clients')
     .insert([body])
     .select()

@@ -1631,7 +1631,7 @@ function InvoiceModal({
 
           {/* Date picker */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">תאריך</label>
+            <label className="block text-xs text-gray-400 mb-1">תאריך <span className="text-red-400">*</span></label>
             <input
               type="date"
               value={israeliToISO(form.date)}
@@ -1744,8 +1744,11 @@ function InvoiceModal({
 
         <div className="flex gap-2 pt-2">
           <button
-            onClick={() => onSave(form)}
-            disabled={saving || !form.client}
+            onClick={() => {
+              if (!form.date) { alert('יש להזין תאריך חשבונית'); return }
+              onSave(form)
+            }}
+            disabled={saving || !form.client || !form.date}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
           >

@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { bookExpensePayment, unbookBySource } from '@/lib/accounting'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const body = await req.json()
@@ -18,13 +20,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if ('project_id' in body) updates['project_id'] = body.project_id || null
 
   // Fetch prior state to detect payment transitions
-  const { data: prior } = await supabase
+  const { data: prior } = await getSupabase()
     .from('expenses')
     .select('id,paid,supplier,description,payment_date')
     .eq('id', id)
     .maybeSingle()
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('expenses')
     .update(updates)
     .eq('id', id)
@@ -61,7 +63,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   try { await unbookBySource('expense', String(id)) } catch { /* ignore */ }
   try { await unbookBySource('expense_payment', String(id)) } catch { /* ignore */ }
 
-  const { error } = await supabase.from('expenses').delete().eq('id', id)
+  const { error } = await getSupabase().from('expenses').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
