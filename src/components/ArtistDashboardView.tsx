@@ -699,7 +699,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
               </div>
             )}
             {tab === 'financial' && selectedArtist && (
-              <QuotesTab artistName={selectedArtist.name} />
+              <ArtistFinancialReport events={events} loading={loadingEvents} artistName={selectedArtist.name} />
             )}
 
             {tab === 'media' && selectedArtist && (
@@ -987,6 +987,163 @@ const QUOTE_STATUS_COLOR: Record<string, string> = {
   'נמחק': 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
 }
 const iCls = 'w-full border border-slate-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white bg-slate-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300'
+
+// ─────────────────────────────────────────────────────────
+// ArtistFinancialReport — monthly show revenue/expense report
+// Management deal: 25% from net (bottom line), artist keeps 75%
+// ─────────────────────────────────────────────────────────
+const MGMT_PCT = 0.25
+
+function parseNum(v: string | null | undefined): number {
+  if (!v) return 0
+  return parseFloat(v.replace(/[₪,\s]/g, '')) || 0
+}
+
+function ArtistFinancialReport({ events, loading, artistName }: {
+  events: ArtistEvent[]
+  loading: boolean
+  artistName: string
+}) {
+  const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({})
+  const fmt = (n: number) => n === 0 ? '—' : `₪${Math.round(n).toLocaleString('he-IL')}`
+
+  const pastShows = events.filter(e =>
+    e.date && e.date < new Date().toISOString().split('T')[0] && e.status !== 'בוטל'
+  )
+
+  // Group by YYYY-MM
+  const byMonth: Record<string, ArtistEvent[]> = {}
+  pastShows.forEach(e => {
+    const mo = (e.date || '').slice(0, 7)
+    if (!byMonth[mo]) byMonth[mo] = []
+    byMonth[mo].push(e)
+  })
+  const months = Object.keys(byMonth).sort()
+
+  // Grand totals
+  const grandRev  = pastShows.reduce((s, e) => s + parseNum(e.total_revenue), 0)
+  const grandExp  = pastShows.reduce((s, e) => s + parseNum(e.total_expenses), 0)
+  const grandNet  = grandRev - grandExp
+  const grandMgmt = grandNet * MGMT_PCT
+  const grandArtist = grandNet * (1 - MGMT_PCT)
+
+  if (loading) return <div className="flex items-center justify-center py-16"><div className="w-6 h-6 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" /></div>
+
+  if (pastShows.length === 0) return (
+    <div className="text-center py-16 text-slate-400">
+      <p className="text-sm">אין הופעות שהתקיימו — הדוח יופיע לאחר ביצוע הופעות</p>
+    </div>
+  )
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      {/* Grand total header */}
+      <div className="bg-slate-900 dark:bg-gray-800 rounded-2xl p-5 border border-slate-700">
+        <h3 className="text-sm font-bold text-white mb-4">סיכום כולל — {artistName}</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'סה"כ הכנסות', val: fmt(grandRev),    color: 'text-indigo-400' },
+            { label: 'סה"כ הוצאות', val: fmt(grandExp),    color: 'text-red-400' },
+            { label: 'יתרה לחלוקה', val: fmt(grandNet),    color: grandNet >= 0 ? 'text-emerald-400' : 'text-red-400' },
+            { label: `חלק אומן (${Math.round((1-MGMT_PCT)*100)}%)`, val: fmt(grandArtist), color: 'text-yellow-400' },
+          ].map(({ label, val, color }) => (
+            <div key={label} className="bg-slate-800/60 rounded-xl p-3 text-right">
+              <div className="text-[10px] text-slate-400 mb-1">{label}</div>
+              <div className={`text-lg font-bold ${color}`}>{val}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 pt-3 border-t border-slate-700 flex items-center justify-between text-xs text-slate-400">
+          <span>{pastShows.length} הופעות שהתקיימו</span>
+          <span>ניהול ({Math.round(MGMT_PCT*100)}%): <span className="text-slate-300 font-semibold">{fmt(grandMgmt)}</span></span>
+        </div>
+      </div>
+
+      {/* Monthly accordions */}
+      {months.map(mo => {
+        const shows = byMonth[mo]
+        const [y, m] = mo.split('-')
+        const heMonths = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+        const label = `${heMonths[parseInt(m)-1]} ${y}`
+        const mRev  = shows.reduce((s, e) => s + parseNum(e.total_revenue), 0)
+        const mExp  = shows.reduce((s, e) => s + parseNum(e.total_expenses), 0)
+        const mNet  = mRev - mExp
+        const mArt  = mNet * (1 - MGMT_PCT)
+        const mMgmt = mNet * MGMT_PCT
+        const isOpen = openMonths[mo] === true
+
+        return (
+          <div key={mo} className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden shadow-sm">
+            {/* Month header */}
+            <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-colors"
+              onClick={() => setOpenMonths(p => ({ ...p, [mo]: !isOpen }))}>
+              <div className="flex items-center gap-3">
+                <svg className={`w-4 h-4 text-indigo-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <span className="text-sm font-bold text-slate-800 dark:text-white">{label}</span>
+                <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-medium">{shows.length} הופעות</span>
+              </div>
+              <div className="flex gap-4 text-xs">
+                <span className="text-indigo-600 font-semibold">{fmt(mRev)}</span>
+                <span className="text-red-500">הוצ׳ {fmt(mExp)}</span>
+                <span className={`font-bold ${mNet >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>נטו {fmt(mNet)}</span>
+              </div>
+            </button>
+
+            {isOpen && (
+              <div className="border-t border-slate-100 dark:border-gray-700">
+                {/* Shows table */}
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-gray-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-5 py-2.5 text-right font-semibold">הופעה</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">תאריך</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">הכנסה</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">הוצאות</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">יתרה לחלוקה</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">אומן (75%)</th>
+                      <th className="px-5 py-2.5 text-right font-semibold">ניהול (25%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shows.map((e, i) => {
+                      const rev  = parseNum(e.total_revenue)
+                      const exp  = parseNum(e.total_expenses)
+                      const net  = rev - exp
+                      const art  = net * (1 - MGMT_PCT)
+                      const mgmt = net * MGMT_PCT
+                      return (
+                        <tr key={e.id} className={`border-t border-slate-100 dark:border-gray-700 ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-gray-700/20'}`}>
+                          <td className="px-5 py-3 font-medium text-slate-800 dark:text-white text-xs">{e.name}</td>
+                          <td className="px-5 py-3 text-xs text-slate-500">{e.date ? new Date(e.date).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—'}</td>
+                          <td className="px-5 py-3 text-xs font-semibold text-indigo-600">{fmt(rev)}</td>
+                          <td className="px-5 py-3 text-xs text-red-500">{fmt(exp)}</td>
+                          <td className="px-5 py-3 text-xs font-bold" style={{ color: net >= 0 ? '#10b981' : '#ef4444' }}>{fmt(net)}</td>
+                          <td className="px-5 py-3 text-xs font-semibold text-yellow-600 dark:text-yellow-400">{fmt(art)}</td>
+                          <td className="px-5 py-3 text-xs text-slate-500">{fmt(mgmt)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  {/* Month summary */}
+                  <tfoot>
+                    <tr className="bg-slate-100 dark:bg-gray-700/60 border-t-2 border-slate-200 dark:border-gray-600 text-xs font-bold">
+                      <td className="px-5 py-3 text-slate-600 dark:text-slate-300" colSpan={2}>סיכום {label}</td>
+                      <td className="px-5 py-3 text-indigo-700 dark:text-indigo-400">{fmt(mRev)}</td>
+                      <td className="px-5 py-3 text-red-600">{fmt(mExp)}</td>
+                      <td className="px-5 py-3" style={{ color: mNet >= 0 ? '#059669' : '#dc2626' }}>{fmt(mNet)}</td>
+                      <td className="px-5 py-3 text-yellow-700 dark:text-yellow-400">{fmt(mArt)}</td>
+                      <td className="px-5 py-3 text-slate-500">{fmt(mMgmt)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function QuotesTab({ artistName }: { artistName: string }) {
   const [quotes, setQuotes] = useState<Quote[]>([])
