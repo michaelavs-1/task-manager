@@ -48,6 +48,10 @@ function SuppliersTab() {
   const [filterStatus, setFilterStatus] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [openSupMonth, setOpenSupMonth] = useState<string | null>(null)
+  const [showAddSupplier, setShowAddSupplier] = useState(false)
+  const [newSup, setNewSup] = useState({ name:'', firstName:'', lastName:'', idNumber:'', taxStatus:'מורשה', email:'', phone:'', role:'', bank:'', accountNumber:'', branch:'', notes:'' })
+  const [savingSup, setSavingSup] = useState(false)
+  const [saveSupErr, setSaveSupErr] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -150,6 +154,13 @@ function SuppliersTab() {
           {statuses.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="text-sm text-gray-400 whitespace-nowrap">{filtered.length} / {suppliers.length} ספקים</span>
+        <button
+          onClick={() => { setNewSup({ name:'', firstName:'', lastName:'', idNumber:'', taxStatus:'מורשה', email:'', phone:'', role:'', bank:'', accountNumber:'', branch:'', notes:'' }); setSaveSupErr(''); setShowAddSupplier(true) }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors whitespace-nowrap"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הוסף ספק
+        </button>
       </div>
 
       {/* Table */}
@@ -367,6 +378,68 @@ function SuppliersTab() {
         </table>
       </div>
 
+      {/* Add Supplier Modal */}
+      {showAddSupplier && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddSupplier(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">הוסף ספק חדש</h2>
+              <button onClick={() => setShowAddSupplier(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              {([
+                ['name',          'שם ספק (מלא) *', 'text'],
+                ['firstName',     'שם פרטי',        'text'],
+                ['lastName',      'שם משפחה',       'text'],
+                ['idNumber',      'ת.ז / ח.פ',      'text'],
+                ['phone',         'טלפון',           'tel'],
+                ['email',         'אימייל',          'email'],
+                ['role',          'תפקיד',           'text'],
+                ['bank',          'בנק',             'text'],
+                ['branch',        'סניף',            'text'],
+                ['accountNumber', 'מספר חשבון',      'text'],
+              ] as [keyof typeof newSup, string, string][]).map(([field, label, type]) => (
+                <div key={field}>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">{label}</label>
+                  <input type={type} value={newSup[field]}
+                    onChange={e => setNewSup(p => ({ ...p, [field]: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50" />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">סטטוס מס</label>
+                <select value={newSup.taxStatus} onChange={e => setNewSup(p => ({ ...p, taxStatus: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50">
+                  {['מורשה','פטור','חברה','עמותה'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">הערות</label>
+                <textarea value={newSup.notes} onChange={e => setNewSup(p => ({ ...p, notes: e.target.value }))} rows={2}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-gray-50 resize-none" />
+              </div>
+              {saveSupErr && <p className="text-xs text-red-500 font-medium">{saveSupErr}</p>}
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowAddSupplier(false)}
+                  className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">ביטול</button>
+                <button disabled={savingSup || !newSup.name.trim()}
+                  onClick={async () => {
+                    setSavingSup(true); setSaveSupErr('')
+                    const res = await fetch('/api/monday-suppliers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newSup) })
+                    const d = await res.json()
+                    setSavingSup(false)
+                    if (d.error) { setSaveSupErr(d.error) } else { setShowAddSupplier(false) }
+                  }}
+                  className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {savingSup ? 'שומר...' : 'הוסף ספק'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

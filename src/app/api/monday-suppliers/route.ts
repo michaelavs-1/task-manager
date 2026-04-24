@@ -152,3 +152,62 @@ export async function GET() {
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
+
+export async function POST(req: Request) {
+  const token = process.env.MONDAY_API_TOKEN
+  if (!token) return NextResponse.json({ error: 'Missing MONDAY_API_TOKEN' }, { status: 500 })
+
+  const body = await req.json()
+  const {
+    name = '',
+    firstName = '',
+    lastName = '',
+    idNumber = '',
+    taxStatus = 'מורשה',
+    email = '',
+    phone = '',
+    role = '',
+    bank = '',
+    accountNumber = '',
+    branch = '',
+    notes = '',
+  } = body
+
+  if (!name.trim()) return NextResponse.json({ error: 'שם חובה' }, { status: 400 })
+
+  const colVals: Record<string, unknown> = {}
+  if (firstName)     colVals['text_mkxbjth2']     = firstName
+  if (lastName)      colVals['text_mkxb13gf']      = lastName
+  if (idNumber)      colVals['text_mkspzjhk']      = idNumber
+  if (taxStatus)     colVals['color_mkxa6ag1']     = { label: taxStatus }
+  if (email)         colVals['email_mkspepqk']     = { email, text: email }
+  if (phone)         colVals['phone_mkspvxa1']     = { phone, countryShortName: 'IL' }
+  if (role)          colVals['dropdown_mksp2r97']  = { labels: [role] }
+  if (bank)          colVals['dropdown_mkxae5mh']  = { labels: [bank] }
+  if (accountNumber) colVals['text_mkxa3emv']      = accountNumber
+  if (branch)        colVals['text_mkxa9bg6']      = branch
+  if (notes)         colVals['long_text_mkspkyrh'] = notes
+
+  const mutation = `
+    mutation {
+      create_item(
+        board_id: ${BOARD_ID},
+        item_name: ${JSON.stringify(name.trim())},
+        column_values: ${JSON.stringify(JSON.stringify(colVals))}
+      ) { id name }
+    }
+  `
+
+  try {
+    const res = await fetch('https://api.monday.com/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
+      body: JSON.stringify({ query: mutation }),
+    })
+    const data = await res.json()
+    if (data.errors) return NextResponse.json({ error: data.errors[0]?.message }, { status: 500 })
+    return NextResponse.json({ supplier: data.data?.create_item })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'שגיאה' }, { status: 500 })
+  }
+}
