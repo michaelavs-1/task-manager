@@ -3733,6 +3733,8 @@ function FinProjectsTab() {
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
   const [groupByMonth, setGroupByMonth] = useState(false)
+  const [viewType, setViewType] = useState<'income' | 'expenses'>('income')
+  const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({})
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
@@ -3986,193 +3988,190 @@ function FinProjectsTab() {
               ))}
             </div>
 
-            {/* Section: Invoices */}
+            {/* View toggle + filters */}
             <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                הכנסות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({invoices.length})</span>
-              </h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setGroupByMonth(g => !g)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
-                  style={groupByMonth ? { background: '#6366f1', color: 'white', border: '1px solid #6366f1' } : { background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}
-                >לפי חודש</button>
+              {/* Income / Expenses toggle */}
+              <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                {([
+                  { key: 'income',   label: 'הכנסות', count: invoices.length, color: '#6366f1' },
+                  { key: 'expenses', label: 'הוצאות', count: expenses.length, color: '#ef4444' },
+                ] as const).map(({ key, label, count, color }) => (
+                  <button key={key} onClick={() => setViewType(key)}
+                    className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5"
+                    style={viewType === key ? { background: color, color: 'white', boxShadow: `0 2px 8px ${color}50` } : { background: 'transparent', color: 'var(--text-secondary)' }}>
+                    {label} <span style={{ opacity: 0.7, fontSize: 11 }}>({count})</span>
+                  </button>
+                ))}
+              </div>
+              {/* Income-specific filters */}
+              {viewType === 'income' && (
                 <div className="flex gap-1 rounded-xl p-1 w-fit" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                   {([
                     { key: 'all',  label: 'הכל',    count: invoices.length },
                     { key: 'open', label: 'פתוחות', count: openCount },
                     { key: 'paid', label: 'שולם',   count: paidCount },
                   ] as const).map(({ key, label, count }) => (
-                    <button
-                      key={key}
-                      onClick={() => setLedgerFilter(key)}
-                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all`}
-                      style={ledgerFilter === key ? { background: '#6366f1', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' } : { background: 'transparent', color: 'var(--text-secondary)' }}
-                    >
+                    <button key={key} onClick={() => setLedgerFilter(key)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={ledgerFilter === key ? { background: '#6366f1', color: 'white' } : { background: 'transparent', color: 'var(--text-secondary)' }}>
                       {label} <span style={{ opacity: 0.6, fontSize: 11 }}>({count})</span>
                     </button>
                   ))}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Invoice table */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            {/* ── INCOME ACCORDIONS ── */}
+            {viewType === 'income' && (
+            <div className="space-y-2">
               {loadingInv ? (
                 <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען חשבוניות...</div>
               ) : displayed.length === 0 ? (
                 <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {invoices.length === 0 ? 'לא נמצאו חשבוניות לפרויקט זה' : 'אין חשבוניות להצגה בפילטר זה'}
                 </div>
-              ) : (
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      {['מס׳', 'תאריך', 'סוג', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
-                        <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const renderInvRow = (inv: InvoiceRow, i: number) => {
-                        const rem = Math.max(0, roundCents(inv.total - inv.paid))
-                        const isPaid = rem < 1
-                        const status = isPaid ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
-                        const statusStyle = { paid: { bg: '#d1fae5', color: '#065f46', label: 'שולם' }, partial: { bg: '#fef3c7', color: '#92400e', label: 'חלקי' }, unpaid: { bg: '#fee2e2', color: '#991b1b', label: 'לא שולם' } }[status]
-                        return (
-                          <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
-                            <td className="px-4 py-2.5 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{formatDateFull(inv.date)}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmtP(inv.before_vat)}</td>
-                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmtP(inv.total)}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(inv.paid)}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmtP(rem) : '—'}</td>
-                            <td className="px-4 py-2.5">
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: statusStyle.bg, color: statusStyle.color }}>{statusStyle.label}</span>
-                            </td>
-                          </tr>
-                        )
-                      }
-                      if (!groupByMonth) return displayed.map((inv, i) => renderInvRow(inv, i))
-                      // Group by month
-                      const monthMap: Record<string, InvoiceRow[]> = {}
-                      displayed.forEach(inv => {
-                        const mk = israeliToMonthKey(inv.date || '') || 'unknown'
-                        if (!monthMap[mk]) monthMap[mk] = []
-                        monthMap[mk].push(inv)
-                      })
-                      return Object.keys(monthMap).sort((a,b) => b.localeCompare(a)).flatMap(mk => {
-                        const rows = monthMap[mk]
-                        const [y, m] = mk.split('-')
-                        const label = mk === 'unknown' ? 'ללא תאריך' : `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`
-                        const mTotal = rows.reduce((s,i) => s+i.total, 0)
-                        const mPaid  = rows.reduce((s,i) => s+i.paid, 0)
-                        return [
-                          <tr key={`hdr-${mk}`} style={{ background: 'rgba(99,102,241,0.12)', borderBottom: '1px solid var(--border-color)' }}>
-                            <td colSpan={9} className="px-4 py-2 text-xs font-bold" style={{ color: '#818cf8' }}>
-                              {label} <span className="font-normal opacity-70">({rows.length} חשבוניות · סה"כ {fmtP(mTotal)} · שולם {fmtP(mPaid)})</span>
-                            </td>
-                          </tr>,
-                          ...rows.map((inv, i) => renderInvRow(inv, i))
-                        ]
-                      })
-                    })()}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                      <td colSpan={3} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({displayed.length})</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{fmtP(displayed.reduce((s,i) => s+i.before_vat,0))}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#6366f1' }}>{fmtP(displayed.reduce((s,i) => s+i.total,0))}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(displayed.reduce((s,i) => s+i.paid,0))}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(displayed.reduce((s,i) => s+Math.max(0, roundCents(i.total-i.paid)),0))}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              )}
+              ) : (() => {
+                const monthMap: Record<string, InvoiceRow[]> = {}
+                displayed.forEach(inv => {
+                  const mk = israeliToMonthKey(inv.date || '') || 'unknown'
+                  if (!monthMap[mk]) monthMap[mk] = []
+                  monthMap[mk].push(inv)
+                })
+                // Chronological: oldest first (ascending)
+                const sortedMonths = Object.keys(monthMap).sort((a, b) => a.localeCompare(b))
+                return sortedMonths.map(mk => {
+                  const rows = monthMap[mk]
+                  const [y, m] = mk.split('-')
+                  const label = mk === 'unknown' ? 'ללא תאריך' : `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`
+                  const mTotal = rows.reduce((s,i) => s+i.total, 0)
+                  const mPaid  = rows.reduce((s,i) => s+i.paid, 0)
+                  const mRem   = Math.max(0, mTotal - mPaid)
+                  const isOpen = openMonths[`inc-${mk}`] === true // default closed
+                  return (
+                    <div key={mk} className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                      <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                        onClick={() => setOpenMonths(p => ({ ...p, [`inc-${mk}`]: !isOpen }))}>
+                        <div className="flex items-center gap-3">
+                          <svg className={`w-4 h-4 transition-transform text-indigo-400 ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>{rows.length} חשבוניות</span>
+                        </div>
+                        <div className="flex gap-4 text-xs">
+                          <span style={{ color: '#6366f1' }}>סה"כ {fmtP(mTotal)}</span>
+                          <span style={{ color: '#10b981' }}>נגבה {fmtP(mPaid)}</span>
+                          {mRem > 0 && <span style={{ color: '#f59e0b' }}>נותר {fmtP(mRem)}</span>}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)' }}>
+                              {['מס׳', 'תאריך', 'סוג', 'לפני מע"מ', 'סה"כ', 'שולם', 'יתרה', 'סטטוס'].map(h => (
+                                <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((inv, i) => {
+                              const rem = Math.max(0, roundCents(inv.total - inv.paid))
+                              const status = rem < 1 ? 'paid' : inv.paid > 0 ? 'partial' : 'unpaid'
+                              const ss = { paid: { bg: '#d1fae5', color: '#065f46', label: 'שולם' }, partial: { bg: '#fef3c7', color: '#92400e', label: 'חלקי' }, unpaid: { bg: '#fee2e2', color: '#991b1b', label: 'לא שולם' } }[status]
+                              return (
+                                <tr key={inv.id} style={{ borderTop: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
+                                  <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.invoice_num || '—'}</td>
+                                  <td className="px-4 py-2 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{formatDateFull(inv.date)}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.doc_type || '—'}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{inv.issued_by || '—'}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{fmtP(inv.before_vat)}</td>
+                                  <td className="px-4 py-2 text-xs font-semibold" style={{ color: '#6366f1' }}>{fmtP(inv.total)}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: '#10b981' }}>{fmtP(inv.paid)}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: rem > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem > 0 ? fmtP(rem) : '—'}</td>
+                                  <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: ss.bg, color: ss.color }}>{ss.label}</span></td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
             </div>
+            )}
 
-            {/* Section: Expenses */}
-            <div className="flex items-center justify-between pt-6">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                הוצאות <span className="text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>({expenses.length})</span>
-              </h3>
-            </div>
-
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            {/* ── EXPENSES ACCORDIONS ── */}
+            {viewType === 'expenses' && (
+            <div className="space-y-2">
               {loadingInv ? (
                 <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען הוצאות...</div>
               ) : expenses.length === 0 ? (
-                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  לא נמצאו הוצאות לפרויקט זה
-                </div>
-              ) : (
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                      {['ספק', 'תיאור', 'חודש', 'תאריך תשלום', 'לפני מע״מ', 'שולם', 'יתרה', 'חשבונית'].map(h => (
-                        <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const sorted = [...expenses].sort((a, b) => (b.month || '').localeCompare(a.month || ''))
-                      const renderExpRow = (ex: Expense, i: number) => {
-                        const rem = Math.max(0, roundCents((ex.total || 0) - (ex.paid || 0)))
-                        return (
-                          <tr key={ex.id} style={{ borderBottom: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
-                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{ex.supplier || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.description || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.month || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{ex.payment_date || '—'}</td>
-                            <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#ef4444' }}>{fmtP(ex.amount || 0)}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: '#10b981' }}>{fmtP(ex.paid || 0)}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: rem >= 1 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem >= 1 ? fmtP(rem) : '—'}</td>
-                            <td className="px-4 py-2.5 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.has_invoice ? '✓' : '—'}</td>
-                          </tr>
-                        )
-                      }
-                      if (!groupByMonth) return sorted.map((ex, i) => renderExpRow(ex, i))
-                      // Group by month key
-                      const monthMap: Record<string, Expense[]> = {}
-                      sorted.forEach(ex => {
-                        const mk = ex.month || 'unknown'
-                        if (!monthMap[mk]) monthMap[mk] = []
-                        monthMap[mk].push(ex)
-                      })
-                      return Object.keys(monthMap).sort((a,b) => b.localeCompare(a)).flatMap(mk => {
-                        const rows = monthMap[mk]
-                        const [y, m] = mk.split('-')
-                        const label = mk === 'unknown' ? 'ללא חודש' : `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`
-                        const mAmt  = rows.reduce((s,e) => s+(e.amount||0), 0)
-                        const mPaid = rows.reduce((s,e) => s+(e.paid||0), 0)
-                        return [
-                          <tr key={`hdr-${mk}`} style={{ background: 'rgba(239,68,68,0.1)', borderBottom: '1px solid var(--border-color)' }}>
-                            <td colSpan={8} className="px-4 py-2 text-xs font-bold" style={{ color: '#f87171' }}>
-                              {label} <span className="font-normal opacity-70">({rows.length} הוצאות · נטו {fmtP(mAmt)} · שולם {fmtP(mPaid)})</span>
-                            </td>
-                          </tr>,
-                          ...rows.map((ex, i) => renderExpRow(ex, i))
-                        ]
-                      })
-                    })()}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ borderTop: '2px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                      <td colSpan={4} className="px-4 py-2.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>סה"כ ({expenses.length})</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#ef4444' }}>{fmtP(totalExp)}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#10b981' }}>{fmtP(totalExpPaid)}</td>
-                      <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#f59e0b' }}>{fmtP(totalExpRem)}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              )}
+                <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>לא נמצאו הוצאות לפרויקט זה</div>
+              ) : (() => {
+                const monthMap: Record<string, Expense[]> = {}
+                expenses.forEach(ex => {
+                  const mk = ex.month || 'unknown'
+                  if (!monthMap[mk]) monthMap[mk] = []
+                  monthMap[mk].push(ex)
+                })
+                // Chronological: oldest first (ascending)
+                const sortedMonths = Object.keys(monthMap).sort((a, b) => a.localeCompare(b))
+                return sortedMonths.map(mk => {
+                  const rows = monthMap[mk]
+                  const [y, m] = mk.split('-')
+                  const label = mk === 'unknown' ? 'ללא חודש' : `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`
+                  const mAmt  = rows.reduce((s,e) => s+(e.amount||0), 0)
+                  const mPaid = rows.reduce((s,e) => s+(e.paid||0), 0)
+                  const mRem  = Math.max(0, rows.reduce((s,e) => s+(e.total||0), 0) - mPaid)
+                  const isOpen = openMonths[`exp-${mk}`] === true // default closed
+                  return (
+                    <div key={mk} className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                      <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                        onClick={() => setOpenMonths(p => ({ ...p, [`exp-${mk}`]: !isOpen }))}>
+                        <div className="flex items-center gap-3">
+                          <svg className={`w-4 h-4 transition-transform text-red-400 ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>{rows.length} הוצאות</span>
+                        </div>
+                        <div className="flex gap-4 text-xs">
+                          <span style={{ color: '#ef4444' }}>נטו {fmtP(mAmt)}</span>
+                          <span style={{ color: '#10b981' }}>שולם {fmtP(mPaid)}</span>
+                          {mRem > 0 && <span style={{ color: '#f59e0b' }}>נותר {fmtP(mRem)}</span>}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)' }}>
+                              {['ספק', 'תיאור', 'לפני מע״מ', 'שולם', 'יתרה', 'חשבונית'].map(h => (
+                                <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((ex, i) => {
+                              const rem = Math.max(0, roundCents((ex.total||0) - (ex.paid||0)))
+                              return (
+                                <tr key={ex.id} style={{ borderTop: '1px solid var(--border-color)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
+                                  <td className="px-4 py-2 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{ex.supplier || '—'}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.description || '—'}</td>
+                                  <td className="px-4 py-2 text-xs font-semibold" style={{ color: '#ef4444' }}>{fmtP(ex.amount||0)}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: '#10b981' }}>{fmtP(ex.paid||0)}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: rem >= 1 ? '#f59e0b' : 'var(--text-secondary)' }}>{rem >= 1 ? fmtP(rem) : '—'}</td>
+                                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-secondary)' }}>{ex.has_invoice ? '✓' : '—'}</td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
             </div>
+            )}
+
           </>
         )}
       </div>
