@@ -1904,8 +1904,8 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     const isCancelled = st === 'cancelled'
     const matchPayment =
       (paymentFilter === 'all'       && !isCancelled) ||
-      (paymentFilter === 'open'      && !isCancelled && remaining > 0) ||
-      (paymentFilter === 'closed'    && !isCancelled && remaining === 0) ||
+      (paymentFilter === 'open'      && (st === 'unpaid' || st === 'partial')) ||
+      (paymentFilter === 'closed'    && st === 'paid') ||
       (paymentFilter === 'cancelled' && isCancelled)
     const matchYear = !inv.date || israeliToISO(inv.date).startsWith(selectedYear)
     const matchMonth = !filterMonth || (inv.date && israeliToISO(inv.date).startsWith(filterMonth))
@@ -2097,8 +2097,8 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
           {([
             { key: 'all',       label: 'הכל',      count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled').length },
-            { key: 'open',      label: 'פתוחות',   count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled' && Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) > 0).length },
-            { key: 'closed',    label: 'סגורות',   count: invoices.filter(inv => invoiceStatus(inv) !== 'cancelled' && Math.max(0, roundCents(inv.total - (inv.paid + (inv.tax_withheld || 0)))) === 0).length },
+            { key: 'open',      label: 'פתוחות',   count: invoices.filter(inv => { const s = invoiceStatus(inv); return s === 'unpaid' || s === 'partial' }).length },
+            { key: 'closed',    label: 'סגורות',   count: invoices.filter(inv => invoiceStatus(inv) === 'paid').length },
             { key: 'cancelled', label: 'מבוטלות',  count: invoices.filter(inv => invoiceStatus(inv) === 'cancelled').length },
           ] as const).map(({ key, label, count }) => (
             <button
@@ -2359,7 +2359,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                       <td colSpan={14} className="px-6 py-3">
                         <div className="flex items-start gap-6 flex-wrap" dir="rtl">
                           {/* מי הוציא */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 flex-shrink-0 relative">
                             <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap">מי הוציא:</span>
                             {reassignIssuedById === inv.id ? (
                               <IssuedByPicker
@@ -2508,7 +2508,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                     const mBeforeVat = group.rows.reduce((s,i) => s+(i.before_vat || 0), 0)
                     const mVat       = roundCents(mTotal - mBeforeVat)
                     const mRem       = Math.max(0, roundCents(mTotal - (mPaid + mWithheld)))
-                    const mOpen     = group.rows.filter(i => Math.max(0, roundCents(i.total-(i.paid+(i.tax_withheld||0)))) > 0).length
+                    const mOpen     = group.rows.filter(i => { const s = invoiceStatus(i); return s === 'unpaid' || s === 'partial' }).length
 
                     return (
                       <Fragment key={group.key}>
@@ -3733,7 +3733,7 @@ function FinProjectsTab() {
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
   const [groupByMonth, setGroupByMonth] = useState(false)
-  const [viewType, setViewType] = useState<'income' | 'expenses'>('income')
+  const [viewType, setViewType] = useState<'income' | 'expenses' | 'report'>('income')
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({})
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
