@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, Fragment, useRef } from 'react'
 import { useEsc } from '../hooks/useEsc'
+import { ARTIST_BOARD_MAP } from '../lib/artist-config'
+import type { ArtistEvent } from '../lib/artist-config'
 
 export type FinTab = 'dashboard' | 'old_table' | 'suppliers' | 'invoices' | 'clients' | 'projects' | 'expenses' | 'authority_payments' | 'forecast'
 
@@ -476,6 +478,7 @@ function FinancialDashboard() {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [forecasts, setForecasts] = useState<ForecastInvoice[]>([])
   const [loading, setLoading] = useState(true)
+  const [selProject, setSelProject] = useState<string | null>(null)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
   const [cfOpenMonth, setCfOpenMonth] = useState<string | null>(null)
   const [bankBalance, setBankBalance] = useState<string>('')
@@ -1188,6 +1191,141 @@ function FinancialDashboard() {
         ) : null
       })()}
 
+      {/* ── Project Profitability ── */}
+      {projects.length > 0 && (() => {
+        // Build per-project income/expenses map
+        type ProjStat = { id: string; name: string; income: number; expenses: number; net: number }
+        const map: Record<string, ProjStat> = {}
+        const ensure = (id: string, name: string) => {
+          if (!map[id]) map[id] = { id, name, income: 0, expenses: 0, net: 0 }
+        }
+        projects.forEach(p => ensure(p.id, p.name))
+        invoices.forEach(inv => {
+          if (!inv.project_id) return
+          ensure(inv.project_id, projects.find(p => p.id === inv.project_id)?.name || inv.project_id)
+          map[inv.project_id].income += inv.before_vat || 0
+        })
+        expenses.forEach(exp => {
+          if (!exp.project_id) return
+          ensure(exp.project_id, projects.find(p => p.id === exp.project_id)?.name || exp.project_id)
+          map[exp.project_id].expenses += exp.amount || 0
+        })
+        const stats = Object.values(map)
+          .map(s => ({ ...s, net: s.income - s.expenses }))
+          .filter(s => s.income > 0 || s.expenses > 0)
+          .sort((a, b) => b.net - a.net)
+
+        if (!stats.length) return null
+
+        // Monthly breakdown for selected project
+        const getMonthly = (projId: string) => {
+          const monthMap: Record<string, { income: number; expenses: number }> = {}
+          invoices.filter(i => i.project_id === projId).forEach(inv => {
+            if (!inv.date) return
+            const d = new Date(israeliToISO(inv.date))
+            if (isNaN(d.getTime())) return
+            const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+            if (!monthMap[k]) monthMap[k] = { income: 0, expenses: 0 }
+            monthMap[k].income += inv.before_vat || 0
+          })
+          expenses.filter(e => e.project_id === projId).forEach(exp => {
+            const k = exp.month || 'unknown'
+            if (!monthMap[k]) monthMap[k] = { income: 0, expenses: 0 }
+            monthMap[k].expenses += exp.amount || 0
+          })
+          return Object.entries(monthMap)
+            .map(([k, v]) => {
+              const [y, mo] = k.split('-')
+              const label = k === 'unknown' ? 'ללא חודש' : `${MONTH_NAMES_HE[parseInt(mo)-1]} ${y}`
+              return { k, label, ...v, net: v.income - v.expenses }
+            })
+            .sort((a, b) => a.k.localeCompare(b.k))
+        }
+
+        const maxNet = Math.max(...stats.map(s => Math.abs(s.net)), 1)
+        const cur = selProject ? stats.find(s => s.id === selProject) : null
+
+        return (
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: 'var(--border-color)' }}>
+              <h3 className="text-sm font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>רווחיות לפי פרויקט</h3>
+              {selProject && (
+                <button onClick={() => setSelProject(null)} className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>← כל הפרויקטים</button>
+              )}
+            </div>
+
+            {!selProject ? (
+              /* ── Ranked list ── */
+              <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
+                {stats.map((s, i) => {
+                  const pct = Math.round(Math.abs(s.net) / maxNet * 100)
+                  const isPos = s.net >= 0
+                  return (
+                    <button key={s.id} onClick={() => setSelProject(s.id)}
+                      className="w-full flex items-center gap-4 px-5 py-3 hover:bg-white/5 transition-colors text-right">
+                      <span className="text-sm font-bold w-6 text-center flex-shrink-0" style={{ color: i === 0 ? '#f59e0b' : i === 1 ? '#9ca3af' : i === 2 ? '#b45309' : 'var(--text-secondary)' }}>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{s.name}</span>
+                          <div className="flex gap-3 text-xs flex-shrink-0 mr-3">
+                            <span style={{ color: '#6366f1' }}>↑ {fmt(s.income)}</span>
+                            <span style={{ color: '#ef4444' }}>↓ {fmt(s.expenses)}</span>
+                            <span className="font-bold" style={{ color: isPos ? '#10b981' : '#ef4444' }}>= {fmt(s.net)}</span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-secondary)' }}>
+                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: isPos ? 'linear-gradient(to left, #10b981, #34d399)' : 'linear-gradient(to left, #ef4444, #f87171)' }} />
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--text-secondary)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : cur ? (
+              /* ── Monthly drill-down ── */
+              <div>
+                <div className="flex gap-4 px-5 py-3 border-b" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
+                  {[
+                    { label: 'הכנסות', val: fmt(cur.income), color: '#6366f1' },
+                    { label: 'הוצאות', val: fmt(cur.expenses), color: '#ef4444' },
+                    { label: 'נטו',    val: fmt(cur.net),      color: cur.net >= 0 ? '#10b981' : '#ef4444' },
+                  ].map(c => (
+                    <div key={c.label}>
+                      <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
+                      <div className="text-base font-bold" style={{ color: c.color }}>{c.val}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="overflow-auto max-h-72">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ background: 'var(--bg-secondary)' }}>
+                        {['חודש','הכנסות','הוצאות','נטו'].map(h => (
+                          <th key={h} className="px-4 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getMonthly(selProject).map((m, i) => (
+                        <tr key={m.k} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                          <td className="px-4 py-2.5 text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{m.label}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: '#6366f1' }}>{m.income > 0 ? fmt(m.income) : '—'}</td>
+                          <td className="px-4 py-2.5 text-xs" style={{ color: '#ef4444' }}>{m.expenses > 0 ? fmt(m.expenses) : '—'}</td>
+                          <td className="px-4 py-2.5 text-xs font-bold" style={{ color: m.net >= 0 ? '#10b981' : '#ef4444' }}>{fmt(m.net)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )
+      })()}
+
       {/* ── Monthly Accordion ── */}
       <MonthlyAccordion invoices={invoices} />
 
@@ -1302,7 +1440,7 @@ function MonthlyAccordion({ invoices }: { invoices: FinDashInvoice[] }) {
 }
 
 // Helper type for dashboard (subset of InvoiceRow)
-interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; tax_withheld?: number; client: string; doc_type: string; payment_date?: string; status?: string }
+interface FinDashInvoice { id: number; invoice_num: string; date: string; before_vat: number; total: number; paid: number; tax_withheld?: number; client: string; doc_type: string; payment_date?: string; status?: string; project_id?: string | null }
 
 // ── Shared types + helpers ────────────────────────────────────────────────────
 interface InvoiceRow {
@@ -3808,6 +3946,9 @@ function FinProjectsTab() {
   const [groupByMonth, setGroupByMonth] = useState(false)
   const [viewType, setViewType] = useState<'income' | 'expenses' | 'report'>('income')
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({})
+  const [artistEvents, setArtistEvents] = useState<ArtistEvent[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
+  const [reportMonths, setReportMonths] = useState<Record<string, boolean>>({})
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
@@ -3838,6 +3979,9 @@ function FinProjectsTab() {
     if (!project) return
     setLoadingInv(true)
     setLedgerFilter('all')
+    setViewType('income')
+    setArtistEvents([])
+    setReportMonths({})
     Promise.all([
       fetch('/api/invoices').then(r => r.json()).catch(() => ({ invoices: [] })),
       fetch('/api/expenses').then(r => r.json()).catch(() => ({ expenses: [] })),
@@ -4068,11 +4212,12 @@ function FinProjectsTab() {
                 {([
                   { key: 'income',   label: 'הכנסות', count: invoices.length, color: '#6366f1' },
                   { key: 'expenses', label: 'הוצאות', count: expenses.length, color: '#ef4444' },
-                ] as const).map(({ key, label, count, color }) => (
+                  ...(current?.category === 'artist' && ARTIST_BOARD_MAP[current.name] ? [{ key: 'report' as const, label: 'דוח אומן', count: null, color: '#f59e0b' }] : []),
+                ] as { key: 'income'|'expenses'|'report'; label: string; count: number|null; color: string }[]).map(({ key, label, count, color }) => (
                   <button key={key} onClick={() => setViewType(key)}
                     className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5"
                     style={viewType === key ? { background: color, color: 'white', boxShadow: `0 2px 8px ${color}50` } : { background: 'transparent', color: 'var(--text-secondary)' }}>
-                    {label} <span style={{ opacity: 0.7, fontSize: 11 }}>({count})</span>
+                    {label} {count !== null && <span style={{ opacity: 0.7, fontSize: 11 }}>({count})</span>}
                   </button>
                 ))}
               </div>
@@ -4243,6 +4388,130 @@ function FinProjectsTab() {
                 })
               })()}
             </div>
+            )}
+
+            {/* ── ARTIST REPORT ── */}
+            {viewType === 'report' && current && (
+              <div className="space-y-4">
+                {loadingEvents ? (
+                  <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען הופעות...</div>
+                ) : artistEvents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>לא נמצאו הופעות שהתקיימו</p>
+                    <button
+                      onClick={async () => {
+                        const boardId = ARTIST_BOARD_MAP[current.name]
+                        if (!boardId) return
+                        setLoadingEvents(true)
+                        const res = await fetch(`/api/artist-events?boardId=${boardId}`)
+                        const d = await res.json()
+                        const past = (d.events || []).filter((e: ArtistEvent) => e.date && e.date < new Date().toISOString().split('T')[0] && e.status !== 'בוטל')
+                        setArtistEvents(past)
+                        setLoadingEvents(false)
+                      }}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold"
+                      style={{ background: '#f59e0b', color: 'white' }}
+                    >
+                      טען הופעות מ-Monday
+                    </button>
+                  </div>
+                ) : (() => {
+                  const MGMT = 0.25
+                  const fmt2 = (n: number) => n === 0 ? '—' : `₪${Math.round(n).toLocaleString('he-IL')}`
+                  const pn = (v: string | null | undefined) => parseFloat((v||'').replace(/[₪,\s]/g,''))||0
+
+                  // Group by month
+                  const byMonth: Record<string, ArtistEvent[]> = {}
+                  artistEvents.forEach(e => {
+                    const mo = (e.date||'').slice(0,7)
+                    if (!byMonth[mo]) byMonth[mo] = []
+                    byMonth[mo].push(e)
+                  })
+                  const months = Object.keys(byMonth).sort()
+
+                  const grandRev = artistEvents.reduce((s,e)=>s+pn(e.total_revenue),0)
+                  const grandExp = artistEvents.reduce((s,e)=>s+pn(e.total_expenses),0)
+                  const grandNet = grandRev - grandExp
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Grand total */}
+                      <div className="rounded-2xl p-4 grid grid-cols-4 gap-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                        {[
+                          { label: 'סה"כ הכנסות', v: grandRev,           color: '#6366f1' },
+                          { label: 'סה"כ הוצאות', v: grandExp,           color: '#ef4444' },
+                          { label: 'יתרה לחלוקה', v: grandNet,           color: grandNet>=0?'#10b981':'#ef4444' },
+                          { label: `אומן (${Math.round((1-MGMT)*100)}%)`, v: grandNet*(1-MGMT), color: '#f59e0b' },
+                        ].map(c=>(
+                          <div key={c.label} className="text-right">
+                            <div className="text-[10px] mb-1" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
+                            <div className="text-base font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Monthly accordions */}
+                      {months.map(mo => {
+                        const shows = byMonth[mo]
+                        const [y, m] = mo.split('-')
+                        const label = `${MONTH_NAMES_HE[parseInt(m)-1]} ${y}`
+                        const mRev = shows.reduce((s,e)=>s+pn(e.total_revenue),0)
+                        const mExp = shows.reduce((s,e)=>s+pn(e.total_expenses),0)
+                        const mNet = mRev - mExp
+                        const isOpen = reportMonths[mo] === true
+                        return (
+                          <div key={mo} className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                            <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                              onClick={()=>setReportMonths(p=>({...p,[mo]:!isOpen}))}>
+                              <div className="flex items-center gap-3">
+                                <svg className={`w-4 h-4 transition-transform ${isOpen?'rotate-90':''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{color:'#f59e0b'}}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                <span className="text-sm font-bold" style={{color:'var(--text-primary)'}}>{label}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full" style={{background:'rgba(245,158,11,0.15)',color:'#f59e0b'}}>{shows.length} הופעות</span>
+                              </div>
+                              <div className="flex gap-4 text-xs">
+                                <span style={{color:'#6366f1'}}>↑ {fmt2(mRev)}</span>
+                                <span style={{color:'#ef4444'}}>↓ {fmt2(mExp)}</span>
+                                <span className="font-bold" style={{color:mNet>=0?'#10b981':'#ef4444'}}>= {fmt2(mNet)}</span>
+                              </div>
+                            </button>
+                            {isOpen && (
+                              <table className="w-full text-xs">
+                                <thead><tr style={{background:'var(--bg-secondary)',borderTop:'1px solid var(--border-color)'}}>
+                                  {['הופעה','תאריך','הכנסה','הוצאות','יתרה לחלוקה','אומן (75%)','ניהול (25%)'].map(h=>(
+                                    <th key={h} className="px-4 py-2 text-right font-semibold" style={{color:'var(--text-secondary)'}}>{h}</th>
+                                  ))}
+                                </tr></thead>
+                                <tbody>
+                                  {shows.map((e,i)=>{
+                                    const rev=pn(e.total_revenue),exp=pn(e.total_expenses),net=rev-exp
+                                    return <tr key={e.id} style={{borderTop:'1px solid var(--border-color)',background:i%2===0?'transparent':'var(--bg-secondary)'}}>
+                                      <td className="px-4 py-2 font-medium" style={{color:'var(--text-primary)'}}>{e.name}</td>
+                                      <td className="px-4 py-2" style={{color:'var(--text-secondary)'}}>{e.date?new Date(e.date).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}):'—'}</td>
+                                      <td className="px-4 py-2 font-semibold" style={{color:'#6366f1'}}>{fmt2(rev)}</td>
+                                      <td className="px-4 py-2" style={{color:'#ef4444'}}>{fmt2(exp)}</td>
+                                      <td className="px-4 py-2 font-bold" style={{color:net>=0?'#10b981':'#ef4444'}}>{fmt2(net)}</td>
+                                      <td className="px-4 py-2 font-semibold" style={{color:'#f59e0b'}}>{fmt2(net*(1-MGMT))}</td>
+                                      <td className="px-4 py-2" style={{color:'var(--text-secondary)'}}>{fmt2(net*MGMT)}</td>
+                                    </tr>
+                                  })}
+                                </tbody>
+                                <tfoot><tr style={{borderTop:'2px solid var(--border-color)',background:'var(--bg-secondary)'}}>
+                                  <td className="px-4 py-2 font-bold" colSpan={2} style={{color:'var(--text-primary)'}}>סיכום {label}</td>
+                                  <td className="px-4 py-2 font-bold" style={{color:'#6366f1'}}>{fmt2(mRev)}</td>
+                                  <td className="px-4 py-2 font-bold" style={{color:'#ef4444'}}>{fmt2(mExp)}</td>
+                                  <td className="px-4 py-2 font-bold" style={{color:mNet>=0?'#10b981':'#ef4444'}}>{fmt2(mNet)}</td>
+                                  <td className="px-4 py-2 font-bold" style={{color:'#f59e0b'}}>{fmt2(mNet*(1-MGMT))}</td>
+                                  <td className="px-4 py-2" style={{color:'var(--text-secondary)'}}>{fmt2(mNet*MGMT)}</td>
+                                </tr></tfoot>
+                              </table>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
             )}
 
           </>
