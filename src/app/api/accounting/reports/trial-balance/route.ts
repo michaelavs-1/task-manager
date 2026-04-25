@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const supa = supaAdmin()
   const { searchParams } = new URL(req.url)

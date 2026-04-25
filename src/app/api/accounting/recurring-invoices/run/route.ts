@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin, bookInvoiceIssued, vatRateOn } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Cron endpoint — issues any recurring invoices whose next_run_date <= today.
  * After issuing, advances next_run_date by frequency.

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { ArtistEvent } from '@/lib/artist-config'
 
+export const dynamic = 'force-dynamic'
+
 interface ColumnValue {
   id: string
   text?: string | null

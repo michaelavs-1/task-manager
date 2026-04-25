@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Cash-flow report, indirect method — בסיס: תנועות בחשבונות מזומן/בנק (1010–1040).
  * Classifies each posted JE touching cash into operating / investing / financing based on source_type.

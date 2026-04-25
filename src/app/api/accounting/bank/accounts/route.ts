@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supa = supaAdmin()
   const { data, error } = await supa.from('bank_accounts').select('*').order('name')

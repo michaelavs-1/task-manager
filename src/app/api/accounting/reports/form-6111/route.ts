@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * טופס 6111 — דו"ח כספי שנתי התאמה למס.
  * סוכם יתרות לפי code_6111 של כל חשבון (כפי שנקבע בתוכנית חשבונות).

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * 856 — דו"ח ניכויים שנתי: סיכום ניכוי מס במקור לספקים.
  * כולל: זיהוי המקבל, סכום תשלום, סכום שנוכה.

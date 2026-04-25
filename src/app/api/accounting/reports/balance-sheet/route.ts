@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Balance Sheet as of a date.
  * GET /api/accounting/reports/balance-sheet?as_of=2026-04-20

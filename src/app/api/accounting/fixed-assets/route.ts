@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * רכוש קבוע — רשימה + הוספה.
  * GET /api/accounting/fixed-assets

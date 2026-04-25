@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * BKMV — קובץ ביקורת רשות המיסים (סעיף 36 לתקנות מס הכנסה).
  * פורמט: INI.TXT + BKMVDATA.TXT.

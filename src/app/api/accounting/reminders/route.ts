@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Invoice reminders — detects overdue invoices, creates reminder rows for UI / email.
  * GET /api/accounting/reminders  → list existing

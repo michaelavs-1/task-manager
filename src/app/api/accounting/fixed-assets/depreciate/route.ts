@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin, bookDepreciation } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Run monthly depreciation for all active fixed assets.
  * POST /api/accounting/fixed-assets/depreciate  { month: 'YYYY-MM' }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const BOARD_ID = '5075345214'
 
 interface ColumnValue {

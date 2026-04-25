@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * דיווח מע"מ 874 — תקופתי (חודשי/דו-חודשי).
  * מקובל: סך המכירות (עסקאות חייבות) ומס עסקאות (2310),

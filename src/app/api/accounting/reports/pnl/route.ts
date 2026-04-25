@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Profit & Loss for a period.
  * GET /api/accounting/reports/pnl?from=2026-01-01&to=2026-12-31

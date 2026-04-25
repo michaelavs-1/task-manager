@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin, bookInvoiceIssued, bookInvoicePayment, bookExpenseIncurred, bookExpensePayment, unbookBySource } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Backfill: build JE history from existing invoices + expenses that have no je_id yet.
  * POST /api/accounting/backfill { scope?: 'invoices' | 'expenses' | 'all', dry_run?: boolean, force?: boolean }

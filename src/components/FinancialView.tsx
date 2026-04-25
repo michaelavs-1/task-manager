@@ -1964,7 +1964,7 @@ function InvoiceModal({
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
             >
               <option value="">— ללא שיוך —</option>
-              {['artist','production'].map(cat => {
+              {(['artist','production','general'] as const).map(cat => {
                 const items = projectList.filter(p => p.category === cat)
                 if (!items.length) return null
                 return (
@@ -2404,7 +2404,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
           {projectList.length > 0 && (
             <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none">
               <option value="">כל הפרויקטים</option>
-              {['artist','production'].map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
+              {(['artist','production','general'] as const).map(cat => { const items = projectList.filter(p => p.category === cat); if (!items.length) return null; return <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקות'}>{items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</optgroup> })}
             </select>
           )}
         </div>
@@ -5130,13 +5130,16 @@ function ExpensesTab() {
                                     onKeyDown={ev => { if (ev.key === 'Enter') saveCellEdit(e); if (ev.key === 'Escape') cancelCellEdit() }}
                                     className={inCls + ' max-w-[120px]'}>
                                     <option value="">—</option>
-                                    {['artist','production'].map(cat => (
-                                      <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
-                                        {projects.filter(p => p.category === cat).map(p => (
-                                          <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                      </optgroup>
-                                    ))}
+                                    {(['artist','production','general'] as const).map(cat => {
+                                      const items = projects.filter(p => p.category === cat)
+                                      if (!items.length) return null
+                                      const label = cat === 'artist' ? 'אומנים' : cat === 'production' ? 'הפקה' : 'כללי'
+                                      return (
+                                        <optgroup key={cat} label={label}>
+                                          {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </optgroup>
+                                      )
+                                    })}
                                   </select>
                                   {sc}
                                 </div>
@@ -5600,13 +5603,16 @@ function ExpensesTab() {
                   <select value={modal.expense.project_id || ''} onChange={e => upd('project_id', e.target.value || null)}
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300">
                     <option value="">ללא פרויקט</option>
-                    {['artist','production'].map(cat => (
-                      <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
-                        {projects.filter(p => p.category === cat).map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </optgroup>
-                    ))}
+                    {(['artist','production','general'] as const).map(cat => {
+                      const items = projects.filter(p => p.category === cat)
+                      if (!items.length) return null
+                      const label = cat === 'artist' ? 'אומנים' : cat === 'production' ? 'הפקה' : 'כללי'
+                      return (
+                        <optgroup key={cat} label={label}>
+                          {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </optgroup>
+                      )
+                    })}
                   </select>
                 </div>
               </div>
@@ -6074,11 +6080,11 @@ export function ForecastTab() {
                   <select value={modal.item.project_id || ''} onChange={e => upd('project_id', e.target.value || null)}
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700">
                     <option value="">— ללא שיוך —</option>
-                    {['artist','production'].map(cat => {
+                    {(['artist','production','general'] as const).map(cat => {
                       const items = projects.filter(p => p.category === cat)
                       if (!items.length) return null
                       return (
-                        <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : 'הפקה'}>
+                        <optgroup key={cat} label={cat === 'artist' ? 'אומנים' : cat === 'production' ? 'הפקה' : 'כללי'}>
                           {items.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </optgroup>
                       )

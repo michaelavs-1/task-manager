@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin, createJournalEntry, mapExpenseToAccount } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Reconcile bank transactions — auto-match against existing invoices/expenses,
  * apply rules, and book JE for unmatched.

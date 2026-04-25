@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * PCN874 — קובץ מע"מ מפורט חודשי.
  * פורמט: שורת כותרת (A) + שורות עסקה (S עסקאות, L תשומות) + שורת סיכום (M).

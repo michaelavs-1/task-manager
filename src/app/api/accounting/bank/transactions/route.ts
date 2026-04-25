@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supaAdmin } from '@/lib/accounting'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Bank transactions — list + import.
  * GET  /api/accounting/bank/transactions?account_id=...&from=...&to=...
