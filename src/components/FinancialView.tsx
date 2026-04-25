@@ -4036,7 +4036,9 @@ function FinProjectsTab() {
   const current = projects.find(p => p.id === sel)
   const artists     = projects.filter(p => p.category === 'artist')
   const productions = projects.filter(p => p.category === 'production')
-  const generals    = projects.filter(p => p.category === 'general')
+  // "תשלומי רשויות" is a dedicated nav tab — hide from projects sidebar
+  const AUTHORITY_PROJECT_NAME = 'תשלומי רשויות'
+  const generals    = projects.filter(p => p.category === 'general' && p.name !== AUTHORITY_PROJECT_NAME)
 
   const displayed = invoices.filter(inv => {
     const rem = Math.max(0, roundCents(inv.total - inv.paid))
@@ -6164,6 +6166,7 @@ function AuthorityPaymentsTab() {
   ]
   type AuthPayment = { id: number; authority: string; amount: number; period: string; due_date: string; paid_date: string; status: string; notes: string }
   const [payments, setPayments] = useState<AuthPayment[]>([])
+  const [authExpenses, setAuthExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [statusForm, setStatusForm] = useState<'paid'|'pending'|'overdue'>('paid')
@@ -6171,11 +6174,19 @@ function AuthorityPaymentsTab() {
   const fmt = (n: number) => n ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
 
   useEffect(() => {
-    fetch('/api/authority-payments')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setPayments(data) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/authority-payments').then(r => r.json()),
+      fetch('/api/projects').then(r => r.json()),
+      fetch('/api/expenses').then(r => r.json()),
+    ]).then(([authData, projData, expData]) => {
+      if (Array.isArray(authData)) setPayments(authData)
+      // Find "תשלומי רשויות" project and filter expenses for it
+      const authProj = (projData.projects || []).find((p: { name: string }) => p.name === 'תשלומי רשויות')
+      if (authProj) {
+        const linked = (expData.expenses || []).filter((e: Expense) => e.project_id === authProj.id)
+        setAuthExpenses(linked)
+      }
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   return (
@@ -6303,6 +6314,50 @@ function AuthorityPaymentsTab() {
               >שמור</button>
               <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 hover:bg-gray-50 transition-colors">ביטול</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Linked expenses ── */}
+      {authExpenses.length > 0 && (
+        <div className="flex-shrink-0">
+          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 mt-2">
+            הוצאות משויכות לתשלומי רשויות
+            <span className="text-xs font-normal text-gray-400 mr-2">({authExpenses.length})</span>
+          </h3>
+          <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 uppercase tracking-wide">
+                  {['ספק', 'תיאור', 'חודש', 'לפני מע"מ', 'שולם', 'יתרה'].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-right font-semibold">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {authExpenses.map((e, i) => {
+                  const rem = Math.max(0, roundCents((e.total || 0) - (e.paid || 0)))
+                  return (
+                    <tr key={e.id} className={`border-t border-gray-100 dark:border-gray-700 ${i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-700/20'}`}>
+                      <td className="px-4 py-2.5 text-xs font-medium text-gray-800 dark:text-white">{e.supplier || '—'}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-500">{e.description || '—'}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-500">{e.month || '—'}</td>
+                      <td className="px-4 py-2.5 text-xs font-semibold text-red-500">{fmt(e.amount || 0)}</td>
+                      <td className="px-4 py-2.5 text-xs text-emerald-600">{e.paid ? fmt(e.paid) : '—'}</td>
+                      <td className="px-4 py-2.5 text-xs" style={{ color: rem >= 1 ? '#f59e0b' : '#9ca3af' }}>{rem >= 1 ? fmt(rem) : '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 text-xs font-bold">
+                  <td className="px-4 py-2 text-gray-500" colSpan={3}>סה"כ</td>
+                  <td className="px-4 py-2 text-red-500">{fmt(authExpenses.reduce((s,e) => s+(e.amount||0),0))}</td>
+                  <td className="px-4 py-2 text-emerald-600">{fmt(authExpenses.reduce((s,e) => s+(e.paid||0),0))}</td>
+                  <td className="px-4 py-2 text-amber-500">{fmt(Math.max(0, authExpenses.reduce((s,e) => s+Math.max(0,roundCents((e.total||0)-(e.paid||0))),0)))}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       )}
