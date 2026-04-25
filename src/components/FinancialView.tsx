@@ -516,9 +516,17 @@ function FinancialDashboard() {
   const totalRemain    = activeInvoices.reduce((s, i) => s + Math.max(0, roundCents((i.total || 0) - (i.paid || 0) - (i.tax_withheld || 0))), 0)
   const openCount      = activeInvoices.filter(i => Math.max(0, roundCents((i.total || 0) - (i.paid || 0) - (i.tax_withheld || 0))) > 0).length
 
+  // Exclude "תשלומי רשויות" project from dashboard expense calculations
+  const authorityProjectIds = projects
+    .filter(p => p.name === 'תשלומי רשויות')
+    .map(p => p.id)
+  const dashExpenses = expenses.filter(e =>
+    !e.project_id || !authorityProjectIds.includes(e.project_id)
+  )
+
   // Expenses KPIs (for top-level "everything at a glance" overview)
-  const totalExpNet = expenses.reduce((s, e) => s + (e.amount || 0), 0)
-  const totalExpVat = expenses.reduce((s, e) => s + (e.vat || 0), 0)
+  const totalExpNet = dashExpenses.reduce((s, e) => s + (e.amount || 0), 0)
+  const totalExpVat = dashExpenses.reduce((s, e) => s + (e.vat || 0), 0)
 
   // VAT owed: VAT collected on revenue (active only) minus VAT paid on expenses
   const totalRevenueVat = activeInvoices.reduce((s, i) => s + ((i.total || 0) - (i.before_vat || 0)), 0)
@@ -546,8 +554,8 @@ function FinancialDashboard() {
     monthMap[key].withheld += inv.tax_withheld || 0
     monthMap[key].count    += 1
   })
-  // Merge expenses into monthMap (using expense.month key like "2026-01")
-  expenses.forEach(e => {
+  // Merge expenses into monthMap (excluding authority payments)
+  dashExpenses.forEach(e => {
     if (!e.month) return
     const key = e.month
     if (monthMap[key]) {
@@ -629,8 +637,8 @@ function FinancialDashboard() {
           cfMap[key].frcRows.push({ client: f.client, description: f.description, total: f.total, confidence: f.confidence })
           cfMap[key].frcTotal += f.total
         })
-        // Aggregate unpaid expenses per month
-        expenses.forEach(exp => {
+        // Aggregate unpaid expenses per month (excluding authority payments)
+        dashExpenses.forEach(exp => {
           if (!exp.month) return
           const key = exp.month
           const unpaid = Math.round(((exp.total || 0) - (exp.paid || 0)) * 100) / 100
@@ -1086,7 +1094,7 @@ function FinancialDashboard() {
       {/* ── Monthly Revenue vs Expenses Table ── */}
       {(() => {
         const expenseMonthMap: Record<string, { net: number; vat: number; total: number }> = {}
-        expenses.forEach(exp => {
+        dashExpenses.forEach(exp => {
           const month = exp.month || ''
           if (!expenseMonthMap[month]) expenseMonthMap[month] = { net: 0, vat: 0, total: 0 }
           expenseMonthMap[month].net += exp.amount || 0
@@ -1146,7 +1154,7 @@ function FinancialDashboard() {
         })
 
         // Calculate VAT from expenses
-        expenses.forEach(exp => {
+        dashExpenses.forEach(exp => {
           const [y, mo] = (exp.month || '').split('-')
           if (!y || !mo) return
           const key = `${y}-${String(parseInt(mo)).padStart(2,'0')}`
@@ -1205,7 +1213,7 @@ function FinancialDashboard() {
           ensure(inv.project_id, projects.find(p => p.id === inv.project_id)?.name || inv.project_id)
           map[inv.project_id].income += inv.before_vat || 0
         })
-        expenses.forEach(exp => {
+        dashExpenses.forEach(exp => {
           if (!exp.project_id) return
           ensure(exp.project_id, projects.find(p => p.id === exp.project_id)?.name || exp.project_id)
           map[exp.project_id].expenses += exp.amount || 0
