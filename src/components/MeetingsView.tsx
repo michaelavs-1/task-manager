@@ -544,7 +544,7 @@ export function MeetingsView() {
 
       {/* New Meeting Modal */}
       {showNewMeetingForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowNewMeetingForm(false)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) { setShowNewMeetingForm(false) } }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md" dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">פגישה חדשה</h2>

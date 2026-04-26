@@ -842,7 +842,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
       {deleteConfirmId && (() => {
         const target = projects.find(p => p.id === deleteConfirmId)
         return (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setDeleteConfirmId(null)}>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setDeleteConfirmId(null) } }}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">מחיקת {target?.category === 'artist' ? 'אמן' : 'הפקה'}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">מחוק את <span className="font-semibold text-slate-800 dark:text-white">{target?.name}</span>? פעולה זו לא יכול להיות בוטל.</p>
@@ -857,7 +857,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
       {/* Add artist/production modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setShowAddModal(false) } }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80 text-right" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4">הוסף אמן / הפקה</h3>
             <div className="space-y-3">
@@ -898,7 +898,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
         const fbUrl = links.find(l => l.category === 'פייסבוק')?.url || ''
         const pluginSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=900&height=900&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
         return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3" onClick={() => setShowFbModal(false)}>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3" onClick={e => { if (e.target === e.currentTarget) { setShowFbModal(false) } }}>
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ width: 'min(960px, 95vw)', height: '94vh' }} onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                 <div className="flex items-center gap-2">
@@ -931,7 +931,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
 
       {/* Social links modal */}
       {showSocialModal && selectedArtist && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => !savingSocial && setShowSocialModal(false)}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { !savingSocial && setShowSocialModal(false) } }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-96 text-right" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">רשתות חברתיות</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{selectedArtist.name}</p>

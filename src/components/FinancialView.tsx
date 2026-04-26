@@ -382,7 +382,7 @@ function SuppliersTab() {
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowAddSupplier(false)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setShowAddSupplier(false) } }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">הוסף ספק חדש</h2>
@@ -1789,7 +1789,7 @@ function InvoiceModal({
   const [dateMode, setDateMode] = useState<'today' | 'other'>(() =>
     initial.date && initial.date !== isoToIsraeli(todayISO) ? 'other' : 'today'
   )
-  useEsc(true, onClose)
+  // No ESC / backdrop close — only the explicit Cancel button closes the modal
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const v = ['before_vat','total','paid','tax_withheld'].includes(k) ? Number(e.target.value) || 0 : e.target.value
@@ -1808,8 +1808,8 @@ function InvoiceModal({
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto" dir="rtl">
         <h2 className="text-lg font-bold text-gray-900">{(initial as InvoiceRow).id ? 'עריכת חשבונית' : 'חשבונית חדשה'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
@@ -3010,7 +3010,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         const st = invoiceStatus(inv)
         return (
           <>
-            <div className="fixed inset-0 z-[998]" onClick={() => { setStatusPickerId(null); setStatusPickerRect(null) }} />
+            <div className="fixed inset-0 z-[998]" onClick={e => { if (e.target === e.currentTarget) { { setStatusPickerId(null); setStatusPickerRect(null)  } }}} />
             <div
               className="bg-white border border-gray-200 rounded-xl shadow-xl min-w-[110px]"
               style={{ position: 'fixed', top: statusPickerRect.top, left: statusPickerRect.left, zIndex: 999 }}
@@ -3036,7 +3036,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
         const withheldPreview = withhold5 ? roundCents(base * 0.05) : 0
         const paidPreview = roundCents(inv.total - withheldPreview)
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setWithholdingInv(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) { setWithholdingInv(null) } }}>
             <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
               <h3 className="font-bold text-gray-800 text-base">סימון חשבונית כשולמה</h3>
               <div className="text-xs text-gray-500 leading-relaxed">
@@ -3072,7 +3072,7 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
 
       {/* Delete Confirm */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) { setDeleteId(null) } }}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
@@ -3120,7 +3120,7 @@ function ClientModal({ initial, onSave, onClose, saving }: {
     setForm(f => ({ ...f, [k]: e.target.value }))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-gray-900">{(initial as ClientRecord).id ? 'עריכת לקוח' : 'לקוח חדש'}</h2>
         <div className="space-y-3">
@@ -3314,7 +3314,7 @@ function LedgerDrawer({ client, invoices, loading, onClose, fmt }: {
   const paidCount  = invoices.filter(i => Math.max(0, roundCents(i.total - i.paid)) === 0).length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -3890,7 +3890,7 @@ function ClientsTab() {
 
       {/* Delete confirm */}
       {deleteClientId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteClientId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) { setDeleteClientId(null) } }}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
@@ -5476,7 +5476,7 @@ function ExpensesTab() {
       {/* Transfer-to-month floating dropdown (fixed position to escape table overflow) */}
       {transferExpId !== null && transferBtnRect && (
         <>
-          <div className="fixed inset-0 z-[998]" onClick={() => { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('') }} />
+          <div className="fixed inset-0 z-[998]" onClick={e => { if (e.target === e.currentTarget) { { setTransferExpId(null); setTransferBtnRect(null); setTransferExpMonth('')  } }}} />
           <div
             className="bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-2xl shadow-2xl min-w-[190px]"
             style={{ position: 'fixed', top: transferBtnRect.top, bottom: transferBtnRect.bottom, right: transferBtnRect.right, zIndex: 999 }}
@@ -5990,7 +5990,7 @@ export function ForecastTab() {
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setModal(null)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setModal(null) } }}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">{modal.mode === 'add' ? 'צפי חדש' : 'ערוך צפי'}</h2>
@@ -6267,7 +6267,7 @@ function AuthorityPaymentsTab() {
 
       {/* Add modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={e => { if (e.target === e.currentTarget) { setShowAdd(false) } }}>
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4" dir="rtl" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-gray-800 text-base">הוספת תשלום רשות</h3>
             <div className="grid grid-cols-2 gap-3">

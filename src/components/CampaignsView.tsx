@@ -596,7 +596,7 @@ export function CampaignsView() {
       ) }
 
             {showOfficesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowOfficesModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={e => { if (e.target === e.currentTarget) { setShowOfficesModal(false) } }}>
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <button onClick={() => setShowOfficesModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
@@ -1535,7 +1535,7 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
         const allFiles = [...primary, ...legacy]
         const anyLoading = mediaLibraryLoading || dropboxLoading
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowMediaPopup(false)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={e => { if (e.target === e.currentTarget) { setShowMediaPopup(false) } }}>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col" dir="rtl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <h2 className="font-bold text-gray-800 dark:text-white text-sm">מדיה — {campaign.name}</h2>

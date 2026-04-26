@@ -922,7 +922,7 @@ export function MediaLibraryView() {
 
       {/* Dropbox folder picker modal */}
       {mounted && showFolderPicker && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[10000] bg-black/40 flex items-center justify-center p-4" onClick={() => setShowFolderPicker(false)}>
+        <div className="fixed inset-0 z-[10000] bg-black/40 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setShowFolderPicker(false) } }}>
           <div
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden"
             onClick={e => e.stopPropagation()}
