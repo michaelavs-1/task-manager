@@ -1672,15 +1672,31 @@ function ModalField({ label, value, onChange, type = 'text', placeholder = '' }:
   type?: string
   placeholder?: string
 }) {
+  const isNumeric = type === 'number'
+  const [focused, setFocused] = useState(false)
+
+  // Display: when focused show raw number, when blurred show formatted with commas
+  const displayValue = isNumeric
+    ? focused
+      ? (value === 0 ? '' : String(value))
+      : (value === 0 ? '' : Number(value).toLocaleString('en-US'))
+    : value
+
   return (
     <div>
       <label className="block text-xs text-gray-400 mb-1">{label}</label>
       <input
-        type={type}
-        value={value}
-        onChange={onChange}
+        type="text"
+        inputMode={isNumeric ? 'decimal' : undefined}
+        value={displayValue}
+        onChange={isNumeric ? (e) => {
+          // Strip commas and pass through a synthetic-compatible event
+          const raw = e.target.value.replace(/,/g, '')
+          onChange({ ...e, target: { ...e.target, value: raw } } as React.ChangeEvent<HTMLInputElement>)
+        } : onChange}
         placeholder={placeholder}
-        onFocus={e => e.target.select()}
+        onFocus={e => { setFocused(true); e.target.select() }}
+        onBlur={() => setFocused(false)}
         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
       />
     </div>
@@ -1792,7 +1808,7 @@ function InvoiceModal({
   // No ESC / backdrop close — only the explicit Cancel button closes the modal
 
   const set = (k: keyof InvoiceForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const v = ['before_vat','total','paid','tax_withheld'].includes(k) ? Number(e.target.value) || 0 : e.target.value
+    const v = ['before_vat','total','paid','tax_withheld'].includes(k) ? Number(e.target.value.replace(/,/g, '')) || 0 : e.target.value
     setForm(f => {
       const next = { ...f, [k]: v } as InvoiceForm
       // Auto-calculate total (incl. VAT) from before_vat — user can still override the total field afterwards.
