@@ -1328,26 +1328,41 @@ function EventRow({ event, showFinancials=false }: { event: ArtistEvent; showFin
 }
 
 // ── RepertoireTab ───────────────────────────────────────────────────────────
+type RightsHolder = { name: string; pct: number }
 type Song = {
   id: number
   artist_name: string
   title: string
   year: string | null
   isrc: string | null
-  status: string | null
   master_pct: number | null
   publishing_pct: number | null
+  master_owners: RightsHolder[] | null
+  publishing_owners: RightsHolder[] | null
   writers: string | null
   producers: string | null
   label: string | null
   notes: string | null
 }
 
-const SONG_STATUSES = ['יצא לאור', 'בהפקה', 'טיוטה', 'הוקפא', 'בוטל']
+// Parse "אקו 50%, Tito 50%" → [{name:"אקו",pct:50},{name:"Tito",pct:50}]
+function parseOwners(raw: string): RightsHolder[] {
+  return raw.split(/[;,]/).map(s => s.trim()).filter(Boolean).map(part => {
+    const m = part.match(/^(.+?)\s+([\d.]+)\s*%?\s*$/)
+    if (m) return { name: m[1].trim(), pct: parseFloat(m[2]) }
+    return { name: part, pct: 0 }
+  }).filter(o => o.name)
+}
+
+// Serialize [{name,pct}] → "אקו 50%, Tito 50%"
+function serializeOwners(owners: RightsHolder[]): string {
+  return owners.map(o => `${o.name} ${o.pct}%`).join(', ')
+}
 
 const EMPTY_SONG = {
-  title: '', year: '', isrc: '', status: 'יצא לאור',
-  master_pct: '', publishing_pct: '', writers: '', producers: '', label: '', notes: ''
+  title: '', year: '', isrc: '',
+  master_owners_text: '', publishing_owners_text: '',
+  writers: '', producers: '', label: '', notes: ''
 }
 
 function RepertoireTab({ artistName }: { artistName: string }) {
@@ -1359,7 +1374,6 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [rightType, setRightType] = useState<'master' | 'publishing'>('master')
 
@@ -1381,9 +1395,9 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   function openNew() { setForm(EMPTY_SONG); setEditSong(null); setShowForm(true) }
   function openEdit(s: Song) {
     setForm({
-      title: s.title, year: s.year || '', isrc: s.isrc || '', status: s.status || 'יצא לאור',
-      master_pct: s.master_pct != null ? String(s.master_pct) : '',
-      publishing_pct: s.publishing_pct != null ? String(s.publishing_pct) : '',
+      title: s.title, year: s.year || '', isrc: s.isrc || '',
+      master_owners_text: s.master_owners ? serializeOwners(s.master_owners) : '',
+      publishing_owners_text: s.publishing_owners ? serializeOwners(s.publishing_owners) : '',
       writers: s.writers || '', producers: s.producers || '', label: s.label || '', notes: s.notes || ''
     })
     setEditSong(s); setShowForm(true)
@@ -1393,14 +1407,18 @@ function RepertoireTab({ artistName }: { artistName: string }) {
     if (!form.title.trim()) return
     setSaving(true)
     try {
+      const masterOwners = form.master_owners_text.trim() ? parseOwners(form.master_owners_text) : null
+      const publishingOwners = form.publishing_owners_text.trim() ? parseOwners(form.publishing_owners_text) : null
       const payload = {
         artist_name: artistName,
         title: form.title.trim(),
         year: form.year || null,
         isrc: form.isrc || null,
-        status: form.status,
-        master_pct: form.master_pct !== '' ? parseFloat(form.master_pct) : null,
-        publishing_pct: form.publishing_pct !== '' ? parseFloat(form.publishing_pct) : null,
+        master_owners: masterOwners,
+        publishing_owners: publishingOwners,
+        // derive pct from the artist's own entry
+        master_pct: masterOwners?.find(o => o.name === artistName || o.name === 'אקו' || o.name === 'Echo')?.pct ?? null,
+        publishing_pct: publishingOwners?.find(o => o.name === artistName || o.name === 'אקו' || o.name === 'Echo')?.pct ?? null,
         writers: form.writers || null,
         producers: form.producers || null,
         label: form.label || null,
@@ -1426,20 +1444,8 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   }
 
   const filtered = songs
-    .filter(s => filterStatus === 'all' || s.status === filterStatus)
     .filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) ||
       (s.writers ?? '').toLowerCase().includes(search.toLowerCase()))
-
-  const statusColor = (st: string | null) => {
-    switch (st) {
-      case 'יצא לאור': return 'bg-emerald-100 text-emerald-700'
-      case 'בהפקה':    return 'bg-blue-100 text-blue-700'
-      case 'טיוטה':    return 'bg-amber-100 text-amber-700'
-      case 'הוקפא':    return 'bg-gray-100 text-gray-500'
-      case 'בוטל':     return 'bg-red-100 text-red-500'
-      default:          return 'bg-gray-100 text-gray-500'
-    }
-  }
 
   const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -1469,22 +1475,10 @@ function RepertoireTab({ artistName }: { artistName: string }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-1 flex-wrap">
+        <div className="flex items-center gap-2 flex-1">
           <span className="text-sm text-gray-400">{songs.length} שירים</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שיר / כותב..."
-            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-40" />
-          <div className="flex gap-1 flex-wrap">
-            <button onClick={() => setFilterStatus('all')}
-              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStatus === 'all' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'}`}>
-              הכל
-            </button>
-            {SONG_STATUSES.map(s => (
-              <button key={s} onClick={() => setFilterStatus(filterStatus === s ? 'all' : s)}
-                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStatus === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'}`}>
-                {s}
-              </button>
-            ))}
-          </div>
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-44" />
         </div>
 
         <button onClick={openNew}
@@ -1513,13 +1507,8 @@ function RepertoireTab({ artistName }: { artistName: string }) {
               <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-400 font-semibold">
                 <th className="text-right px-4 py-3 w-6"></th>
                 <th className="text-right px-4 py-3">שם השיר</th>
-                <th className="text-right px-4 py-3 w-20">שנה</th>
-                <th className="text-right px-4 py-3 w-28">סטטוס</th>
-                <th className="text-right px-4 py-3 w-32">
-                  <span className={rightType === 'master' ? 'text-indigo-600 font-bold' : 'text-gray-300'}>מאסטר %</span>
-                  <span className="mx-1 text-gray-200">/</span>
-                  <span className={rightType === 'publishing' ? 'text-indigo-600 font-bold' : 'text-gray-300'}>פאבלישינג %</span>
-                </th>
+                <th className="text-right px-4 py-3 w-16">שנה</th>
+                <th className="text-right px-4 py-3">בעלי זכויות</th>
                 <th className="text-right px-4 py-3">כותבים</th>
                 <th className="text-right px-4 py-3 w-24">פעולות</th>
               </tr>
@@ -1540,18 +1529,25 @@ function RepertoireTab({ artistName }: { artistName: string }) {
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">{s.title}</td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.year || '—'}</td>
+                      {/* Owner chips */}
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(s.status)}`}>{s.status || '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {rightType === 'master'
-                          ? (s.master_pct != null
-                              ? <span className="font-bold text-indigo-600">{s.master_pct}%</span>
-                              : <span className="text-gray-300">—</span>)
-                          : (s.publishing_pct != null
-                              ? <span className="font-bold text-purple-600">{s.publishing_pct}%</span>
-                              : <span className="text-gray-300">—</span>)
-                        }
+                        {(() => {
+                          const owners = rightType === 'master' ? s.master_owners : s.publishing_owners
+                          if (!owners || owners.length === 0) return <span className="text-gray-300 text-xs">—</span>
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {owners.map((o, idx) => (
+                                <span key={idx} className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                                  rightType === 'master'
+                                    ? (o.pct === 100 ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-50 text-indigo-500')
+                                    : (o.pct === 100 ? 'bg-purple-100 text-purple-700' : 'bg-purple-50 text-purple-500')
+                                }`}>
+                                  {o.name} <span className="font-bold">{o.pct}%</span>
+                                </span>
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[160px]">{s.writers || '—'}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -1593,14 +1589,21 @@ function RepertoireTab({ artistName }: { artistName: string }) {
               <div className="col-span-2">
                 <F label="שם השיר *"><input value={form.title} onChange={set('title')} className={inputCls} placeholder="שם השיר" autoFocus /></F>
               </div>
-              <F label="שנת הוצאה"><input value={form.year} onChange={set('year')} className={inputCls} placeholder="2024" /></F>
-              <F label="סטטוס">
-                <select value={form.status} onChange={set('status')} className={inputCls}>
-                  {SONG_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </F>
-              <F label='מאסטר % (חלק האומן)'><input value={form.master_pct} onChange={set('master_pct')} className={inputCls} placeholder="50" type="text" inputMode="decimal" /></F>
-              <F label='פאבלישינג % (חלק האומן)'><input value={form.publishing_pct} onChange={set('publishing_pct')} className={inputCls} placeholder="50" type="text" inputMode="decimal" /></F>
+              <div className="col-span-2 grid grid-cols-2 gap-3">
+                <F label="שנת הוצאה"><input value={form.year} onChange={set('year')} className={inputCls} placeholder="2024" /></F>
+                <F label="ISRC"><input value={form.isrc} onChange={set('isrc')} className={inputCls} placeholder="IL-..." /></F>
+              </div>
+              <div className="col-span-2">
+                <F label='בעלי זכויות מאסטר (למשל: אקו 50%, Tito 50%)'>
+                  <input value={form.master_owners_text} onChange={set('master_owners_text')} className={inputCls} placeholder="אקו 100%  או  אקו 50%, שם 50%" />
+                </F>
+                <p className="text-xs text-gray-400 mt-1">פורמט: שם אחוז%, שם אחוז% — מופרד בפסיקים</p>
+              </div>
+              <div className="col-span-2">
+                <F label='בעלי זכויות פאבלישינג'>
+                  <input value={form.publishing_owners_text} onChange={set('publishing_owners_text')} className={inputCls} placeholder="אקו 100%  או  אקו 50%, שם 50%" />
+                </F>
+              </div>
               <div className="col-span-2">
                 <F label="כותבים"><input value={form.writers} onChange={set('writers')} className={inputCls} placeholder="שם הכותב, שותף..." /></F>
               </div>
@@ -1610,7 +1613,6 @@ function RepertoireTab({ artistName }: { artistName: string }) {
               <div className="col-span-2">
                 <F label="תווית / הפצה"><input value={form.label} onChange={set('label')} className={inputCls} placeholder="Warner, Sony, עצמאי..." /></F>
               </div>
-              <F label="ISRC"><input value={form.isrc} onChange={set('isrc')} className={inputCls} placeholder="IL-..." /></F>
               <div className="col-span-2">
                 <F label="הערות">
                   <textarea value={form.notes} onChange={set('notes')} rows={2} className={`${inputCls} resize-none`} />

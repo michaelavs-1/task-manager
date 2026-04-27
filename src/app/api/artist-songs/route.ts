@@ -73,17 +73,18 @@ export async function POST(req: NextRequest) {
   const { data, error } = await sb
     .from('artist_songs')
     .insert([{
-      artist_name:     body.artist_name,
-      title:           body.title,
-      year:            body.year || null,
-      isrc:            body.isrc || null,
-      status:          body.status || 'יצא לאור',
-      master_pct:      body.master_pct ?? null,
-      publishing_pct:  body.publishing_pct ?? null,
-      writers:         body.writers || null,
-      producers:       body.producers || null,
-      label:           body.label || null,
-      notes:           body.notes || null,
+      artist_name:       body.artist_name,
+      title:             body.title,
+      year:              body.year || null,
+      isrc:              body.isrc || null,
+      master_pct:        body.master_pct ?? null,
+      publishing_pct:    body.publishing_pct ?? null,
+      master_owners:     body.master_owners ?? null,
+      publishing_owners: body.publishing_owners ?? null,
+      writers:           body.writers || null,
+      producers:         body.producers || null,
+      label:             body.label || null,
+      notes:             body.notes || null,
     }])
     .select()
     .single()
@@ -97,7 +98,7 @@ export async function PATCH(req: NextRequest) {
   const { id, ...fields } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const allowed = ['title','year','isrc','status','master_pct','publishing_pct','writers','producers','label','notes']
+  const allowed = ['title','year','isrc','master_pct','publishing_pct','master_owners','publishing_owners','writers','producers','label','notes']
   const patch: Record<string, unknown> = {}
   allowed.forEach(k => { if (k in fields) patch[k] = fields[k] })
 
