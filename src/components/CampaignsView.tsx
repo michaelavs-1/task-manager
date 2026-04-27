@@ -31,6 +31,7 @@ type Campaign = {
   instagram_link: string | null; tiktok_code_link: string | null; media_url: string | null; tickets_sold: number | null; tickets_for_sale: number | null; booking_agency: string | null; office?: string; contact_name?: string | null; media_budget: number | null
  dark_media_link: string | null
  show_time: string | null
+ invoice_sent: boolean | null
 }
 type Contact = { id: string; name: string; phone: string }
 type ArtistMeta = { defaultOffice?: string; defaultContactId?: string }
@@ -1063,6 +1064,16 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   const [ticketsForSaleInput, setTicketsForSaleInput] = useState<string>(campaign.tickets_for_sale != null ? String(campaign.tickets_for_sale) : '')
   const [mediaBudgetInput, setMediaBudgetInput] = useState<string>(campaign.media_budget != null ? String(campaign.media_budget) : '')
   const [savingBudget, setSavingBudget] = useState(false)
+  const [invoiceSent, setInvoiceSent] = useState<boolean>(campaign.invoice_sent ?? false)
+  const [savingInvoice, setSavingInvoice] = useState(false)
+
+  async function toggleInvoiceSent() {
+    const newVal = !invoiceSent
+    setSavingInvoice(true)
+    setInvoiceSent(newVal)
+    await supabase.from('campaigns').update({ invoice_sent: newVal, updated_at: new Date().toISOString() }).eq('id', campaign.id)
+    setSavingInvoice(false)
+  }
   const [mediaLibraryFiles, setMediaLibraryFiles] = useState<{name: string; url: string; path: string}[]>([])
   const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false)
   const [showMediaPopup, setShowMediaPopup] = useState(false)
@@ -1504,7 +1515,31 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
             </div>
           </div>
 
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-600 flex gap-2">
+          {/* Invoice sent checkbox */}
+          <div className="pt-2 pb-1">
+            <button
+              onClick={toggleInvoiceSent}
+              disabled={savingInvoice}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+                invoiceSent
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-500'
+              }`}
+            >
+              <span className={`w-4 h-4 flex-shrink-0 rounded flex items-center justify-center border-2 transition-colors ${
+                invoiceSent ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'
+              }`}>
+                {invoiceSent && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </span>
+              <span>{savingInvoice ? 'שומר...' : 'נשלחה חשבונית'}</span>
+            </button>
+          </div>
+
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-600 flex gap-2">
             <button onClick={() => setShowMediaPopup(true)} className="flex-1 py-2 rounded-xl text-xs font-semibold text-indigo-600 border border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-1">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
               מדיה
