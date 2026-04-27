@@ -3467,6 +3467,7 @@ function ClientsTab() {
   const [invoiceCache, setInvoiceCache] = useState<Record<number, InvoiceRow[]>>({})
   const [loadingId, setLoadingId] = useState<number | null>(null)
   const [expandedFilter, setExpandedFilter] = useState<'all' | 'paid' | 'open'>('all')
+  const [expandedInvId, setExpandedInvId] = useState<number | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -3844,9 +3845,19 @@ function ClientsTab() {
                                       {dispInvs.map((inv, idx) => {
                                         const rem = Math.max(0, roundCents(inv.total - inv.paid))
                                         const isPaid = rem < 1
+                                        const isInvExpanded = expandedInvId === inv.id
                                         return (
-                                          <tr key={inv.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`} onClick={e => e.stopPropagation()}>
-                                            <td className="px-3 py-2 font-mono text-xs text-gray-400">{inv.invoice_num || '—'}</td>
+                                          <Fragment key={inv.id}>
+                                          <tr
+                                            className={`border-b border-gray-100 cursor-pointer transition-colors ${isInvExpanded ? 'bg-indigo-50' : idx % 2 === 0 ? 'bg-white hover:bg-indigo-50/40' : 'bg-gray-50/40 hover:bg-indigo-50/40'}`}
+                                            onClick={e => { e.stopPropagation(); setExpandedInvId(isInvExpanded ? null : inv.id) }}
+                                          >
+                                            <td className="px-3 py-2 font-mono text-xs">
+                                              <div className="flex items-center gap-1">
+                                                <svg className={`w-3 h-3 text-gray-300 flex-shrink-0 transition-transform ${isInvExpanded ? 'rotate-90 text-indigo-400' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                                <span className={isInvExpanded ? 'text-indigo-600 font-semibold' : 'text-gray-400'}>{inv.invoice_num || '—'}</span>
+                                              </div>
+                                            </td>
                                             <td className="px-3 py-2 text-gray-500 text-xs whitespace-nowrap">{formatDateFull(inv.date)}</td>
                                             <td className="px-3 py-2 text-gray-500 text-xs">{inv.doc_type || '—'}</td>
                                             <td className="px-3 py-2 text-gray-500 text-xs">{fmt(inv.before_vat)}</td>
@@ -3863,6 +3874,36 @@ function ClientsTab() {
                                                   : <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-red-100 text-red-600">ממתין</span>}
                                             </td>
                                           </tr>
+                                          {/* ── Invoice detail row ── */}
+                                          {isInvExpanded && (
+                                            <tr className="border-b border-indigo-100 bg-indigo-50/60" onClick={e => e.stopPropagation()}>
+                                              <td colSpan={8} className="px-5 py-3">
+                                                <div className="flex flex-col gap-2 text-xs">
+                                                  {/* Meta row */}
+                                                  <div className="flex flex-wrap gap-4 text-gray-500">
+                                                    {inv.payment_date && (
+                                                      <span><span className="text-gray-400 ml-1">תאריך תשלום:</span>{formatDateFull(inv.payment_date)}</span>
+                                                    )}
+                                                    {inv.tax_withheld > 0 && (
+                                                      <span><span className="text-gray-400 ml-1">ניכוי מס במקור:</span><span className="text-amber-600 font-medium">{fmt(inv.tax_withheld)}</span></span>
+                                                    )}
+                                                    {inv.project_id && (
+                                                      <span><span className="text-gray-400 ml-1">פרויקט:</span><span className="text-indigo-600 font-medium">{inv.project_id}</span></span>
+                                                    )}
+                                                  </div>
+                                                  {/* Notes */}
+                                                  <div className="flex gap-2 items-start">
+                                                    <span className="text-indigo-500 font-semibold whitespace-nowrap pt-0.5">הערות:</span>
+                                                    {inv.notes
+                                                      ? <span className="text-gray-700 whitespace-pre-wrap leading-relaxed">{inv.notes}</span>
+                                                      : <span className="text-gray-300 italic">אין הערות</span>
+                                                    }
+                                                  </div>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          )}
+                                          </Fragment>
                                         )
                                       })}
                                     </tbody>
