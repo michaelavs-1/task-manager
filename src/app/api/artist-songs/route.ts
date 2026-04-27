@@ -98,7 +98,7 @@ export async function PATCH(req: NextRequest) {
   const { id, ...fields } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const allowed = ['title','year','isrc','master_pct','publishing_pct','master_owners','publishing_owners','writers','producers','label','notes']
+  const allowed = ['title','year','isrc','master_pct','publishing_pct','master_owners','publishing_owners','writers','producers','label','notes','revenue','federation_revenue','streaming_revenue']
   const patch: Record<string, unknown> = {}
   allowed.forEach(k => { if (k in fields) patch[k] = fields[k] })
 

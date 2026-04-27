@@ -5,7 +5,7 @@ import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 import { useEsc } from '@/hooks/useEsc'
 
-type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media' | 'repertoire' | 'streams'
+type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'royalties' | 'campaigns' | 'media' | 'repertoire' | 'streams'
 type Project = {
   id: string; name: string; category: string
   status?: string; genre?: string; audience?: string
@@ -43,7 +43,7 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'tasks',      label: 'משימות' },
   { id: 'meetings',   label: 'פגישות' },
   { id: 'links',      label: 'קישורים' },
-  { id: 'financial',  label: 'ביצועי הזמר' },
+  { id: 'royalties',  label: 'תמלוגים' },
   { id: 'media',       label: 'מדיה' },
   { id: 'repertoire', label: 'רפרטואר' },
   { id: 'streams',    label: 'ניטור השמעות' },
@@ -699,8 +699,8 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
-            {tab === 'financial' && selectedArtist && (
-              <ArtistFinancialReport events={events} loading={loadingEvents} artistName={selectedArtist.name} />
+            {tab === 'royalties' && selectedArtist && (
+              <RoyaltiesTab artistName={selectedArtist.name} />
             )}
 
             {tab === 'media' && selectedArtist && (
@@ -1343,6 +1343,9 @@ type Song = {
   producers: string | null
   label: string | null
   notes: string | null
+  revenue: number | null
+  federation_revenue: number | null
+  streaming_revenue: number | null
 }
 
 // Parse "אקו 50%, Tito 50%" → [{name:"אקו",pct:50},{name:"Tito",pct:50}]
@@ -1374,10 +1377,11 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
-  const [searchOwner, setSearchOwner] = useState('')
   const [filterAlbum, setFilterAlbum] = useState('all')
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [rightType, setRightType] = useState<'master' | 'publishing'>('master')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
+  const [revenueEditing, setRevenueEditing] = useState<Record<number, string>>({})
 
   function load() {
     setLoading(true)
@@ -1445,6 +1449,13 @@ function RepertoireTab({ artistName }: { artistName: string }) {
     setDeleteId(null)
   }
 
+  async function saveRevenue(id: number, raw: string) {
+    const val = parseFloat(raw.replace(/,/g, '')) || 0
+    await fetch('/api/artist-songs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, revenue: val }) })
+    setSongs(prev => prev.map(s => s.id === id ? { ...s, revenue: val } : s))
+    setRevenueEditing(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+
   const albums = useMemo(() => {
     const set = new Set(songs.map(s => s.label).filter(Boolean) as string[])
     return Array.from(set).sort((a, b) => {
@@ -1457,12 +1468,14 @@ function RepertoireTab({ artistName }: { artistName: string }) {
 
   const filtered = songs
     .filter(s => filterAlbum === 'all' || s.label === filterAlbum)
-    .filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) || (s.writers ?? '').toLowerCase().includes(search.toLowerCase()))
     .filter(s => {
-      if (!searchOwner) return true
-      const q = searchOwner.toLowerCase()
+      if (!search) return true
+      const q = search.toLowerCase()
+      if (s.title.toLowerCase().includes(q)) return true
+      if ((s.writers ?? '').toLowerCase().includes(q)) return true
       const owners = rightType === 'master' ? s.master_owners : s.publishing_owners
-      return owners?.some(o => o.name.toLowerCase().includes(q)) ?? false
+      if (owners?.some(o => o.name.toLowerCase().includes(q))) return true
+      return false
     })
 
   const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -1495,26 +1508,27 @@ function RepertoireTab({ artistName }: { artistName: string }) {
 
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <span className="text-sm text-gray-400">{filtered.length}{filtered.length !== songs.length ? `/${songs.length}` : ''} שירים</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שיר..."
-            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-32" />
-          {/* Rights holder search */}
-          <div className="relative">
-            <input
-              value={searchOwner}
-              onChange={e => setSearchOwner(e.target.value)}
-              placeholder="חפש בעל זכות..."
-              className={`text-xs border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-36 transition-colors ${searchOwner ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200'}`}
-            />
-            {searchOwner && (
-              <button onClick={() => setSearchOwner('')} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-xs">✕</button>
-            )}
-          </div>
-          {/* Album filter */}
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="שיר, כותב, בעל זכות..."
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-44" />
           <select value={filterAlbum} onChange={e => setFilterAlbum(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[160px]">
             <option value="all">כל האלבומים</option>
             {albums.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
+        </div>
+
+        {/* View mode toggle */}
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs">
+          <button onClick={() => setViewMode('table')}
+            title="טבלה"
+            className={`px-3 py-2 transition-colors ${viewMode === 'table' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 6h18M3 14h18M3 18h18" /></svg>
+          </button>
+          <button onClick={() => setViewMode('cards')}
+            title="כרטיסי זכויות"
+            className={`px-3 py-2 transition-colors ${viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </button>
         </div>
 
         <button onClick={openNew}
@@ -1535,15 +1549,19 @@ function RepertoireTab({ artistName }: { artistName: string }) {
         </div>
       )}
 
-      {/* Songs table */}
-      {!loading && filtered.length > 0 && (
+      {/* ── Cards view ── */}
+      {!loading && viewMode === 'cards' && <RightsHolderCards songs={filtered} rightType={rightType} />}
+
+      {/* ── Table view ── */}
+      {!loading && viewMode === 'table' && filtered.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-400 font-semibold">
                 <th className="text-right px-4 py-3 w-6"></th>
                 <th className="text-right px-4 py-3">שם השיר</th>
-                <th className="text-right px-4 py-3 w-16">שנה</th>
+                <th className="text-right px-4 py-3 w-28">אלבום</th>
+                <th className="text-right px-4 py-3 w-14">שנה</th>
                 <th className="text-right px-4 py-3">בעלי זכויות</th>
                 <th className="text-right px-4 py-3">כותבים</th>
                 <th className="text-right px-4 py-3 w-24">פעולות</th>
@@ -1564,6 +1582,7 @@ function RepertoireTab({ artistName }: { artistName: string }) {
                         </svg>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">{s.title}</td>
+                      <td className="px-4 py-3 text-xs text-indigo-500 font-medium truncate max-w-[110px]">{s.label || '—'}</td>
                       <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.year || '—'}</td>
                       {/* Owner chips */}
                       <td className="px-4 py-3">
@@ -1680,6 +1699,229 @@ function RepertoireTab({ artistName }: { artistName: string }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── RightsHolderCards ─────────────────────────────────────────────────────
+function RightsHolderCards({ songs, rightType }: { songs: Song[]; rightType: 'master' | 'publishing' }) {
+  const fmt = (n: number) => n > 0 ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+
+  const holders = useMemo(() => {
+    const map: Record<string, { name: string; songs: { title: string; label: string | null; pct: number; earned: number }[]; total: number }> = {}
+    songs.forEach(s => {
+      const owners = rightType === 'master' ? s.master_owners : s.publishing_owners
+      if (!owners) return
+      const rev = (rightType === 'master' ? s.federation_revenue ?? 0 : s.streaming_revenue ?? 0) +
+                  (s.revenue ?? 0)
+      owners.forEach(o => {
+        if (!map[o.name]) map[o.name] = { name: o.name, songs: [], total: 0 }
+        const earned = rev * o.pct / 100
+        map[o.name].songs.push({ title: s.title, label: s.label, pct: o.pct, earned })
+        map[o.name].total += earned
+      })
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [songs, rightType])
+
+  const totalRevenue = songs.reduce((s, x) => s + (x.revenue ?? 0) + (x.federation_revenue ?? 0) + (x.streaming_revenue ?? 0), 0)
+
+  if (holders.length === 0) {
+    return <div className="text-center py-16 text-gray-300 text-sm">אין נתוני בעלי זכויות</div>
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary bar */}
+      <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-5 py-3 flex items-center gap-6 flex-wrap">
+        <div><span className="text-xs text-indigo-400">סה״כ הכנסות</span><p className="text-lg font-bold text-indigo-700">{totalRevenue > 0 ? fmt(totalRevenue) : '—'}</p></div>
+        <div><span className="text-xs text-indigo-400">בעלי זכויות</span><p className="text-lg font-bold text-indigo-700">{holders.length}</p></div>
+        <div><span className="text-xs text-indigo-400">שירים</span><p className="text-lg font-bold text-indigo-700">{songs.length}</p></div>
+      </div>
+
+      {/* Cards grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {holders.map(h => (
+          <div key={h.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Card header */}
+            <div className="px-5 py-4 bg-gradient-to-l from-indigo-50 to-white border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="font-bold text-gray-900 text-base">{h.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{h.songs.length} שירים</p>
+              </div>
+              <div className="text-left">
+                <p className="text-xl font-bold text-indigo-600">{h.total > 0 ? fmt(h.total) : '—'}</p>
+                <p className="text-xs text-gray-400">סה״כ לתשלום</p>
+              </div>
+            </div>
+            {/* Song list */}
+            <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+              {h.songs.map((s, i) => (
+                <div key={i} className="px-5 py-2.5 flex items-center justify-between hover:bg-gray-50/50">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-800 truncate block">{s.title}</span>
+                    {s.label && <span className="text-xs text-gray-400">{s.label}</span>}
+                  </div>
+                  <div className="flex items-center gap-3 ml-3 flex-shrink-0">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${rightType === 'master' ? 'bg-indigo-50 text-indigo-600' : 'bg-purple-50 text-purple-600'}`}>{s.pct}%</span>
+                    <span className="text-sm font-semibold text-gray-700 w-20 text-left">{s.earned > 0 ? fmt(s.earned) : <span className="text-gray-300">—</span>}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── RoyaltiesTab ──────────────────────────────────────────────────────────
+function RoyaltiesTab({ artistName }: { artistName: string }) {
+  const [source, setSource] = useState<'federation' | 'streaming'>('federation')
+  const [songs, setSongs] = useState<Song[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterAlbum, setFilterAlbum] = useState('all')
+  const [saving, setSaving] = useState<Record<number, boolean>>({})
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/artist-songs?artist=${encodeURIComponent(artistName)}`)
+      .then(r => r.json())
+      .then(d => setSongs(d.songs || []))
+      .finally(() => setLoading(false))
+  }, [artistName])
+
+  const revenueKey = source === 'federation' ? 'federation_revenue' : 'streaming_revenue'
+
+  async function patchRevenue(id: number, val: number) {
+    setSaving(p => ({ ...p, [id]: true }))
+    await fetch('/api/artist-songs', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, [revenueKey]: val })
+    })
+    setSongs(prev => prev.map(s => s.id === id ? { ...s, [revenueKey]: val } : s))
+    setSaving(p => { const n = { ...p }; delete n[id]; return n })
+  }
+
+  const albums = useMemo(() => {
+    const set = new Set(songs.map(s => s.label).filter(Boolean) as string[])
+    return Array.from(set).sort((a, b) => {
+      const ay = songs.find(s => s.label === a)?.year ?? '9999'
+      const by = songs.find(s => s.label === b)?.year ?? '9999'
+      return ay.localeCompare(by)
+    })
+  }, [songs])
+
+  const filtered = songs.filter(s => filterAlbum === 'all' || s.label === filterAlbum)
+
+  const fmtILS = (n: number) => n > 0 ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
+
+  // Distribution: group by rights holder
+  const distribution = useMemo(() => {
+    const map: Record<string, number> = {}
+    songs.forEach(s => {
+      const owners = s.master_owners
+      if (!owners) return
+      const rev = Number(s[revenueKey as keyof Song] ?? 0)
+      if (!rev) return
+      owners.forEach(o => {
+        map[o.name] = (map[o.name] ?? 0) + rev * o.pct / 100
+      })
+    })
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [songs, revenueKey])
+
+  const totalRevenue = songs.reduce((sum, s) => sum + Number(s[revenueKey as keyof Song] ?? 0), 0)
+
+  return (
+    <div className="space-y-5" dir="rtl">
+      {/* Source toggle */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden text-sm font-semibold">
+          <button onClick={() => setSource('federation')}
+            className={`px-5 py-2 transition-colors ${source === 'federation' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+            פדרציה
+          </button>
+          <button onClick={() => setSource('streaming')}
+            className={`px-5 py-2 transition-colors ${source === 'streaming' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+            סטרימינג
+          </button>
+        </div>
+        <select value={filterAlbum} onChange={e => setFilterAlbum(e.target.value)}
+          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[160px]">
+          <option value="all">כל האלבומים</option>
+          {albums.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <span className="text-sm text-gray-400 mr-auto">סה״כ: <b className="text-indigo-600">{fmtILS(totalRevenue)}</b></span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left: song revenue input */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-gray-50 border-b border-gray-100 px-5 py-3 text-xs font-semibold text-gray-400 flex items-center gap-4">
+            <span className="flex-1">שיר</span>
+            <span className="w-32 text-left">הכנסה ({source === 'federation' ? 'פדרציה' : 'סטרימינג'})</span>
+          </div>
+          {loading ? (
+            <div className="text-center py-10 text-gray-400 text-sm">טוען...</div>
+          ) : (
+            <div className="divide-y divide-gray-50 max-h-[60vh] overflow-y-auto">
+              {filtered.map(s => {
+                const curVal = Number(s[revenueKey as keyof Song] ?? 0)
+                return (
+                  <div key={s.id} className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50/50">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
+                      <p className="text-xs text-gray-400">{s.label} {s.year ? `· ${s.year}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-xs text-gray-400">₪</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        defaultValue={curVal > 0 ? String(curVal) : ''}
+                        placeholder="0"
+                        onBlur={e => {
+                          const v = parseFloat(e.target.value.replace(/,/g,'')) || 0
+                          if (v !== curVal) patchRevenue(s.id, v)
+                        }}
+                        className={`w-28 text-sm border rounded-lg px-2 py-1 text-left focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors ${saving[s.id] ? 'bg-amber-50 border-amber-200' : 'border-gray-200 bg-white'}`}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Right: distribution */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-indigo-50 border-b border-indigo-100 px-5 py-3">
+            <p className="text-sm font-bold text-indigo-800">חלוקת תמלוגים</p>
+            <p className="text-xs text-indigo-400 mt-0.5">לפי % בעלות מאסטר</p>
+          </div>
+          {distribution.length === 0 ? (
+            <div className="p-5 text-center text-gray-300 text-xs">הזן הכנסות לשירים כדי לראות חלוקה</div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {distribution.map(([name, amount]) => (
+                <div key={name} className="px-5 py-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-800">{name}</span>
+                  <span className="text-sm font-bold text-indigo-600">{fmtILS(Math.round(amount))}</span>
+                </div>
+              ))}
+              {/* Total */}
+              <div className="px-5 py-3 flex items-center justify-between bg-indigo-50">
+                <span className="text-sm font-bold text-indigo-800">סה״כ</span>
+                <span className="text-sm font-bold text-indigo-700">{fmtILS(Math.round(distribution.reduce((s, [, v]) => s + v, 0)))}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
