@@ -1,11 +1,11 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Task } from '@/lib/supabase'
 import { ARTIST_BOARD_MAP, type ArtistEvent } from '@/lib/artist-config'
 import { useEsc } from '@/hooks/useEsc'
 
-type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media' | 'streams'
+type ArtistTab = 'overview' | 'shows' | 'tasks' | 'meetings' | 'links' | 'financial' | 'campaigns' | 'media' | 'repertoire' | 'streams'
 type Project = {
   id: string; name: string; category: string
   status?: string; genre?: string; audience?: string
@@ -44,7 +44,8 @@ const TAB_DEFS: { id: ArtistTab; label: string }[] = [
   { id: 'meetings',   label: 'פגישות' },
   { id: 'links',      label: 'קישורים' },
   { id: 'financial',  label: 'ביצועי הזמר' },
-  { id: 'media',      label: 'מדיה' },
+  { id: 'media',       label: 'מדיה' },
+  { id: 'repertoire', label: 'רפרטואר' },
   { id: 'streams',    label: 'ניטור השמעות' },
 ]
 
@@ -759,6 +760,9 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                 )}
               </div>
             )}
+            {tab === 'repertoire' && selectedArtist && (
+              <RepertoireTab artistName={selectedArtist.name} />
+            )}
             {tab === 'streams' && (
               <div className="space-y-5">
                 {/* Header */}
@@ -1319,6 +1323,300 @@ function EventRow({ event, showFinancials=false }: { event: ArtistEvent; showFin
           <span className={`text-xs px-2 py-1 rounded-lg flex-shrink-0 ${event.contract_status==='חוזה חתום'?'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200':'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200'}`}>{event.contract_status}</span>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── RepertoireTab ───────────────────────────────────────────────────────────
+type Song = {
+  id: number
+  artist_name: string
+  title: string
+  year: string | null
+  isrc: string | null
+  status: string | null
+  master_pct: number | null
+  publishing_pct: number | null
+  writers: string | null
+  producers: string | null
+  label: string | null
+  notes: string | null
+}
+
+const SONG_STATUSES = ['יצא לאור', 'בהפקה', 'טיוטה', 'הוקפא', 'בוטל']
+
+const EMPTY_SONG = {
+  title: '', year: '', isrc: '', status: 'יצא לאור',
+  master_pct: '', publishing_pct: '', writers: '', producers: '', label: '', notes: ''
+}
+
+function RepertoireTab({ artistName }: { artistName: string }) {
+  const [songs, setSongs] = useState<Song[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editSong, setEditSong] = useState<Song | null>(null)
+  const [form, setForm] = useState<typeof EMPTY_SONG>(EMPTY_SONG)
+  const [saving, setSaving] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+
+  function load() {
+    setLoading(true)
+    fetch(`/api/artist-songs?artist=${encodeURIComponent(artistName)}`)
+      .then(r => r.json())
+      .then(d => setSongs(d.songs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+  useState(() => { load() })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [artistName])
+
+  const set = (k: keyof typeof EMPTY_SONG) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }))
+
+  function openNew() { setForm(EMPTY_SONG); setEditSong(null); setShowForm(true) }
+  function openEdit(s: Song) {
+    setForm({
+      title: s.title, year: s.year || '', isrc: s.isrc || '', status: s.status || 'יצא לאור',
+      master_pct: s.master_pct != null ? String(s.master_pct) : '',
+      publishing_pct: s.publishing_pct != null ? String(s.publishing_pct) : '',
+      writers: s.writers || '', producers: s.producers || '', label: s.label || '', notes: s.notes || ''
+    })
+    setEditSong(s); setShowForm(true)
+  }
+
+  async function save() {
+    if (!form.title.trim()) return
+    setSaving(true)
+    try {
+      const payload = {
+        artist_name: artistName,
+        title: form.title.trim(),
+        year: form.year || null,
+        isrc: form.isrc || null,
+        status: form.status,
+        master_pct: form.master_pct !== '' ? parseFloat(form.master_pct) : null,
+        publishing_pct: form.publishing_pct !== '' ? parseFloat(form.publishing_pct) : null,
+        writers: form.writers || null,
+        producers: form.producers || null,
+        label: form.label || null,
+        notes: form.notes || null,
+      }
+      if (editSong) {
+        const r = await fetch('/api/artist-songs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editSong.id, ...payload }) })
+        const d = await r.json()
+        if (d.song) setSongs(prev => prev.map(s => s.id === editSong.id ? d.song : s))
+      } else {
+        const r = await fetch('/api/artist-songs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        const d = await r.json()
+        if (d.song) setSongs(prev => [d.song, ...prev])
+      }
+      setShowForm(false)
+    } finally { setSaving(false) }
+  }
+
+  async function deleteSong(id: number) {
+    await fetch(`/api/artist-songs?id=${id}`, { method: 'DELETE' })
+    setSongs(prev => prev.filter(s => s.id !== id))
+    setDeleteId(null)
+  }
+
+  const filtered = songs
+    .filter(s => filterStatus === 'all' || s.status === filterStatus)
+    .filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) ||
+      (s.writers ?? '').toLowerCase().includes(search.toLowerCase()))
+
+  const statusColor = (st: string | null) => {
+    switch (st) {
+      case 'יצא לאור': return 'bg-emerald-100 text-emerald-700'
+      case 'בהפקה':    return 'bg-blue-100 text-blue-700'
+      case 'טיוטה':    return 'bg-amber-100 text-amber-700'
+      case 'הוקפא':    return 'bg-gray-100 text-gray-500'
+      case 'בוטל':     return 'bg-red-100 text-red-500'
+      default:          return 'bg-gray-100 text-gray-500'
+    }
+  }
+
+  const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      {children}
+    </div>
+  )
+  const inputCls = "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{songs.length} שירים</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שיר / כותב..."
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-40" />
+          <div className="flex gap-1">
+            <button onClick={() => setFilterStatus('all')}
+              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStatus === 'all' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'}`}>
+              הכל
+            </button>
+            {SONG_STATUSES.map(s => (
+              <button key={s} onClick={() => setFilterStatus(filterStatus === s ? 'all' : s)}
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStatus === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button onClick={openNew}
+          className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הוסף שיר
+        </button>
+      </div>
+
+      {loading && <div className="text-center py-12 text-gray-400 text-sm">טוען...</div>}
+
+      {!loading && filtered.length === 0 && (
+        <div className="text-center py-16 text-gray-300">
+          <svg className="w-12 h-12 mx-auto mb-3 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+          <p className="text-sm">אין שירים עדיין — לחץ על ״הוסף שיר״ להתחיל</p>
+        </div>
+      )}
+
+      {/* Songs table */}
+      {!loading && filtered.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-400 font-semibold">
+                <th className="text-right px-4 py-3 w-6"></th>
+                <th className="text-right px-4 py-3">שם השיר</th>
+                <th className="text-right px-4 py-3 w-20">שנה</th>
+                <th className="text-right px-4 py-3 w-28">סטטוס</th>
+                <th className="text-right px-4 py-3 w-24">מאסטר %</th>
+                <th className="text-right px-4 py-3 w-28">פאבלישינג %</th>
+                <th className="text-right px-4 py-3">כותבים</th>
+                <th className="text-right px-4 py-3 w-24">פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => {
+                const expanded = expandedId === s.id
+                return (
+                  <React.Fragment key={s.id}>
+                    <tr
+                      onClick={() => setExpandedId(expanded ? null : s.id)}
+                      className={`border-b border-gray-50 cursor-pointer hover:bg-indigo-50/40 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+                    >
+                      <td className="px-4 py-3">
+                        <svg className={`w-3.5 h-3.5 text-gray-300 transition-transform ${expanded ? 'rotate-90 text-indigo-400' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{s.title}</td>
+                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.year || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(s.status)}`}>{s.status || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">
+                        {s.master_pct != null ? `${s.master_pct}%` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">
+                        {s.publishing_pct != null ? `${s.publishing_pct}%` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[160px]">{s.writers || '—'}</td>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                        <div className="flex gap-1.5 justify-end">
+                          <button onClick={() => openEdit(s)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">עריכה</button>
+                          <button onClick={() => setDeleteId(s.id)} className="text-xs px-2 py-1 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 transition-colors">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expanded && (
+                      <tr className="border-b border-indigo-100 bg-indigo-50/30">
+                        <td colSpan={8} className="px-6 py-4">
+                          <div className="grid grid-cols-3 gap-4 text-xs">
+                            {s.isrc && <div><span className="text-gray-400 block">ISRC</span><span className="font-mono text-gray-700">{s.isrc}</span></div>}
+                            {s.producers && <div><span className="text-gray-400 block">מפיקים</span><span className="text-gray-700">{s.producers}</span></div>}
+                            {s.label && <div><span className="text-gray-400 block">תווית / הפצה</span><span className="text-gray-700">{s.label}</span></div>}
+                            {s.notes && <div className="col-span-3"><span className="text-gray-400 block mb-1">הערות</span><span className="text-gray-700 whitespace-pre-wrap">{s.notes}</span></div>}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add/Edit modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-gray-900">{editSong ? 'עריכת שיר' : 'הוספת שיר'}</h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <F label="שם השיר *"><input value={form.title} onChange={set('title')} className={inputCls} placeholder="שם השיר" autoFocus /></F>
+              </div>
+              <F label="שנת הוצאה"><input value={form.year} onChange={set('year')} className={inputCls} placeholder="2024" /></F>
+              <F label="סטטוס">
+                <select value={form.status} onChange={set('status')} className={inputCls}>
+                  {SONG_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </F>
+              <F label='מאסטר % (חלק האומן)'><input value={form.master_pct} onChange={set('master_pct')} className={inputCls} placeholder="50" type="text" inputMode="decimal" /></F>
+              <F label='פאבלישינג % (חלק האומן)'><input value={form.publishing_pct} onChange={set('publishing_pct')} className={inputCls} placeholder="50" type="text" inputMode="decimal" /></F>
+              <div className="col-span-2">
+                <F label="כותבים"><input value={form.writers} onChange={set('writers')} className={inputCls} placeholder="שם הכותב, שותף..." /></F>
+              </div>
+              <div className="col-span-2">
+                <F label="מפיקים"><input value={form.producers} onChange={set('producers')} className={inputCls} placeholder="שם המפיק..." /></F>
+              </div>
+              <div className="col-span-2">
+                <F label="תווית / הפצה"><input value={form.label} onChange={set('label')} className={inputCls} placeholder="Warner, Sony, עצמאי..." /></F>
+              </div>
+              <F label="ISRC"><input value={form.isrc} onChange={set('isrc')} className={inputCls} placeholder="IL-..." /></F>
+              <div className="col-span-2">
+                <F label="הערות">
+                  <textarea value={form.notes} onChange={set('notes')} rows={2} className={`${inputCls} resize-none`} />
+                </F>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm hover:bg-gray-50">ביטול</button>
+              <button onClick={save} disabled={saving || !form.title.trim()}
+                className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {saving ? 'שומר...' : 'שמור'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {deleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-xl p-6 space-y-4 max-w-sm w-full">
+            <p className="font-semibold text-gray-900">למחוק את השיר?</p>
+            <p className="text-sm text-gray-400">פעולה זו אינה הפיכה.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteId(null)} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm">ביטול</button>
+              <button onClick={() => deleteSong(deleteId)} className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600">מחק</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
