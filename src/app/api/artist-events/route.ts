@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   const query = `
     query {
       boards(ids: [${boardId}]) {
-        items_page(limit: 200) {
+        items_page(limit: 500) {
           items {
             id
             name
