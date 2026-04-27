@@ -3468,13 +3468,18 @@ function ClientsTab() {
   const [loadingId, setLoadingId] = useState<number | null>(null)
   const [expandedFilter, setExpandedFilter] = useState<'all' | 'paid' | 'open'>('all')
   const [expandedInvId, setExpandedInvId] = useState<number | null>(null)
+  const [projectList, setProjectList] = useState<{ id: string; name: string; category: string }[]>([])
 
   const load = () => {
     setLoading(true)
-    fetch('/api/clients')
-      .then(r => r.json())
-      .then(d => { if (d.error) setError(d.error); else setClients(d.clients || []) })
-      .catch(() => setError('שגיאה בטעינת לקוחות'))
+    Promise.all([
+      fetch('/api/clients').then(r => r.json()),
+      fetch('/api/projects').then(r => r.json()).catch(() => ({ projects: [] })),
+    ]).then(([clientData, projData]) => {
+      if (clientData.error) setError(clientData.error)
+      else setClients(clientData.clients || [])
+      setProjectList(projData.projects || [])
+    }).catch(() => setError('שגיאה בטעינת לקוחות'))
       .finally(() => setLoading(false))
   }
 
@@ -3888,7 +3893,7 @@ function ClientsTab() {
                                                       <span><span className="text-gray-400 ml-1">ניכוי מס במקור:</span><span className="text-amber-600 font-medium">{fmt(inv.tax_withheld)}</span></span>
                                                     )}
                                                     {inv.project_id && (
-                                                      <span><span className="text-gray-400 ml-1">פרויקט:</span><span className="text-indigo-600 font-medium">{inv.project_id}</span></span>
+                                                      <span><span className="text-gray-400 ml-1">פרויקט:</span><span className="text-indigo-600 font-medium">{projectList.find(p => p.id === inv.project_id)?.name || inv.project_id}</span></span>
                                                     )}
                                                   </div>
                                                   {/* Notes */}
