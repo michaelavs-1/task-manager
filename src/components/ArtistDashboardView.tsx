@@ -1361,6 +1361,7 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [rightType, setRightType] = useState<'master' | 'publishing'>('master')
 
   function load() {
     setLoading(true)
@@ -1451,12 +1452,28 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   return (
     <div className="space-y-4" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{songs.length} שירים</span>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* מאסטר / פאבלישינג toggle */}
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden text-sm font-semibold">
+          <button
+            onClick={() => setRightType('master')}
+            className={`px-5 py-2 transition-colors ${rightType === 'master' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
+          >
+            מאסטר
+          </button>
+          <button
+            onClick={() => setRightType('publishing')}
+            className={`px-5 py-2 transition-colors ${rightType === 'publishing' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
+          >
+            פאבלישינג
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          <span className="text-sm text-gray-400">{songs.length} שירים</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שיר / כותב..."
             className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-40" />
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             <button onClick={() => setFilterStatus('all')}
               className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${filterStatus === 'all' ? 'bg-gray-700 text-white border-gray-700' : 'bg-white text-gray-400 border-gray-200 hover:text-gray-600'}`}>
               הכל
@@ -1469,6 +1486,7 @@ function RepertoireTab({ artistName }: { artistName: string }) {
             ))}
           </div>
         </div>
+
         <button onClick={openNew}
           className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -1497,8 +1515,11 @@ function RepertoireTab({ artistName }: { artistName: string }) {
                 <th className="text-right px-4 py-3">שם השיר</th>
                 <th className="text-right px-4 py-3 w-20">שנה</th>
                 <th className="text-right px-4 py-3 w-28">סטטוס</th>
-                <th className="text-right px-4 py-3 w-24">מאסטר %</th>
-                <th className="text-right px-4 py-3 w-28">פאבלישינג %</th>
+                <th className="text-right px-4 py-3 w-32">
+                  <span className={rightType === 'master' ? 'text-indigo-600 font-bold' : 'text-gray-300'}>מאסטר %</span>
+                  <span className="mx-1 text-gray-200">/</span>
+                  <span className={rightType === 'publishing' ? 'text-indigo-600 font-bold' : 'text-gray-300'}>פאבלישינג %</span>
+                </th>
                 <th className="text-right px-4 py-3">כותבים</th>
                 <th className="text-right px-4 py-3 w-24">פעולות</th>
               </tr>
@@ -1522,11 +1543,15 @@ function RepertoireTab({ artistName }: { artistName: string }) {
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(s.status)}`}>{s.status || '—'}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                        {s.master_pct != null ? `${s.master_pct}%` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                        {s.publishing_pct != null ? `${s.publishing_pct}%` : '—'}
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {rightType === 'master'
+                          ? (s.master_pct != null
+                              ? <span className="font-bold text-indigo-600">{s.master_pct}%</span>
+                              : <span className="text-gray-300">—</span>)
+                          : (s.publishing_pct != null
+                              ? <span className="font-bold text-purple-600">{s.publishing_pct}%</span>
+                              : <span className="text-gray-300">—</span>)
+                        }
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[160px]">{s.writers || '—'}</td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
