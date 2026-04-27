@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { ArtistEvent } from '@/lib/artist-config'
+import { getColumnsForBoard } from '@/lib/artist-config'
+import type { ArtistEvent, BoardColumns } from '@/lib/artist-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,36 +16,33 @@ interface MondayItem {
   column_values: ColumnValue[]
 }
 
-function parseEvent(item: MondayItem): ArtistEvent {
-  const col = (id: string) => item.column_values.find(c => c.id === id)?.text || null
-
-  // Parse formula columns (they have text with the computed value)
-  const colVal = (id: string) => {
-    const c = item.column_values.find(cv => cv.id === id)
-    return c?.text || null
+function parseEvent(item: MondayItem, cols: BoardColumns): ArtistEvent {
+  const col = (id: string) => {
+    if (!id) return null
+    return item.column_values.find(c => c.id === id)?.text || null
   }
 
   return {
     id: item.id,
     name: item.name,
-    date: col('date_mm1akrm7'),
-    status: col('color_mm1a9mr6'),
-    contract_status: col('color_mm1afewp'),
-    event_type: col('color_mm1akdec'),
-    location: col('text_mm1amztr'),
-    start_time: col('hour_mm1awtkm'),
-    end_time: col('hour_mm1adj2d'),
-    soundcheck_time: col('hour_mm1agkqg'),
-    audience_count: col('numeric_mm1a8jd0'),
-    audience_type: col('color_mm1apw17'),
-    ticket_price: col('numeric_mm0cc869'),
-    ticket_count: col('numeric_mm0cvpvq'),
-    total_revenue: colVal('formula_mm0czrmj'),
-    total_expenses: colVal('formula_mm0cxz90'),
-    net_profit: colVal('formula_mm0cnjr'),
-    artist_share: colVal('formula_mm1apcr'),
-    office_share: colVal('formula_mm1accmw'),
-    details: col('text_mm1az3j9'),
+    date:            col(cols.date),
+    status:          col(cols.status),
+    contract_status: col(cols.contract_status),
+    event_type:      col(cols.event_type),
+    location:        col(cols.location),
+    start_time:      col(cols.start_time),
+    end_time:        col(cols.end_time),
+    soundcheck_time: col(cols.soundcheck_time),
+    audience_count:  col(cols.audience_count),
+    audience_type:   col(cols.audience_type),
+    ticket_price:    col(cols.ticket_price),
+    ticket_count:    col(cols.ticket_count),
+    total_revenue:   col(cols.total_revenue),
+    total_expenses:  col(cols.total_expenses),
+    net_profit:      col(cols.net_profit),
+    artist_share:    col(cols.artist_share),
+    office_share:    col(cols.office_share),
+    details:         col(cols.details),
   }
 }
 
@@ -54,6 +52,8 @@ export async function GET(request: NextRequest) {
 
   if (!boardId) return NextResponse.json({ error: 'boardId required' }, { status: 400 })
   if (!mondayToken) return NextResponse.json({ error: 'MONDAY_API_TOKEN not set' }, { status: 500 })
+
+  const cols = getColumnsForBoard(boardId)
 
   const query = `
     query {
@@ -84,10 +84,9 @@ export async function GET(request: NextRequest) {
 
     const data = await resp.json()
     const items: MondayItem[] = data?.data?.boards?.[0]?.items_page?.items || []
-    const events = items.map(parseEvent)
+    const events = items.map(item => parseEvent(item, cols))
 
-    // Sort: upcoming first, past at end
-    const today = new Date().toISOString().split('T')[0]
+    // Sort by date: upcoming first, no-date last
     events.sort((a, b) => {
       if (!a.date && !b.date) return 0
       if (!a.date) return 1
