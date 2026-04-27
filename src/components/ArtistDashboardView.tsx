@@ -55,8 +55,18 @@ function isUpcoming(d: string | null) { return !!d && d >= new Date().toISOStrin
 
 export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; initialArtist?: string }) {
   const [projects, setProjects] = useState<Project[]>([])
-  const [selectedArtist, setSelectedArtist] = useState<Project | null>(null)
-  const [tab, setTab] = useState<ArtistTab>('overview')
+  const [selectedArtist, setSelectedArtistRaw] = useState<Project | null>(null)
+  const [tab, setTabRaw] = useState<ArtistTab>('overview')
+
+  // Persist selected artist + tab across refreshes
+  function setSelectedArtist(p: Project | null) {
+    setSelectedArtistRaw(p)
+    if (p) localStorage.setItem('artist_dashboard_artist', p.name)
+  }
+  function setTab(t: ArtistTab) {
+    setTabRaw(t)
+    localStorage.setItem('artist_dashboard_tab', t)
+  }
   const [events, setEvents] = useState<ArtistEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [eventsError, setEventsError] = useState('')
@@ -108,7 +118,17 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     supabase.from('projects').select('*').order('category').order('name').then(({ data }) => {
       if (data) {
         setProjects(data as Project[])
-        if (!initialArtist) { const first = (data as Project[]).find(p => p.category === 'artist'); if (first) setSelectedArtist(first) }
+        if (!initialArtist) {
+          // Restore from localStorage, or fall back to first artist
+          const saved = typeof window !== 'undefined' ? localStorage.getItem('artist_dashboard_artist') : null
+          const savedTab = typeof window !== 'undefined' ? localStorage.getItem('artist_dashboard_tab') as ArtistTab | null : null
+          const match = saved ? (data as Project[]).find(p => p.name === saved) : null
+          const target = match ?? (data as Project[]).find(p => p.category === 'artist') ?? null
+          if (target) {
+            setSelectedArtistRaw(target)
+            if (savedTab) setTabRaw(savedTab)
+          }
+        }
       }
     })
   }, [])
@@ -165,7 +185,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const updateArtistStatus = async (artist: Project, newStatus: string) => {
     await supabase.from('projects').update({ status: newStatus }).eq('id', artist.id)
     setProjects(prev => prev.map(p => p.id === artist.id ? { ...p, status: newStatus } : p))
-    setSelectedArtist(prev => prev ? { ...prev, status: newStatus } : prev)
+    if (selectedArtist) setSelectedArtist({ ...selectedArtist, status: newStatus })
   }
 
   const saveMeta = async () => {
@@ -173,7 +193,7 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     const updates = { genre: metaGenre, audience: metaAudience, contact_name: metaContactName, contact_phone: metaContactPhone, monthly_revenue_target: metaRevenueTarget ? parseInt(metaRevenueTarget) : undefined }
     await supabase.from('projects').update(updates).eq('id', selectedArtist.id)
     setProjects(prev => prev.map(p => p.id === selectedArtist.id ? { ...p, ...updates } as Project : p))
-    setSelectedArtist(prev => prev ? { ...prev, ...updates } as Project : prev)
+    if (selectedArtist) setSelectedArtist({ ...selectedArtist, ...updates } as Project)
     setEditingMeta(false)
   }
 
