@@ -8,6 +8,24 @@ export async function GET() {
   const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
 
   const queries = [
+    `CREATE TABLE IF NOT EXISTS artist_songs (
+      id             BIGSERIAL PRIMARY KEY,
+      artist_name    TEXT NOT NULL,
+      title          TEXT NOT NULL,
+      year           TEXT,
+      isrc           TEXT,
+      status         TEXT DEFAULT 'יצא לאור',
+      master_pct     NUMERIC(5,2),
+      publishing_pct NUMERIC(5,2),
+      writers        TEXT,
+      producers      TEXT,
+      label          TEXT,
+      notes          TEXT,
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS artist_songs_artist_idx ON artist_songs(artist_name)`,
+    `ALTER TABLE artist_songs ENABLE ROW LEVEL SECURITY`,
+    `CREATE POLICY IF NOT EXISTS "allow_all_artist_songs" ON artist_songs FOR ALL USING (true) WITH CHECK (true)`,
     `CREATE TABLE IF NOT EXISTS artist_meeting_notes (
       id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
       artist_name text NOT NULL,
