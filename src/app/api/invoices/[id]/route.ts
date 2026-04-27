@@ -19,7 +19,7 @@ export async function PATCH(
   const body = await req.json()
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
 
-  const fields = ['issued_by','sent_to','date','doc_type','invoice_num','client','notes','payment_date','status']
+  const fields = ['issued_by','sent_to','date','doc_type','invoice_num','client','notes','payment_date','status','receipt_number']
   for (const f of fields) {
     if (f in body) updates[f] = body[f]
   }

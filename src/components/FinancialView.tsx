@@ -1467,6 +1467,7 @@ interface InvoiceRow {
   tax_withheld: number
   payment_date: string
   notes: string
+  receipt_number: string | null
   status?: string   // explicit override: 'cancelled' | null/'' = auto-calculate
 }
 
@@ -1659,7 +1660,7 @@ function IssuedByPicker({ current, onSave, onClose }: {
 
 const EMPTY_FORM: Omit<InvoiceRow, 'id'> = {
   client_id: null, project_id: null, issued_by: '', sent_to: '', date: '', doc_type: '',
-  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, tax_withheld: 0, payment_date: '', notes: '',
+  invoice_num: '', client: '', before_vat: 0, total: 0, paid: 0, tax_withheld: 0, payment_date: '', notes: '', receipt_number: null,
 }
 
 type InvoiceForm = Omit<InvoiceRow, 'id'>
@@ -2058,6 +2059,8 @@ function InvoicesTab() {
   const [expandedInvIds, setExpandedInvIds] = useState<Set<number>>(new Set())
   const [editNotesId, setEditNotesId] = useState<number | null>(null)
   const [editNotesVal, setEditNotesVal] = useState('')
+  const [editReceiptId, setEditReceiptId] = useState<number | null>(null)
+  const [editReceiptVal, setEditReceiptVal] = useState('')
   const [transferInvId, setTransferInvId] = useState<number | null>(null)
   function toggleExpanded(id: number) {
     setExpandedInvIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
@@ -2268,6 +2271,13 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
     await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: editNotesVal }) })
     setInvoices(prev => prev.map(x => x.id === invId ? { ...x, notes: editNotesVal } : x))
     setEditNotesId(null)
+  }
+
+  async function saveReceipt(invId: number) {
+    const val = editReceiptVal.trim() || null
+    await fetch(`/api/invoices/${invId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receipt_number: val }) })
+    setInvoices(prev => prev.map(x => x.id === invId ? { ...x, receipt_number: val } : x))
+    setEditReceiptId(null)
   }
 
   async function transferInvoiceToMonth(invId: number, targetMonthKey: string) {
@@ -2634,21 +2644,41 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                   className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
                                   placeholder="הכנס הערה... (Enter לשמירה, Shift+Enter לשורה חדשה)"
                                 />
-                                <button
-                                  onClick={() => saveNotes(inv.id)}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
-                                  style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
-                                >שמור</button>
+                                <button onClick={() => saveNotes(inv.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>שמור</button>
                                 <button onClick={() => setEditNotesId(null)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 flex-shrink-0">ביטול</button>
                               </div>
                             ) : (
                               <div className="flex-1 flex items-center gap-2 group">
                                 <span className="text-xs text-gray-600 whitespace-pre-wrap">{inv.notes || <span className="text-gray-300 italic">אין הערות</span>}</span>
-                                <button
-                                  onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all"
-                                  title="ערוך הערות"
-                                >
+                                <button onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all" title="ערוך הערות">
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {/* שיוך לקבלה */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-xs font-semibold text-emerald-600 whitespace-nowrap">קבלה:</span>
+                            {editReceiptId === inv.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  autoFocus
+                                  value={editReceiptVal}
+                                  onChange={e => setEditReceiptVal(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveReceipt(inv.id); if (e.key === 'Escape') setEditReceiptId(null) }}
+                                  placeholder="מס׳ קבלה"
+                                  className="w-28 border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                />
+                                <button onClick={() => saveReceipt(inv.id)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600">שמור</button>
+                                <button onClick={() => setEditReceiptId(null)} className="px-2.5 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 group">
+                                {inv.receipt_number
+                                  ? <span className="text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg">{inv.receipt_number}</span>
+                                  : <span className="text-xs text-gray-300 italic">לא שויך</span>
+                                }
+                                <button onClick={() => { setEditReceiptId(inv.id); setEditReceiptVal(inv.receipt_number || '') }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-all" title="שייך קבלה">
                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                 </button>
                               </div>
@@ -2946,33 +2976,40 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
                                       <span className="text-xs font-semibold text-indigo-600 whitespace-nowrap pt-1">הערות:</span>
                                       {editNotesId === inv.id ? (
                                         <div className="flex-1 flex items-start gap-2">
-                                          <textarea
-                                            autoFocus
-                                            value={editNotesVal}
-                                            onChange={e => setEditNotesVal(e.target.value)}
-                                            onKeyDown={e => {
-                                              if (e.key === 'Escape') setEditNotesId(null)
-                                              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNotes(inv.id) }
-                                            }}
-                                            rows={2}
-                                            className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                                            placeholder="הכנס הערה... (Enter לשמירה, Shift+Enter לשורה חדשה)"
-                                          />
-                                          <button
-                                            onClick={() => saveNotes(inv.id)}
-                                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0"
-                                            style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}
-                                          >שמור</button>
+                                          <textarea autoFocus value={editNotesVal} onChange={e => setEditNotesVal(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Escape') setEditNotesId(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNotes(inv.id) } }}
+                                            rows={2} className="flex-1 border border-indigo-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                                            placeholder="הכנס הערה... (Enter לשמירה)" />
+                                          <button onClick={() => saveNotes(inv.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)' }}>שמור</button>
                                           <button onClick={() => setEditNotesId(null)} className="px-3 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 flex-shrink-0">ביטול</button>
                                         </div>
                                       ) : (
                                         <div className="flex-1 flex items-center gap-2 group">
                                           <span className="text-xs text-gray-600 whitespace-pre-wrap">{inv.notes || <span className="text-gray-300 italic">אין הערות</span>}</span>
-                                          <button
-                                            onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }}
-                                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all"
-                                            title="ערוך הערות"
-                                          >
+                                          <button onClick={() => { setEditNotesId(inv.id); setEditNotesVal(inv.notes || '') }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 transition-all" title="ערוך הערות">
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {/* שיוך לקבלה */}
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <span className="text-xs font-semibold text-emerald-600 whitespace-nowrap">קבלה:</span>
+                                      {editReceiptId === inv.id ? (
+                                        <div className="flex items-center gap-1.5">
+                                          <input autoFocus value={editReceiptVal} onChange={e => setEditReceiptVal(e.target.value)}
+                                            onKeyDown={e => { if (e.key === 'Enter') saveReceipt(inv.id); if (e.key === 'Escape') setEditReceiptId(null) }}
+                                            placeholder="מס׳ קבלה" className="w-28 border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                                          <button onClick={() => saveReceipt(inv.id)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600">שמור</button>
+                                          <button onClick={() => setEditReceiptId(null)} className="px-2.5 py-1.5 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50">ביטול</button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 group">
+                                          {inv.receipt_number
+                                            ? <span className="text-xs font-mono bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg">{inv.receipt_number}</span>
+                                            : <span className="text-xs text-gray-300 italic">לא שויך</span>
+                                          }
+                                          <button onClick={() => { setEditReceiptId(inv.id); setEditReceiptVal(inv.receipt_number || '') }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-all" title="שייך קבלה">
                                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                           </button>
                                         </div>
@@ -4843,6 +4880,18 @@ function ExpensesTab() {
       if (field === 'vat') {
         next.total = roundCents(next.amount + Number(val))
       }
+      // Reverse-calculate from total: derive amount + vat automatically
+      if (field === 'total') {
+        const total = Number(val)
+        const status = next.vat_status
+        if (status === 'מורשה' || status === 'חברה') {
+          next.amount = roundCents(total / (1 + VAT_RATE))
+          next.vat    = roundCents(total - next.amount)
+        } else {
+          next.amount = roundCents(total)
+          next.vat    = 0
+        }
+      }
       return { ...prev, expense: next }
     })
   }
@@ -5701,9 +5750,10 @@ function ExpensesTab() {
                     className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">סה"כ</label>
+                  <label className="block text-xs font-semibold text-violet-600 mb-1">סה"כ כולל מע"מ ✦</label>
                   <input type="number" step="0.01" value={modal.expense.total || ''} onChange={e => upd('total', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                    className="w-full px-3 py-2 text-sm border-2 border-violet-300 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-400 font-semibold" />
+                  <p className="text-[10px] text-violet-400 mt-0.5">הזן סכום זה — מע"מ ולפני מע"מ יחושבו אוטומטית</p>
                 </div>
               </div>
               {/* Paid checkbox + conditional payment date */}
