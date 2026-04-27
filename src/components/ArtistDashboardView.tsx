@@ -1777,33 +1777,55 @@ function RightsHolderCards({ songs, rightType }: { songs: Song[]; rightType: 'ma
 }
 
 // ── RoyaltiesTab ──────────────────────────────────────────────────────────
+type RoyaltyReport = {
+  id: number
+  artist_name: string
+  source: string
+  period: string
+  song_revenues: { song_id: number; title: string; amount: number }[]
+  notes: string | null
+  created_at: string
+}
+
+const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+
+function fmtPeriod(period: string, source: string) {
+  if (source === 'federation') return `שנת ${period}`
+  const [y, m] = period.split('-')
+  return `${MONTHS_HE[parseInt(m) - 1]} ${y}`
+}
+
 function RoyaltiesTab({ artistName }: { artistName: string }) {
   const [source, setSource] = useState<'federation' | 'streaming'>('federation')
   const [songs, setSongs] = useState<Song[]>([])
+  const [reports, setReports] = useState<RoyaltyReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedReport, setSelectedReport] = useState<RoyaltyReport | null>(null)
+  const [showNewReport, setShowNewReport] = useState(false)
+
+  // New report form
+  const curYear = new Date().getFullYear()
+  const [newPeriodYear, setNewPeriodYear] = useState(String(curYear))
+  const [newPeriodMonth, setNewPeriodMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [newAmounts, setNewAmounts] = useState<Record<number, string>>({})
+  const [newNotes, setNewNotes] = useState('')
+  const [saving, setSaving] = useState(false)
   const [filterAlbum, setFilterAlbum] = useState('all')
-  const [saving, setSaving] = useState<Record<number, boolean>>({})
 
-  useEffect(() => {
+  function loadAll() {
     setLoading(true)
-    fetch(`/api/artist-songs?artist=${encodeURIComponent(artistName)}`)
-      .then(r => r.json())
-      .then(d => setSongs(d.songs || []))
-      .finally(() => setLoading(false))
-  }, [artistName])
-
-  const revenueKey = source === 'federation' ? 'federation_revenue' : 'streaming_revenue'
-
-  async function patchRevenue(id: number, val: number) {
-    setSaving(p => ({ ...p, [id]: true }))
-    await fetch('/api/artist-songs', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, [revenueKey]: val })
-    })
-    setSongs(prev => prev.map(s => s.id === id ? { ...s, [revenueKey]: val } : s))
-    setSaving(p => { const n = { ...p }; delete n[id]; return n })
+    Promise.all([
+      fetch(`/api/artist-songs?artist=${encodeURIComponent(artistName)}`).then(r => r.json()),
+      fetch(`/api/royalty-reports?artist=${encodeURIComponent(artistName)}&source=${source}`).then(r => r.json()),
+    ]).then(([songData, repData]) => {
+      setSongs(songData.songs || [])
+      const reps: RoyaltyReport[] = repData.reports || []
+      setReports(reps)
+      if (reps.length > 0 && !selectedReport) setSelectedReport(reps[0])
+    }).finally(() => setLoading(false))
   }
+
+  useEffect(() => { loadAll() }, [artistName, source]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const albums = useMemo(() => {
     const set = new Set(songs.map(s => s.label).filter(Boolean) as string[])
@@ -1814,114 +1836,239 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
     })
   }, [songs])
 
-  const filtered = songs.filter(s => filterAlbum === 'all' || s.label === filterAlbum)
+  const filteredSongs = songs.filter(s => filterAlbum === 'all' || s.label === filterAlbum)
+  const fmtILS = (n: number) => n > 0 ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 2 })}` : '—'
 
-  const fmtILS = (n: number) => n > 0 ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 0 })}` : '—'
-
-  // Distribution: group by rights holder
+  // Distribution for selected report
   const distribution = useMemo(() => {
+    if (!selectedReport) return []
     const map: Record<string, number> = {}
-    songs.forEach(s => {
-      const owners = s.master_owners
-      if (!owners) return
-      const rev = Number(s[revenueKey as keyof Song] ?? 0)
-      if (!rev) return
-      owners.forEach(o => {
-        map[o.name] = (map[o.name] ?? 0) + rev * o.pct / 100
+    selectedReport.song_revenues.forEach(sr => {
+      if (!sr.amount) return
+      const song = songs.find(s => s.id === sr.song_id)
+      if (!song?.master_owners) return
+      song.master_owners.forEach(o => {
+        map[o.name] = (map[o.name] ?? 0) + sr.amount * o.pct / 100
       })
     })
     return Object.entries(map).sort((a, b) => b[1] - a[1])
-  }, [songs, revenueKey])
+  }, [selectedReport, songs])
 
-  const totalRevenue = songs.reduce((sum, s) => sum + Number(s[revenueKey as keyof Song] ?? 0), 0)
+  const reportTotal = selectedReport?.song_revenues.reduce((s, r) => s + (r.amount ?? 0), 0) ?? 0
+
+  async function saveReport() {
+    const period = source === 'federation' ? newPeriodYear : `${newPeriodYear}-${newPeriodMonth}`
+    const song_revenues = songs.map(s => ({
+      song_id: s.id,
+      title: s.title,
+      label: s.label,
+      amount: parseFloat(String(newAmounts[s.id] ?? '').replace(/,/g, '')) || 0,
+    })).filter(r => r.amount > 0)
+
+    setSaving(true)
+    const res = await fetch('/api/royalty-reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artist_name: artistName, source, period, song_revenues, notes: newNotes || null })
+    })
+    const d = await res.json()
+    if (d.report) {
+      setReports(prev => [d.report, ...prev])
+      setSelectedReport(d.report)
+      setShowNewReport(false)
+      setNewAmounts({})
+      setNewNotes('')
+    }
+    setSaving(false)
+  }
+
+  async function deleteReport(id: number) {
+    await fetch(`/api/royalty-reports?id=${id}`, { method: 'DELETE' })
+    setReports(prev => prev.filter(r => r.id !== id))
+    if (selectedReport?.id === id) setSelectedReport(reports.find(r => r.id !== id) ?? null)
+  }
+
+  const years = Array.from({ length: 10 }, (_, i) => String(curYear - i))
 
   return (
-    <div className="space-y-5" dir="rtl">
-      {/* Source toggle */}
+    <div className="space-y-4" dir="rtl">
+      {/* Source toggle + new report button */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex rounded-xl border border-gray-200 overflow-hidden text-sm font-semibold">
-          <button onClick={() => setSource('federation')}
+          <button onClick={() => { setSource('federation'); setSelectedReport(null) }}
             className={`px-5 py-2 transition-colors ${source === 'federation' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
             פדרציה
           </button>
-          <button onClick={() => setSource('streaming')}
+          <button onClick={() => { setSource('streaming'); setSelectedReport(null) }}
             className={`px-5 py-2 transition-colors ${source === 'streaming' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
             סטרימינג
           </button>
         </div>
-        <select value={filterAlbum} onChange={e => setFilterAlbum(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[160px]">
-          <option value="all">כל האלבומים</option>
-          {albums.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <span className="text-sm text-gray-400 mr-auto">סה״כ: <b className="text-indigo-600">{fmtILS(totalRevenue)}</b></span>
+        <button onClick={() => setShowNewReport(true)}
+          className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+          הזן דו״ח {source === 'federation' ? 'שנתי' : 'חודשי'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: song revenue input */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-gray-50 border-b border-gray-100 px-5 py-3 text-xs font-semibold text-gray-400 flex items-center gap-4">
-            <span className="flex-1">שיר</span>
-            <span className="w-32 text-left">הכנסה ({source === 'federation' ? 'פדרציה' : 'סטרימינג'})</span>
-          </div>
-          {loading ? (
-            <div className="text-center py-10 text-gray-400 text-sm">טוען...</div>
-          ) : (
-            <div className="divide-y divide-gray-50 max-h-[60vh] overflow-y-auto">
-              {filtered.map(s => {
-                const curVal = Number(s[revenueKey as keyof Song] ?? 0)
-                return (
-                  <div key={s.id} className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50/50">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
-                      <p className="text-xs text-gray-400">{s.label} {s.year ? `· ${s.year}` : ''}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-xs text-gray-400">₪</span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        defaultValue={curVal > 0 ? String(curVal) : ''}
-                        placeholder="0"
-                        onBlur={e => {
-                          const v = parseFloat(e.target.value.replace(/,/g,'')) || 0
-                          if (v !== curVal) patchRevenue(s.id, v)
-                        }}
-                        className={`w-28 text-sm border rounded-lg px-2 py-1 text-left focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors ${saving[s.id] ? 'bg-amber-50 border-amber-200' : 'border-gray-200 bg-white'}`}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+      {loading && <div className="text-center py-10 text-gray-400 text-sm">טוען...</div>}
 
-        {/* Right: distribution */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="bg-indigo-50 border-b border-indigo-100 px-5 py-3">
-            <p className="text-sm font-bold text-indigo-800">חלוקת תמלוגים</p>
-            <p className="text-xs text-indigo-400 mt-0.5">לפי % בעלות מאסטר</p>
-          </div>
-          {distribution.length === 0 ? (
-            <div className="p-5 text-center text-gray-300 text-xs">הזן הכנסות לשירים כדי לראות חלוקה</div>
-          ) : (
+      {!loading && reports.length === 0 && (
+        <div className="text-center py-16 text-gray-300">
+          <svg className="w-12 h-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-sm">אין דו״חות עדיין — לחץ ״הזן דו״ח״ להתחיל</p>
+        </div>
+      )}
+
+      {!loading && reports.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+          {/* Report list */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 text-xs font-semibold text-gray-400">דו״חות</div>
             <div className="divide-y divide-gray-50">
-              {distribution.map(([name, amount]) => (
-                <div key={name} className="px-5 py-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800">{name}</span>
-                  <span className="text-sm font-bold text-indigo-600">{fmtILS(Math.round(amount))}</span>
+              {reports.map(r => (
+                <div key={r.id}
+                  onClick={() => setSelectedReport(r)}
+                  className={`px-4 py-3 cursor-pointer flex items-center justify-between group hover:bg-indigo-50/50 transition-colors ${selectedReport?.id === r.id ? 'bg-indigo-50 border-r-2 border-indigo-500' : ''}`}>
+                  <div>
+                    <p className={`text-sm font-medium ${selectedReport?.id === r.id ? 'text-indigo-700' : 'text-gray-800'}`}>{fmtPeriod(r.period, r.source)}</p>
+                    <p className="text-xs text-gray-400">
+                      {fmtILS(r.song_revenues.reduce((s, x) => s + (x.amount ?? 0), 0))}
+                    </p>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); deleteReport(r.id) }}
+                    className="text-gray-200 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 </div>
               ))}
-              {/* Total */}
-              <div className="px-5 py-3 flex items-center justify-between bg-indigo-50">
-                <span className="text-sm font-bold text-indigo-800">סה״כ</span>
-                <span className="text-sm font-bold text-indigo-700">{fmtILS(Math.round(distribution.reduce((s, [, v]) => s + v, 0)))}</span>
+            </div>
+          </div>
+
+          {/* Report detail + distribution */}
+          {selectedReport && (
+            <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Songs */}
+              <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-700">{fmtPeriod(selectedReport.period, selectedReport.source)}</span>
+                  <span className="text-xs text-gray-400">סה״כ: <b className="text-indigo-600">{fmtILS(reportTotal)}</b></span>
+                </div>
+                <div className="divide-y divide-gray-50 max-h-[55vh] overflow-y-auto">
+                  {selectedReport.song_revenues.filter(r => r.amount > 0).map((r, i) => (
+                    <div key={i} className="px-5 py-2.5 flex items-center justify-between hover:bg-gray-50/50">
+                      <span className="text-sm text-gray-800 flex-1 truncate">{r.title}</span>
+                      <span className="text-sm font-semibold text-emerald-600 ml-4">{fmtILS(r.amount)}</span>
+                    </div>
+                  ))}
+                  {selectedReport.song_revenues.filter(r => r.amount > 0).length === 0 && (
+                    <div className="px-5 py-8 text-center text-gray-300 text-sm">אין נתוני הכנסות בדו״ח זה</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Distribution */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-indigo-50 border-b border-indigo-100 px-5 py-3">
+                  <p className="text-sm font-bold text-indigo-800">חלוקת תמלוגים</p>
+                  <p className="text-xs text-indigo-400 mt-0.5">לפי % בעלות מאסטר</p>
+                </div>
+                {distribution.length === 0 ? (
+                  <div className="p-5 text-center text-gray-300 text-xs">אין נתונים לחלוקה</div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {distribution.map(([name, amount]) => (
+                      <div key={name} className="px-5 py-3 flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-800">{name}</span>
+                        <span className="text-sm font-bold text-indigo-600">{fmtILS(Math.round(amount * 100) / 100)}</span>
+                      </div>
+                    ))}
+                    <div className="px-5 py-3 flex items-center justify-between bg-indigo-50">
+                      <span className="text-sm font-bold text-indigo-800">סה״כ</span>
+                      <span className="text-sm font-bold text-indigo-700">{fmtILS(Math.round(distribution.reduce((s, [, v]) => s + v, 0) * 100) / 100)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* New report modal */}
+      {showNewReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Modal header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">דו״ח {source === 'federation' ? 'פדרציה שנתי' : 'סטרימינג חודשי'}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">הזן את הסכום שהתקבל לכל שיר</p>
+              </div>
+              <button onClick={() => setShowNewReport(false)} className="text-gray-300 hover:text-gray-500 text-xl">✕</button>
+            </div>
+
+            {/* Period selector */}
+            <div className="px-6 py-3 border-b border-gray-100 flex-shrink-0 flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-600">תקופה:</span>
+              {source === 'streaming' && (
+                <select value={newPeriodMonth} onChange={e => setNewPeriodMonth(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  {MONTHS_HE.map((m, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+                </select>
+              )}
+              <select value={newPeriodYear} onChange={e => setNewPeriodYear(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              {/* Album filter */}
+              <select value={filterAlbum} onChange={e => setFilterAlbum(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 mr-auto max-w-[150px]">
+                <option value="all">כל האלבומים</option>
+                {albums.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+
+            {/* Song list */}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+              {filteredSongs.map(s => (
+                <div key={s.id} className="px-6 py-2.5 flex items-center gap-3 hover:bg-gray-50/50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
+                    <p className="text-xs text-gray-400">{s.label}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-xs text-gray-400">₪</span>
+                    <input
+                      type="text" inputMode="decimal"
+                      value={newAmounts[s.id] ?? ''}
+                      onChange={e => setNewAmounts(p => ({ ...p, [s.id]: e.target.value }))}
+                      placeholder="0"
+                      className="w-28 text-sm border border-gray-200 rounded-lg px-2 py-1 text-left focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Notes + save */}
+            <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0 space-y-3">
+              <input value={newNotes} onChange={e => setNewNotes(e.target.value)}
+                placeholder="הערות (אופציונלי)"
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setShowNewReport(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm hover:bg-gray-50">ביטול</button>
+                <button onClick={saveReport} disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                  {saving ? 'שומר...' : 'שמור דו״ח'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
