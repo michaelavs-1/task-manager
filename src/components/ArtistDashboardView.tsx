@@ -1374,6 +1374,7 @@ function RepertoireTab({ artistName }: { artistName: string }) {
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const [searchOwner, setSearchOwner] = useState('')
   const [filterAlbum, setFilterAlbum] = useState('all')
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [rightType, setRightType] = useState<'master' | 'publishing'>('master')
@@ -1456,14 +1457,12 @@ function RepertoireTab({ artistName }: { artistName: string }) {
 
   const filtered = songs
     .filter(s => filterAlbum === 'all' || s.label === filterAlbum)
+    .filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) || (s.writers ?? '').toLowerCase().includes(search.toLowerCase()))
     .filter(s => {
-      if (!search) return true
-      const q = search.toLowerCase()
-      if (s.title.toLowerCase().includes(q)) return true
-      if ((s.writers ?? '').toLowerCase().includes(q)) return true
+      if (!searchOwner) return true
+      const q = searchOwner.toLowerCase()
       const owners = rightType === 'master' ? s.master_owners : s.publishing_owners
-      if (owners?.some(o => o.name.toLowerCase().includes(q))) return true
-      return false
+      return owners?.some(o => o.name.toLowerCase().includes(q)) ?? false
     })
 
   const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -1496,8 +1495,20 @@ function RepertoireTab({ artistName }: { artistName: string }) {
 
         <div className="flex items-center gap-2 flex-1 flex-wrap">
           <span className="text-sm text-gray-400">{filtered.length}{filtered.length !== songs.length ? `/${songs.length}` : ''} שירים</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="שיר, כותב, בעל זכות..."
-            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-36" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שיר..."
+            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-32" />
+          {/* Rights holder search */}
+          <div className="relative">
+            <input
+              value={searchOwner}
+              onChange={e => setSearchOwner(e.target.value)}
+              placeholder="חפש בעל זכות..."
+              className={`text-xs border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 w-36 transition-colors ${searchOwner ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200'}`}
+            />
+            {searchOwner && (
+              <button onClick={() => setSearchOwner('')} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-xs">✕</button>
+            )}
+          </div>
           {/* Album filter */}
           <select value={filterAlbum} onChange={e => setFilterAlbum(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[160px]">
