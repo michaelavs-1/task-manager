@@ -430,11 +430,35 @@ export function EventBoardView() {
               ))}
             </div>
 
-            <select value={filterArtist} onChange={e => setFilterArtist(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="all">כל האומנים</option>
-              {artists.map(a => <option key={a.boardId} value={canonicalName(a.boardId)}>{canonicalName(a.boardId)}</option>)}
-            </select>
+            {/* Artist filter tabs */}
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setFilterArtist('all')}
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                  filterArtist === 'all'
+                    ? 'bg-gray-800 text-white border-gray-800'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
+                }`}
+              >
+                כולם
+              </button>
+              {artists.map(a => {
+                const name = canonicalName(a.boardId)
+                const c = artistColor(name)
+                const active = filterArtist === name
+                return (
+                  <button
+                    key={a.boardId}
+                    onClick={() => setFilterArtist(active ? 'all' : name)}
+                    className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                      active ? `${c.bg} ${c.text} border-transparent` : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                )
+              })}
+            </div>
 
             <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300">
