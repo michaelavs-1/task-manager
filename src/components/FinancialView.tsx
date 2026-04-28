@@ -5948,6 +5948,12 @@ export function ForecastTab() {
       if (field === 'vat') {
         next.total = roundCents(next.amount_before_vat + Number(val))
       }
+      // Reverse-calc from total → amount_before_vat + vat
+      if (field === 'total') {
+        const total = Number(val)
+        next.amount_before_vat = roundCents(total / (1 + VAT_RATE))
+        next.vat = roundCents(total - next.amount_before_vat)
+      }
       return { ...prev, item: next }
     })
   }
@@ -6212,9 +6218,10 @@ export function ForecastTab() {
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">סה"כ</label>
+                  <label className="block text-xs font-semibold text-indigo-600 mb-1.5 uppercase tracking-wide">סה"כ כולל מע"מ ✦</label>
                   <input type="number" step="0.01" value={modal.item.total || ''} onChange={e => upd('total', parseFloat(e.target.value) || 0)}
-                    className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-gray-50 dark:bg-gray-700" />
+                    className="w-full border-2 border-indigo-300 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700" />
+                  <p className="text-[10px] text-indigo-400 mt-0.5">הזן — לפני מע״מ ומע״מ יחושבו</p>
                 </div>
               </div>
               {/* Project */}
