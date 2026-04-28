@@ -1055,7 +1055,10 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
         const fbUrl = links.find(l => l.category === 'פייסבוק')?.url || ''
         const pluginSrc = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(fbUrl)}&tabs=timeline&width=900&height=900&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`
         return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3" onClick={e => { if (e.target === e.currentTarget) { setShowFbModal(false) } }}>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3"
+            tabIndex={-1}
+            onKeyDown={e => { if (e.key === 'Escape') setShowFbModal(false) }}
+            onClick={e => { if (e.target === e.currentTarget) { setShowFbModal(false) } }}>
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col" style={{ width: 'min(960px, 95vw)', height: '94vh' }} onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                 <div className="flex items-center gap-2">
@@ -1969,6 +1972,10 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
   const [saving, setSaving] = useState(false)
   const [filterAlbum, setFilterAlbum] = useState('all')
   const [modalSearch, setModalSearch] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'excel' | 'pdf'>('excel')
+  const [exportType, setExportType] = useState<'general' | 'personal'>('general')
+  const [exportHolder, setExportHolder] = useState<string>('')
 
   function loadAll() {
     setLoading(true)
@@ -2056,6 +2063,113 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
 
   const years = Array.from({ length: 10 }, (_, i) => String(curYear - i))
 
+  // ── Unique rights holders across all songs ────────────────────────────
+  const allHolders = useMemo(() => {
+    const set = new Set<string>()
+    songs.forEach(s => s.master_owners?.forEach(o => set.add(o.name)))
+    return Array.from(set).sort()
+  }, [songs])
+
+  // ── Export helpers ────────────────────────────────────────────────────
+  function buildExportRows(report: RoyaltyReport, holderFilter?: string) {
+    const rows: (string | number)[][] = []
+    const period = fmtPeriod(report.period, report.source)
+
+    if (!holderFilter) {
+      // General: all holders as columns
+      const holders = allHolders
+      rows.push(['שיר', 'אלבום', 'הכנסה כוללת', ...holders.flatMap(h => [`${h} %`, `${h} ₪`])])
+      report.song_revenues.filter(r => r.amount > 0).forEach(sr => {
+        const song = songs.find(s => s.id === sr.song_id)
+        const owners = song?.master_owners ?? []
+        const holderCols = holders.flatMap(h => {
+          const o = owners.find(x => x.name === h)
+          return o ? [o.pct, Math.round(sr.amount * o.pct / 100 * 100) / 100] : [0, 0]
+        })
+        rows.push([sr.title, songs.find(s => s.id === sr.song_id)?.label ?? '', sr.amount, ...holderCols])
+      })
+      // Totals row
+      const totals = holders.map(h => {
+        let sum = 0
+        report.song_revenues.filter(r => r.amount > 0).forEach(sr => {
+          const song = songs.find(s => s.id === sr.song_id)
+          const o = song?.master_owners?.find(x => x.name === h)
+          if (o) sum += sr.amount * o.pct / 100
+        })
+        return Math.round(sum * 100) / 100
+      })
+      rows.push(['סה"כ', '', report.song_revenues.reduce((s, r) => s + (r.amount ?? 0), 0), ...holders.flatMap(h => ['', totals[holders.indexOf(h)]])])
+    } else {
+      // Personal
+      rows.push(['שיר', 'אלבום', 'הכנסה כוללת', 'אחוז', 'חלק שלך'])
+      let total = 0
+      report.song_revenues.filter(r => r.amount > 0).forEach(sr => {
+        const song = songs.find(s => s.id === sr.song_id)
+        const o = song?.master_owners?.find(x => x.name === holderFilter)
+        const pct = o?.pct ?? 0
+        const earned = Math.round(sr.amount * pct / 100 * 100) / 100
+        total += earned
+        rows.push([sr.title, songs.find(s => s.id === sr.song_id)?.label ?? '', sr.amount, pct, earned])
+      })
+      rows.push(['סה"כ', '', '', '', Math.round(total * 100) / 100])
+    }
+    return { rows, period }
+  }
+
+  async function doExport() {
+    if (!selectedReport) return
+    const holder = exportType === 'personal' ? exportHolder : undefined
+    const { rows, period } = buildExportRows(selectedReport, holder)
+    const title = holder ? `דו"ח תמלוגים - ${holder} - ${period}` : `דו"ח תמלוגים - ${artistName} - ${period}`
+
+    if (exportFormat === 'excel') {
+      const XLSX = await import('xlsx')
+      const ws = XLSX.utils.aoa_to_sheet(rows)
+      // RTL support + column widths
+      ws['!cols'] = rows[0].map(() => ({ wch: 20 }))
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, period)
+      XLSX.writeFile(wb, `${title}.xlsx`)
+    } else {
+      // PDF via print window
+      const fmtILS = (n: number | string) => typeof n === 'number' ? `₪${n.toLocaleString('he-IL', { maximumFractionDigits: 2 })}` : String(n)
+      const headerRow = rows[0]
+      const dataRows = rows.slice(1)
+      const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8"/>
+<title>${title}</title>
+<style>
+  body { font-family: Arial, sans-serif; direction: rtl; padding: 24px; color: #111; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p { color: #666; font-size: 13px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #6366f1; color: white; padding: 8px 12px; text-align: right; }
+  td { padding: 7px 12px; border-bottom: 1px solid #e5e7eb; }
+  tr:last-child td { font-weight: bold; background: #f3f4f6; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  tr:last-child td { background: #eef2ff; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+<p>מקור: ${selectedReport.source === 'federation' ? 'פדרציה' : 'סטרימינג'} · תקופה: ${period}</p>
+<table>
+  <thead><tr>${headerRow.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+  <tbody>${dataRows.map((row, ri) => `<tr>${row.map((cell, ci) => {
+    const isAmount = typeof cell === 'number' && ci >= 2
+    return `<td>${isAmount ? fmtILS(cell) : cell}</td>`
+  }).join('')}</tr>`).join('')}</tbody>
+</table>
+</body></html>`
+      const win = window.open('', '_blank')
+      if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 400) }
+    }
+    setShowExportModal(false)
+  }
+
   return (
     <div className="space-y-4" dir="rtl">
       {/* Source toggle + new report button */}
@@ -2075,6 +2189,16 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           הזן דו״ח {source === 'federation' ? 'שנתי' : streamingPeriodType === 'monthly' ? 'חודשי' : streamingPeriodType === 'quarterly' ? 'רבעוני' : 'שנתי'}
         </button>
+        {/* Export button — only when a report is selected */}
+        {selectedReport && (
+          <button onClick={() => { setExportHolder(allHolders[0] ?? ''); setShowExportModal(true) }}
+            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            ייצא דו״ח
+          </button>
+        )}
         {/* Streaming period type toggle */}
         {source === 'streaming' && (
           <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs">
@@ -2107,7 +2231,7 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
             <div className="divide-y divide-gray-50">
               {reports.map(r => (
                 <div key={r.id}
-                  onClick={() => setSelectedReport(r)}
+                  onClick={() => setSelectedReport(selectedReport?.id === r.id ? null : r)}
                   className={`px-4 py-3 cursor-pointer flex items-center justify-between group hover:bg-indigo-50/50 transition-colors ${selectedReport?.id === r.id ? 'bg-indigo-50 border-r-2 border-indigo-500' : ''}`}>
                   <div>
                     <p className={`text-sm font-medium ${selectedReport?.id === r.id ? 'text-indigo-700' : 'text-gray-800'}`}>{fmtPeriod(r.period, r.source)}</p>
@@ -2266,6 +2390,63 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
                   {saving ? 'שומר...' : 'שמור דו״ח'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Export modal ── */}
+      {showExportModal && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" dir="rtl"
+          onClick={e => { if (e.target === e.currentTarget) setShowExportModal(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+            <h2 className="text-lg font-bold text-gray-900">ייצוא דו״ח</h2>
+            <p className="text-sm text-gray-400">{fmtPeriod(selectedReport.period, selectedReport.source)} — {artistName}</p>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-2">פורמט</label>
+              <div className="flex gap-2">
+                {(['excel','pdf'] as const).map(f => (
+                  <button key={f} onClick={() => setExportFormat(f)}
+                    className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors ${exportFormat === f ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'}`}>
+                    {f === 'excel' ? '📊 Excel' : '📄 PDF'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-500 block mb-2">סוג דו״ח</label>
+              <div className="flex gap-2">
+                {(['general','personal'] as const).map(t => (
+                  <button key={t} onClick={() => setExportType(t)}
+                    className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-colors ${exportType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'}`}>
+                    {t === 'general' ? '🌐 כללי' : '👤 פרסונלי'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {exportType === 'general' ? 'כל בעלי הזכויות בעמודות נפרדות' : 'דו"ח אישי לבעל זכות ספציפי'}
+              </p>
+            </div>
+
+            {exportType === 'personal' && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-2">בעל הזכות</label>
+                <select value={exportHolder} onChange={e => setExportHolder(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  {allHolders.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowExportModal(false)} className="flex-1 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm hover:bg-gray-50">ביטול</button>
+              <button onClick={doExport}
+                className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                ייצא
+              </button>
             </div>
           </div>
         </div>

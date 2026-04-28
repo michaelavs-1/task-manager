@@ -217,7 +217,7 @@ export function MeetingsView() {
     } finally { setProcessing(false); setProcessStep(null) }
   }
 
-  function saveManualMeeting() {
+  async function saveManualMeeting() {
     if (!newMeetingTitle.trim()) return
     const m: Meeting = {
       id: Date.now().toString(),
@@ -229,6 +229,17 @@ export function MeetingsView() {
     }
     const updated = [m, ...meetings]
     saveMeetingsList(updated)
+
+    // If linked to a project → also write to artist_meeting_notes so it shows in artist tab
+    if (newMeetingProject && (newMeetingSummary.trim() || newMeetingTitle.trim())) {
+      await supabase.from('artist_meeting_notes').insert({
+        artist_name: newMeetingProject,
+        title: newMeetingTitle.trim(),
+        content: newMeetingSummary.trim() || newMeetingTitle.trim(),
+        meeting_date: newMeetingDate,
+      }).select()
+    }
+
     setNewMeetingTitle('')
     setNewMeetingDate(new Date().toISOString().slice(0, 10))
     setNewMeetingProject('')
@@ -518,6 +529,30 @@ export function MeetingsView() {
                       </div>
                     </div>
                   )}
+                  {/* Project link (inline) */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-400">שייך לאומן:</span>
+                    <select
+                      value={m.project ?? ''}
+                      onChange={async e => {
+                        const proj = e.target.value
+                        const updated = meetings.map(x => x.id === m.id ? { ...x, project: proj || undefined } : x)
+                        saveMeetingsList(updated)
+                        // Also sync to artist_meeting_notes if linking to a project
+                        if (proj && m.summary) {
+                          await supabase.from('artist_meeting_notes').insert({
+                            artist_name: proj,
+                            title: m.title,
+                            content: m.summary,
+                            meeting_date: m.date.slice(0, 10),
+                          }).select()
+                        }
+                      }}
+                      className="text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                      <option value="">ללא שיוך</option>
+                      {artists.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
                   {m.summary ? (
                     <>
                       <div>
