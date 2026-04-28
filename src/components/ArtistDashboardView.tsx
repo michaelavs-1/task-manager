@@ -100,6 +100,13 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
   const [socialIg, setSocialIg] = useState('')
   const [socialTiktok, setSocialTiktok] = useState('')
   const [savingSocial, setSavingSocial] = useState(false)
+  // WhatsApp groups (stored per-artist in localStorage)
+  type WaGroup = { id: string; name: string; url: string }
+  const [waGroups, setWaGroups] = useState<WaGroup[]>([])
+  const [showWaAccordion, setShowWaAccordion] = useState(false)
+  const [showWaSettings, setShowWaSettings] = useState(false)
+  const [waNewName, setWaNewName] = useState('')
+  const [waNewUrl, setWaNewUrl] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
@@ -205,6 +212,13 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
     setMetaContactPhone(selectedArtist.contact_phone || '')
     setMetaRevenueTarget(selectedArtist.monthly_revenue_target ? String(selectedArtist.monthly_revenue_target) : '')
     loadEvents(selectedArtist); loadMeetings(selectedArtist); loadLinks(selectedArtist); loadCampaigns(selectedArtist); loadMedia(selectedArtist)
+    // Load WhatsApp groups from localStorage
+    try {
+      const raw = localStorage.getItem(`wa_groups_${selectedArtist.name}`)
+      setWaGroups(raw ? JSON.parse(raw) : [])
+    } catch { setWaGroups([]) }
+    setShowWaAccordion(false)
+    setShowWaSettings(false)
   }, [selectedArtist, loadEvents, loadMeetings, loadLinks, loadCampaigns, loadMedia])
 
   const saveMeeting = async () => {
@@ -422,10 +436,84 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                       </button>
                     )
                   })()}
+                  {/* WhatsApp */}
+                  <button
+                    onClick={() => { setShowWaAccordion(o => !o); setShowWaSettings(false) }}
+                    title="קבוצות WhatsApp"
+                    className={`px-2 py-1.5 rounded-lg transition-colors flex items-center ${showWaAccordion || waGroups.length > 0 ? 'bg-[#25D366] hover:bg-[#1ebe5d]' : 'bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 dark:hover:bg-gray-600'}`}
+                  >
+                    <svg className={`w-4 h-4 ${showWaAccordion || waGroups.length > 0 ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                  </button>
                   <button onClick={() => openSocialModal()} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors" title="ערוך רשתות חברתיות">⚙️</button>
                   <button onClick={() => setEditingMeta(!editingMeta)} className="text-xs px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">✏️ ערוך</button>
                 </div>
               </div>
+              {/* WhatsApp accordion */}
+              {showWaAccordion && (
+                <div className="mt-2 rounded-xl border border-[#25D366]/30 bg-[#f0fdf4] dark:bg-green-900/10 overflow-hidden" dir="rtl">
+                  {/* Groups list */}
+                  {waGroups.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-gray-400">אין קבוצות — לחץ + להוסיף</div>
+                  ) : (
+                    <div className="divide-y divide-[#25D366]/10">
+                      {waGroups.map(g => (
+                        <div key={g.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-[#25D366]/5 group">
+                          <button
+                            onClick={() => {
+                              // Extract code from https://chat.whatsapp.com/CODE
+                              const code = g.url.replace('https://chat.whatsapp.com/', '').split('?')[0]
+                              // Try WhatsApp Desktop deep link first, fall back to web
+                              window.location.href = `whatsapp://chat?code=${code}`
+                              setTimeout(() => window.open(g.url, '_blank'), 500)
+                            }}
+                            className="flex items-center gap-2 flex-1 text-right"
+                          >
+                            <svg className="w-4 h-4 text-[#25D366] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                            <span className="text-sm font-medium text-gray-800 dark:text-white">{g.name}</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              const updated = waGroups.filter(x => x.id !== g.id)
+                              setWaGroups(updated)
+                              localStorage.setItem(`wa_groups_${selectedArtist?.name}`, JSON.stringify(updated))
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all p-1"
+                          >✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Add group form */}
+                  {showWaSettings ? (
+                    <div className="px-4 py-3 border-t border-[#25D366]/10 space-y-2">
+                      <input value={waNewName} onChange={e => setWaNewName(e.target.value)} placeholder="שם הקבוצה (למשל: צוות הפקה)" className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 bg-white" />
+                      <input value={waNewUrl} onChange={e => setWaNewUrl(e.target.value)} placeholder="https://chat.whatsapp.com/..." className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 bg-white" dir="ltr" />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            if (!waNewName.trim() || !waNewUrl.trim()) return
+                            const updated = [...waGroups, { id: Date.now().toString(), name: waNewName.trim(), url: waNewUrl.trim() }]
+                            setWaGroups(updated)
+                            localStorage.setItem(`wa_groups_${selectedArtist?.name}`, JSON.stringify(updated))
+                            setWaNewName(''); setWaNewUrl(''); setShowWaSettings(false)
+                          }}
+                          className="flex-1 py-1.5 rounded-lg bg-[#25D366] text-white text-xs font-semibold hover:bg-[#1ebe5d] transition-colors"
+                        >שמור</button>
+                        <button onClick={() => setShowWaSettings(false)} className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 text-xs hover:bg-gray-50">ביטול</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowWaSettings(true)} className="w-full px-4 py-2 text-xs text-[#25D366] font-semibold hover:bg-[#25D366]/5 transition-colors flex items-center gap-1.5 border-t border-[#25D366]/10">
+                      <span className="text-base leading-none">+</span> הוסף קבוצה
+                    </button>
+                  )}
+                </div>
+              )}
+
               {editingMeta && (
                 <div className="mt-3 p-4 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl shadow-sm">
                   <div className="grid grid-cols-2 gap-3">
