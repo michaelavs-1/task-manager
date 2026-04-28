@@ -1944,8 +1944,10 @@ const MONTHS_HE = ['ינואר','פברואר','מרץ','אפריל','מאי','�
 
 function fmtPeriod(period: string, source: string) {
   if (source === 'federation') return `שנת ${period}`
-  const [y, m] = period.split('-')
-  return `${MONTHS_HE[parseInt(m) - 1]} ${y}`
+  const parts = period.split('-')
+  if (parts.length === 1) return `שנת ${parts[0]}`   // yearly streaming
+  if (parts[1]?.startsWith('Q')) return `${parts[1]} ${parts[0]}` // quarterly
+  return `${MONTHS_HE[parseInt(parts[1]) - 1]} ${parts[0]}`      // monthly
 }
 
 function RoyaltiesTab({ artistName }: { artistName: string }) {
@@ -1960,6 +1962,8 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
   const curYear = new Date().getFullYear()
   const [newPeriodYear, setNewPeriodYear] = useState(String(curYear))
   const [newPeriodMonth, setNewPeriodMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [streamingPeriodType, setStreamingPeriodType] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly')
+  const [newPeriodQ, setNewPeriodQ] = useState('Q1')
   const [newAmounts, setNewAmounts] = useState<Record<number, string>>({})
   const [newNotes, setNewNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -2013,7 +2017,13 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
   const reportTotal = selectedReport?.song_revenues.reduce((s, r) => s + (r.amount ?? 0), 0) ?? 0
 
   async function saveReport() {
-    const period = source === 'federation' ? newPeriodYear : `${newPeriodYear}-${newPeriodMonth}`
+    const period = source === 'federation'
+      ? newPeriodYear
+      : streamingPeriodType === 'monthly'
+        ? `${newPeriodYear}-${newPeriodMonth}`
+        : streamingPeriodType === 'quarterly'
+          ? `${newPeriodYear}-${newPeriodQ}`
+          : newPeriodYear  // yearly
     const song_revenues = songs.map(s => ({
       song_id: s.id,
       title: s.title,
@@ -2063,8 +2073,19 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
         <button onClick={() => setShowNewReport(true)}
           className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          הזן דו״ח {source === 'federation' ? 'שנתי' : 'חודשי'}
+          הזן דו״ח {source === 'federation' ? 'שנתי' : streamingPeriodType === 'monthly' ? 'חודשי' : streamingPeriodType === 'quarterly' ? 'רבעוני' : 'שנתי'}
         </button>
+        {/* Streaming period type toggle */}
+        {source === 'streaming' && (
+          <div className="flex rounded-xl border border-gray-200 overflow-hidden text-xs">
+            {(['monthly','quarterly','yearly'] as const).map(t => (
+              <button key={t} onClick={() => setStreamingPeriodType(t)}
+                className={`px-3 py-1.5 font-medium transition-colors ${streamingPeriodType === t ? 'bg-indigo-100 text-indigo-700' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+                {t === 'monthly' ? 'חודשי' : t === 'quarterly' ? 'רבעוני' : 'שנתי'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading && <div className="text-center py-10 text-gray-400 text-sm">טוען...</div>}
@@ -2176,12 +2197,20 @@ function RoyaltiesTab({ artistName }: { artistName: string }) {
             </div>
 
             {/* Period selector */}
-            <div className="px-6 py-3 border-b border-gray-100 flex-shrink-0 flex items-center gap-3">
+            <div className="px-6 py-3 border-b border-gray-100 flex-shrink-0 flex items-center gap-3 flex-wrap">
               <span className="text-sm font-medium text-gray-600">תקופה:</span>
-              {source === 'streaming' && (
+              {/* Monthly picker */}
+              {source === 'streaming' && streamingPeriodType === 'monthly' && (
                 <select value={newPeriodMonth} onChange={e => setNewPeriodMonth(e.target.value)}
                   className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                   {MONTHS_HE.map((m, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+                </select>
+              )}
+              {/* Quarterly picker */}
+              {source === 'streaming' && streamingPeriodType === 'quarterly' && (
+                <select value={newPeriodQ} onChange={e => setNewPeriodQ(e.target.value)}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  {['Q1','Q2','Q3','Q4'].map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
               )}
               <select value={newPeriodYear} onChange={e => setNewPeriodYear(e.target.value)}
