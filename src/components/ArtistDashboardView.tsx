@@ -576,29 +576,74 @@ export function ArtistDashboardView({ tasks, initialArtist }: { tasks: Task[]; i
                       ))}
                     </div>
 
-                    {showsFilter === 'all' ? (
-                      <>
-                        {upcomingEvents.length > 0 && <section className="mb-6">
-                          <SHead>הופעות קרובות</SHead>
-                          <div className="space-y-2">{upcomingEvents.map(e => <EventRow key={e.id} event={e} />)}</div>
-                        </section>}
-                        {pastEvents.length > 0 && <section>
-                          <div className="flex items-center gap-3 mb-3">
-                            <SHead>הופעות עבר ({pastEvents.length})</SHead>
-                            <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? 'הסתר' : 'הצג'}</button>
-                          </div>
-                          {showPastEvents && <div className="space-y-2">{pastEvents.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>}
-                        </section>}
-                        {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="🤔" msg="אין הופעות" />}
-                      </>
-                    ) : (() => {
-                      const allNonCancelled = events.filter(e => e.status !== 'בוטל')
-                      const filtered = showsFilter === 'open'
-                        ? allNonCancelled.filter(e => e.status === 'קופה פתוחה' || e.event_type === 'קופה פתוחה')
-                        : allNonCancelled.filter(e => e.status === 'מכורות' || e.event_type === 'מכורות')
-                      return filtered.length === 0
-                        ? <Empty icon="🎫" msg={showsFilter === 'open' ? 'אין הופעות עם קופה פתוחה' : 'אין הופעות מכורות'} />
-                        : <div className="space-y-2">{filtered.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>
+                    {(() => {
+                      const isSoldOut = (e: ArtistEvent) =>
+                        (e.contract_status ?? '').includes('מכורה') ||
+                        (e.status ?? '').includes('מכורה')
+                      const isOpen = (e: ArtistEvent) =>
+                        (e.contract_status ?? '').includes('פתוחה') ||
+                        (e.status ?? '').includes('פתוחה')
+
+                      if (showsFilter !== 'all') {
+                        const allNonCancelled = events.filter(e => e.status !== 'בוטל')
+                        const filtered = showsFilter === 'open'
+                          ? allNonCancelled.filter(isOpen)
+                          : allNonCancelled.filter(isSoldOut)
+                        return filtered.length === 0
+                          ? <Empty icon="🎫" msg={showsFilter === 'open' ? 'אין הופעות עם קופה פתוחה' : 'אין הופעות מכורות'} />
+                          : <div className="space-y-2">{filtered.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>
+                      }
+
+                      // "הכל" view — split upcoming into מכורות / פתוחה / אחר
+                      const soldOut  = upcomingEvents.filter(isSoldOut)
+                      const open     = upcomingEvents.filter(isOpen)
+                      const other    = upcomingEvents.filter(e => !isSoldOut(e) && !isOpen(e))
+                      const hasGroups = soldOut.length > 0 || open.length > 0
+
+                      return (
+                        <>
+                          {hasGroups ? (
+                            <>
+                              {soldOut.length > 0 && <section className="mb-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">מכורות ({soldOut.length})</span>
+                                  <div className="flex-1 h-px bg-gray-100" />
+                                </div>
+                                <div className="space-y-2">{soldOut.map(e => <EventRow key={e.id} event={e} />)}</div>
+                              </section>}
+                              {open.length > 0 && <section className="mb-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-bold text-emerald-500 uppercase tracking-wide">קופה פתוחה ({open.length})</span>
+                                  <div className="flex-1 h-px bg-emerald-100" />
+                                </div>
+                                <div className="space-y-2">{open.map(e => <EventRow key={e.id} event={e} />)}</div>
+                              </section>}
+                              {other.length > 0 && <section className="mb-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">אחר ({other.length})</span>
+                                  <div className="flex-1 h-px bg-gray-100" />
+                                </div>
+                                <div className="space-y-2">{other.map(e => <EventRow key={e.id} event={e} />)}</div>
+                              </section>}
+                            </>
+                          ) : (
+                            <>
+                              {upcomingEvents.length > 0 && <section className="mb-6">
+                                <SHead>הופעות קרובות</SHead>
+                                <div className="space-y-2">{upcomingEvents.map(e => <EventRow key={e.id} event={e} />)}</div>
+                              </section>}
+                            </>
+                          )}
+                          {pastEvents.length > 0 && <section>
+                            <div className="flex items-center gap-3 mb-3">
+                              <SHead>הופעות עבר ({pastEvents.length})</SHead>
+                              <button onClick={() => setShowPastEvents(!showPastEvents)} className="text-xs text-indigo-500 hover:text-indigo-700 -mt-3">{showPastEvents ? 'הסתר' : 'הצג'}</button>
+                            </div>
+                            {showPastEvents && <div className="space-y-2">{pastEvents.map(e => <EventRow key={e.id} event={e} showFinancials />)}</div>}
+                          </section>}
+                          {upcomingEvents.length === 0 && pastEvents.length === 0 && <Empty icon="🤔" msg="אין הופעות" />}
+                        </>
+                      )
                     })()}
                   </>
                 )}
