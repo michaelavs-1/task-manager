@@ -328,7 +328,7 @@ function SuppliersTab() {
                                           <td className="px-3 py-2 font-mono text-gray-800">{fmtS(ex.total)}</td>
                                           <td className="px-3 py-2 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
                                           <td className={`px-3 py-2 font-mono font-semibold ${rowBal > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{rowBal > 0 ? fmtS(rowBal) : '✔'}</td>
-                                          <td className="px-3 py-2 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
+                                          <td className="px-3 py-2 text-gray-500 font-mono">{normalizeDate(ex.payment_date)}</td>
                                           <td className="px-3 py-2 text-center">{ex.has_invoice ? <span className="text-emerald-500 font-bold">✔</span> : <span className="text-gray-300">—</span>}</td>
                                         </tr>
                                       )
@@ -358,7 +358,7 @@ function SuppliersTab() {
                                             <td className="px-3 py-1.5 font-mono text-gray-700">{fmtS(ex.total)}</td>
                                             <td className="px-3 py-1.5 font-mono text-emerald-600">{fmtS(ex.paid)}</td>
                                             <td className={`px-3 py-1.5 font-mono ${rowBal > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{rowBal > 0 ? fmtS(rowBal) : '✔'}</td>
-                                            <td className="px-3 py-1.5 text-gray-500 font-mono">{ex.payment_date || '—'}</td>
+                                            <td className="px-3 py-1.5 text-gray-500 font-mono">{normalizeDate(ex.payment_date)}</td>
                                             <td className="px-3 py-1.5 text-center">{ex.has_invoice ? <span className="text-emerald-500">✔</span> : <span className="text-gray-300">—</span>}</td>
                                           </tr>
                                         )
@@ -1728,6 +1728,28 @@ function isoToIsraeli(iso: string): string {
   if (!iso) return ''
   const [year, month, day] = iso.split('-')
   return `${parseInt(day)}.${parseInt(month)}.${year}`
+}
+
+/** Normalize any date string (ISO or Israeli) to short Israeli format dd.MM.yy */
+function normalizeDate(d: string): string {
+  if (!d) return '—'
+  // Already Israeli format (contains dots)
+  if (d.includes('.')) {
+    const parts = d.split('.')
+    if (parts.length >= 2) {
+      const day = parseInt(parts[0])
+      const mon = parseInt(parts[1])
+      const yr  = parts[2] ? (parts[2].length === 4 ? parts[2].slice(2) : parts[2]) : ''
+      return yr ? `${day}.${mon}.${yr}` : `${day}.${mon}`
+    }
+    return d
+  }
+  // ISO format YYYY-MM-DD
+  if (d.includes('-') && d.length >= 10) {
+    const [y, m, dd] = d.split('-')
+    return `${parseInt(dd)}.${parseInt(m)}.${y.slice(2)}`
+  }
+  return d
 }
 
 // ── Payment-month helpers ──────────────────────────────────────────────────
@@ -5465,7 +5487,7 @@ function ExpensesTab() {
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-0.5">
-                                  <span>{e.payment_date || '—'}</span>
+                                  <span>{normalizeDate(e.payment_date)}</span>
                                   {pencilBtn('payment_date', e.payment_date)}
                                 </div>
                               )}
