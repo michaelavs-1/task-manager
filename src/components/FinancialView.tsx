@@ -768,12 +768,10 @@ function FinancialDashboard() {
                       <div className="text-[9px] font-semibold" style={{ color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}>סיכום</div>
                       <div className="text-sm font-bold" style={{ color: isOpen ? '#fff' : (net >= 0 ? '#6366f1' : '#ef4444') }}>{fmt(net)}</div>
                     </div>
-                    {bankNum !== 0 && (
-                      <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
-                        <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>יתרה חזויה</div>
-                        <div className="text-xs font-bold" style={{ color: isOpen ? (runningAfter >= 0 ? '#bbf7d0' : '#fca5a5') : (runningAfter >= 0 ? '#10b981' : '#ef4444') }}>{fmt(runningAfter)}</div>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between gap-2 mt-1 pt-1" style={{ borderTop: `1px dashed ${isOpen ? 'rgba(255,255,255,0.15)' : 'var(--border-color)'}` }}>
+                      <div className="text-[9px]" style={{ color: isOpen ? 'rgba(255,255,255,0.55)' : 'var(--text-secondary)' }}>יתרה חזויה מצטברת</div>
+                      <div className="text-xs font-bold" style={{ color: isOpen ? (runningAfter >= 0 ? '#bbf7d0' : '#fca5a5') : (runningAfter >= 0 ? '#10b981' : '#ef4444') }}>{fmt(runningAfter)}</div>
+                    </div>
                   </button>
                 )
               })}
@@ -782,7 +780,7 @@ function FinancialDashboard() {
             {cfOpenMonth && cfMap[cfOpenMonth] && (
               <div className="border-t px-5 py-4" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-secondary)' }}>
                 {/* Opening balance from previous month — only shown when bank balance entered */}
-                {bankNum !== 0 && openingByMonth[cfOpenMonth] !== undefined && (
+                {openingByMonth[cfOpenMonth] !== undefined && (
                   <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px dashed var(--border-color)' }}>
                     <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
                       יתרה מחודש קודם
