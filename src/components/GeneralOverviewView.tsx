@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import type { Task } from '@/lib/supabase'
 
 interface Props {
@@ -33,10 +34,49 @@ const QUICK_LINKS = [
   { tab: 'tasks',     label: 'משימות', icon: '✅', color: 'bg-emerald-50 border-emerald-100 hover:border-emerald-300' },
 ]
 
+type EventItem = { id: string; name: string; artistName: string; date: string | null; location?: string | null; status?: string | null }
+type CampaignItem = { id: string; name: string; launch_date: string | null; project_name: string | null; status: string | null }
+
+function useDailyDigest() {
+  const [shows, setShows] = useState<{ today: EventItem[]; yesterday: EventItem[] }>({ today: [], yesterday: [] })
+  const [campaigns, setCampaigns] = useState<{ today: CampaignItem[]; yesterday: CampaignItem[] }>({ today: [], yesterday: [] })
+
+  useEffect(() => {
+    const todayISO = new Date().toISOString().split('T')[0]
+    const yISO = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+    // Shows from cache
+    try {
+      const raw = localStorage.getItem('event_board_cache')
+      if (raw) {
+        const events: EventItem[] = JSON.parse(raw)
+        setShows({
+          today:     events.filter(e => e.date === todayISO),
+          yesterday: events.filter(e => e.date === yISO),
+        })
+      }
+    } catch { /* ignore */ }
+
+    // Campaigns from API
+    fetch('/api/sync-campaigns')
+      .then(r => r.json())
+      .then((d: { campaigns?: CampaignItem[] }) => {
+        const camps: CampaignItem[] = d.campaigns || []
+        setCampaigns({
+          today:     camps.filter(c => c.launch_date?.slice(0,10) === todayISO),
+          yesterday: camps.filter(c => c.launch_date?.slice(0,10) === yISO),
+        })
+      }).catch(() => {})
+  }, [])
+
+  return { shows, campaigns }
+}
+
 export function GeneralOverviewView({ tasks, userName, userRole, onNavigate }: Props) {
   const now = new Date()
   const dayName = DAYS_HE[now.getDay()]
   const dateStr = `${now.getDate()} ${MONTHS_HE[now.getMonth()]} ${now.getFullYear()}`
+  const { shows, campaigns } = useDailyDigest()
 
   const pending = tasks.filter(t => t.status === 'pending')
   const inProgress = tasks.filter(t => t.status === 'in_progress')
@@ -61,6 +101,44 @@ export function GeneralOverviewView({ tasks, userName, userRole, onNavigate }: P
           יום {dayName}, {dateStr}
         </p>
       </div>
+
+      {/* ── Daily Digest ── */}
+      {(shows.yesterday.length > 0 || shows.today.length > 0 || campaigns.yesterday.length > 0 || campaigns.today.length > 0) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: '🎭 הופעות אתמול', items: shows.yesterday,     color: 'border-gray-200 bg-gray-50', labelC: 'text-gray-500', nav: 'eventboard' },
+            { label: '📣 קמפיינים אתמול', items: campaigns.yesterday, color: 'border-gray-200 bg-gray-50', labelC: 'text-gray-500', nav: 'campaigns' },
+            { label: '🎭 הופעות היום',   items: shows.today,        color: 'border-indigo-200 bg-indigo-50', labelC: 'text-indigo-600', nav: 'eventboard' },
+            { label: '📣 קמפיינים היום', items: campaigns.today,     color: 'border-violet-200 bg-violet-50', labelC: 'text-violet-600', nav: 'campaigns' },
+          ].map(({ label, items, color, labelC, nav }) => (
+            <button
+              key={label}
+              onClick={() => onNavigate(nav)}
+              className={`rounded-2xl border p-4 text-right transition-all hover:shadow-md ${color}`}
+            >
+              <p className={`text-xs font-semibold mb-2 ${labelC}`}>{label}</p>
+              {items.length === 0 ? (
+                <p className="text-sm text-gray-300">אין</p>
+              ) : (
+                <div className="space-y-1">
+                  {items.slice(0, 3).map(item => (
+                    <div key={item.id} className="text-xs text-gray-700 font-medium truncate">
+                      {'artistName' in item
+                        ? `${(item as EventItem).artistName} — ${item.name}`
+                        : `${(item as CampaignItem).project_name ?? ''} — ${item.name}`
+                      }
+                    </div>
+                  ))}
+                  {items.length > 3 && (
+                    <p className="text-xs text-gray-400">+{items.length - 3} נוספים</p>
+                  )}
+                </div>
+              )}
+              <p className={`text-2xl font-bold mt-2 ${labelC}`}>{items.length}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
