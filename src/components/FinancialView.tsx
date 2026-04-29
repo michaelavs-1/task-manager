@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, Fragment, useRef } from 'react'
+import { useState, useEffect, Fragment, useRef, useMemo } from 'react'
 import { useEsc } from '../hooks/useEsc'
 import { ARTIST_BOARD_MAP } from '../lib/artist-config'
 import type { ArtistEvent } from '../lib/artist-config'
@@ -4524,108 +4524,7 @@ function FinProjectsTab() {
 
             {/* ── EVENT SUMMARIES ── */}
             {viewType === 'events' && current && (
-              <div className="space-y-4">
-                {loadingEvents ? (
-                  <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען הופעות...</div>
-                ) : artistEvents.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>לא נמצאו הופעות</p>
-                    <button
-                      onClick={async () => {
-                        const boardId = ARTIST_BOARD_MAP[current.name]
-                        if (!boardId) return
-                        setLoadingEvents(true)
-                        const res = await fetch(`/api/artist-events?boardId=${boardId}`)
-                        const d = await res.json()
-                        const past = (d.events || []).filter((e: ArtistEvent) => e.date && e.date < new Date().toISOString().split('T')[0] && e.status !== 'בוטל')
-                        setArtistEvents(past)
-                        setLoadingEvents(false)
-                      }}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold"
-                      style={{ background: '#10b981', color: 'white' }}
-                    >
-                      טען הופעות מ-Monday
-                    </button>
-                  </div>
-                ) : (() => {
-                  const pn = (v: string | null | undefined) => parseFloat((v||'').replace(/[₪,\s]/g,''))||0
-                  const fmt2 = (n: number) => n === 0 ? '—' : `₪${Math.round(n).toLocaleString('he-IL')}`
-                  const sorted = [...artistEvents].sort((a, b) => (b.date||'').localeCompare(a.date||''))
-
-                  const totalRev = artistEvents.reduce((s,e) => s + pn(e.total_revenue), 0)
-                  const totalExp = artistEvents.reduce((s,e) => s + pn(e.total_expenses), 0)
-                  const totalNet = totalRev - totalExp
-
-                  return (
-                    <div className="space-y-3">
-                      {/* Summary bar */}
-                      <div className="grid grid-cols-3 gap-3 rounded-2xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
-                        {[
-                          { label: 'סה"כ הכנסות', v: totalRev, color: '#6366f1' },
-                          { label: 'סה"כ הוצאות', v: totalExp, color: '#ef4444' },
-                          { label: 'נותר לחלוקה',  v: totalNet, color: totalNet >= 0 ? '#10b981' : '#ef4444' },
-                        ].map(c => (
-                          <div key={c.label} className="text-right">
-                            <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
-                            <div className="text-lg font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Per-event cards */}
-                      {sorted.map((ev, i) => {
-                        const rev = pn(ev.total_revenue)
-                        const exp = pn(ev.total_expenses)
-                        const net = rev - exp
-                        const artistShare = pn(ev.artist_share) || net * 0.75
-                        const officeShare = pn(ev.office_share) || net * 0.25
-
-                        return (
-                          <div key={ev.id} className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-                            {/* Event header */}
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{ev.name}</p>
-                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                                  {ev.date ? new Date(ev.date).toLocaleDateString('he-IL', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
-                                  {ev.location && ` · ${ev.location}`}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {ev.event_type && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>{ev.event_type}</span>
-                                )}
-                                {ev.contract_status && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>{ev.contract_status}</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Financial grid */}
-                            {(rev > 0 || exp > 0) ? (
-                              <div className="grid grid-cols-4 gap-2">
-                                {[
-                                  { label: 'הכנסות', v: rev,         color: '#6366f1' },
-                                  { label: 'הוצאות', v: exp,         color: '#ef4444' },
-                                  { label: 'נותר',   v: net,         color: net >= 0 ? '#10b981' : '#ef4444' },
-                                  { label: 'חלק אומן', v: artistShare, color: '#f59e0b' },
-                                ].map(c => (
-                                  <div key={c.label} className="rounded-lg p-2.5 text-right" style={{ background: 'var(--bg-secondary)' }}>
-                                    <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
-                                    <div className="text-sm font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs py-2 text-center" style={{ color: 'var(--text-secondary)' }}>אין נתוני הכנסות/הוצאות</p>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()}
-              </div>
+              <EventSummariesView artistName={current.name} />
             )}
 
             {/* ── ARTIST REPORT ── */}
@@ -6609,6 +6508,265 @@ function AuthorityPaymentsTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── EventSummariesView ─────────────────────────────────────────────────────
+// Merges Monday event metadata with manually-entered financials stored in Supabase
+type EventSummary = {
+  id: number
+  artist_name: string
+  monday_id: string | null
+  event_name: string
+  event_date: string | null
+  revenue: number
+  expenses: number
+  notes: string | null
+}
+
+function EventSummariesView({ artistName }: { artistName: string }) {
+  const [mondayEvents, setMondayEvents] = useState<ArtistEvent[]>([])
+  const [summaries, setSummaries] = useState<EventSummary[]>([])
+  const [loadingMonday, setLoadingMonday] = useState(false)
+  const [loadingDB, setLoadingDB] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editRev, setEditRev] = useState('')
+  const [editExp, setEditExp] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const MGMT = 0.25
+
+  const fmt2 = (n: number) => n === 0 ? '—' : `₪${Math.round(n).toLocaleString('he-IL')}`
+
+  // Load summaries from DB
+  useEffect(() => {
+    setLoadingDB(true)
+    fetch(`/api/event-summaries?artist=${encodeURIComponent(artistName)}`)
+      .then(r => r.json())
+      .then(d => setSummaries(d.summaries || []))
+      .catch(() => {})
+      .finally(() => setLoadingDB(false))
+  }, [artistName])
+
+  // Load events from Monday
+  async function loadMonday() {
+    const boardId = ARTIST_BOARD_MAP[artistName]
+    if (!boardId) return
+    setLoadingMonday(true)
+    const res = await fetch(`/api/artist-events?boardId=${boardId}`)
+    const d = await res.json()
+    const past = (d.events || []).filter((e: ArtistEvent) =>
+      e.date && e.date < new Date().toISOString().split('T')[0] && e.status !== 'בוטל'
+    ).sort((a: ArtistEvent, b: ArtistEvent) => (b.date||'').localeCompare(a.date||''))
+    setMondayEvents(past)
+    setLoadingMonday(false)
+  }
+
+  // Merge: for each Monday event, find existing summary by monday_id or event_name+date
+  const mergedRows = useMemo(() => {
+    const rows: { ev: ArtistEvent; sum: EventSummary | null }[] = []
+    const used = new Set<number>()
+    mondayEvents.forEach(ev => {
+      const sum = summaries.find(s =>
+        (s.monday_id && s.monday_id === ev.id) ||
+        (s.event_name === ev.name && s.event_date === ev.date)
+      ) || null
+      if (sum) used.add(sum.id)
+      rows.push({ ev, sum })
+    })
+    // Also show summaries not linked to a Monday event
+    summaries.filter(s => !used.has(s.id)).forEach(s => {
+      rows.push({ ev: { id: `manual-${s.id}`, name: s.event_name, date: s.event_date } as ArtistEvent, sum: s })
+    })
+    return rows.sort((a,b) => (b.ev.date||'').localeCompare(a.ev.date||''))
+  }, [mondayEvents, summaries])
+
+  // Grand totals
+  const totalRev = summaries.reduce((s,x) => s + (x.revenue||0), 0)
+  const totalExp = summaries.reduce((s,x) => s + (x.expenses||0), 0)
+  const totalNet = totalRev - totalExp
+
+  async function saveEdit(ev: ArtistEvent, existingSum: EventSummary | null) {
+    setSaving(true)
+    const rev = parseFloat(editRev.replace(/,/g,'')) || 0
+    const exp = parseFloat(editExp.replace(/,/g,'')) || 0
+    if (existingSum) {
+      const r = await fetch('/api/event-summaries', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: existingSum.id, revenue: rev, expenses: exp, notes: editNotes }) })
+      const d = await r.json()
+      if (d.summary) setSummaries(prev => prev.map(s => s.id === existingSum.id ? d.summary : s))
+    } else {
+      const r = await fetch('/api/event-summaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist_name: artistName, event_name: ev.name, event_date: ev.date, revenue: rev, expenses: exp, notes: editNotes, monday_id: ev.id.startsWith('manual') ? null : ev.id }) })
+      const d = await r.json()
+      if (d.summary) setSummaries(prev => [...prev, d.summary])
+    }
+    setEditingId(null)
+    setSaving(false)
+  }
+
+  async function deleteSummary(id: number) {
+    await fetch(`/api/event-summaries?id=${id}`, { method: 'DELETE' })
+    setSummaries(prev => prev.filter(s => s.id !== id))
+  }
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      {/* Header actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-3">
+          {totalRev > 0 && (
+            <div className="rounded-2xl p-3 grid grid-cols-3 gap-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+              {[
+                { label: 'הכנסות',    v: totalRev, color: '#6366f1' },
+                { label: 'הוצאות',   v: totalExp, color: '#ef4444' },
+                { label: 'נותר לחלוקה', v: totalNet, color: totalNet>=0?'#10b981':'#ef4444' },
+              ].map(c => (
+                <div key={c.label} className="text-right">
+                  <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
+                  <div className="text-base font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={loadMonday} disabled={loadingMonday}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+            style={{ background: loadingMonday ? 'var(--bg-secondary)' : '#f59e0b', color: loadingMonday ? 'var(--text-secondary)' : 'white' }}>
+            {loadingMonday ? 'טוען...' : '↻ טען מ-Monday'}
+          </button>
+          <button
+            onClick={() => { setEditingId('new'); setEditRev(''); setEditExp(''); setEditNotes('') }}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+            style={{ background: '#10b981', color: 'white' }}>
+            + הוסף אירוע
+          </button>
+        </div>
+      </div>
+
+      {/* Add manual form */}
+      {editingId === 'new' && (
+        <ManualEventForm
+          onSave={async (name, date, rev, exp, notes) => {
+            setSaving(true)
+            const r = await fetch('/api/event-summaries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist_name: artistName, event_name: name, event_date: date || null, revenue: rev, expenses: exp, notes: notes || null }) })
+            const d = await r.json()
+            if (d.summary) setSummaries(prev => [...prev, d.summary])
+            setEditingId(null); setSaving(false)
+          }}
+          onCancel={() => setEditingId(null)}
+          saving={saving}
+        />
+      )}
+
+      {/* Merged rows */}
+      {loadingDB ? (
+        <div className="text-center py-8 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען...</div>
+      ) : mergedRows.length === 0 ? (
+        <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          לחץ "טען מ-Monday" להצגת הופעות, או "הוסף אירוע" להזנה ידנית
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {mergedRows.map(({ ev, sum }) => {
+            const rowKey = sum ? String(sum.id) : `ev-${ev.id}`
+            const isEditing = editingId === rowKey
+            const rev = sum?.revenue || 0
+            const exp = sum?.expenses || 0
+            const net = rev - exp
+
+            return (
+              <div key={ev.id} className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: `1px solid ${sum ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}` }}>
+                <div className="flex items-start gap-3">
+                  {/* Event info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{ev.name}</p>
+                      {ev.date && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{new Date(ev.date).toLocaleDateString('he-IL', { day:'2-digit', month:'short', year:'2-digit' })}</span>}
+                      {(ev as ArtistEvent).location && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>· {(ev as ArtistEvent).location}</span>}
+                      {(ev as ArtistEvent).event_type && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>{(ev as ArtistEvent).event_type}</span>}
+                    </div>
+                    {/* Financial row */}
+                    {!isEditing && (
+                      <div className="flex items-center gap-4 mt-2">
+                        {rev > 0 || exp > 0 ? (
+                          <>
+                            <span className="text-xs font-semibold" style={{ color: '#6366f1' }}>הכנסות: {fmt2(rev)}</span>
+                            <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>הוצאות: {fmt2(exp)}</span>
+                            <span className="text-xs font-bold" style={{ color: net>=0?'#10b981':'#ef4444' }}>נותר: {fmt2(net)}</span>
+                            <span className="text-xs font-semibold" style={{ color: '#f59e0b' }}>אומן (75%): {fmt2(net*(1-MGMT))}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>אין נתוני הכנסות — לחץ לעריכה</span>
+                        )}
+                        {sum?.notes && <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>· {sum.notes}</span>}
+                      </div>
+                    )}
+                    {/* Edit form */}
+                    {isEditing && (
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות ₪</span>
+                          <input value={editRev} onChange={e => setEditRev(e.target.value)} placeholder="0"
+                            className="w-24 text-xs border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>הוצאות ₪</span>
+                          <input value={editExp} onChange={e => setEditExp(e.target.value)} placeholder="0"
+                            className="w-24 text-xs border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                            style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <input value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="הערות..."
+                          className="flex-1 min-w-[120px] text-xs border rounded-lg px-2 py-1 focus:outline-none"
+                          style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+                        <button onClick={() => saveEdit(ev, sum)} disabled={saving}
+                          className="text-xs px-3 py-1 rounded-lg font-semibold" style={{ background: '#10b981', color: 'white' }}>
+                          {saving ? '...' : 'שמור'}
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>ביטול</button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Action buttons */}
+                  {!isEditing && (
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={() => { setEditingId(rowKey); setEditRev(sum ? String(sum.revenue) : ''); setEditExp(sum ? String(sum.expenses) : ''); setEditNotes(sum?.notes || '') }}
+                        className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>ערוך</button>
+                      {sum && (
+                        <button onClick={() => deleteSummary(sum.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#ef4444' }}>✕</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ManualEventForm({ onSave, onCancel, saving }: { onSave: (name: string, date: string, rev: number, exp: number, notes: string) => void; onCancel: () => void; saving: boolean }) {
+  const [name, setName] = useState('')
+  const [date, setDate] = useState('')
+  const [rev, setRev] = useState('')
+  const [exp, setExp] = useState('')
+  const [notes, setNotes] = useState('')
+  return (
+    <div className="rounded-xl p-4 space-y-3" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)' }}>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>שם האירוע *</label><input value={name} onChange={e => setName(e.target.value)} className="w-full mt-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+        <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>תאריך</label><input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full mt-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+        <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>הכנסות ₪</label><input value={rev} onChange={e => setRev(e.target.value)} placeholder="0" className="w-full mt-1 text-sm border rounded-lg px-3 py-2 focus:outline-none" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+        <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>הוצאות ₪</label><input value={exp} onChange={e => setExp(e.target.value)} placeholder="0" className="w-full mt-1 text-sm border rounded-lg px-3 py-2 focus:outline-none" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+        <div className="col-span-2"><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>הערות</label><input value={notes} onChange={e => setNotes(e.target.value)} className="w-full mt-1 text-sm border rounded-lg px-3 py-2 focus:outline-none" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <button onClick={onCancel} className="text-xs px-4 py-2 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>ביטול</button>
+        <button onClick={() => onSave(name, date, parseFloat(rev)||0, parseFloat(exp)||0, notes)} disabled={!name.trim() || saving} className="text-xs px-4 py-2 rounded-lg font-semibold" style={{ background: '#10b981', color: 'white', opacity: !name.trim()||saving ? 0.5 : 1 }}>{saving ? 'שומר...' : 'שמור'}</button>
+      </div>
     </div>
   )
 }
