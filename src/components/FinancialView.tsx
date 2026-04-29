@@ -4071,7 +4071,7 @@ function FinProjectsTab() {
   const [loadingInv, setLoadingInv] = useState(false)
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'open' | 'paid'>('all')
   const [groupByMonth, setGroupByMonth] = useState(false)
-  const [viewType, setViewType] = useState<'income' | 'expenses' | 'report'>('income')
+  const [viewType, setViewType] = useState<'income' | 'expenses' | 'report' | 'events'>('income')
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({})
   const [artistEvents, setArtistEvents] = useState<ArtistEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
@@ -4341,8 +4341,11 @@ function FinProjectsTab() {
                 {([
                   { key: 'income',   label: 'הכנסות', count: invoices.length, color: '#6366f1' },
                   { key: 'expenses', label: 'הוצאות', count: expenses.length, color: '#ef4444' },
-                  ...(current?.category === 'artist' && ARTIST_BOARD_MAP[current.name] ? [{ key: 'report' as const, label: 'דוח אומן', count: null, color: '#f59e0b' }] : []),
-                ] as { key: 'income'|'expenses'|'report'; label: string; count: number|null; color: string }[]).map(({ key, label, count, color }) => (
+                  ...(current?.category === 'artist' && ARTIST_BOARD_MAP[current.name] ? [
+                    { key: 'events' as const,  label: 'סיכומי אירוע', count: null, color: '#10b981' },
+                    { key: 'report' as const,  label: 'דוח אומן',     count: null, color: '#f59e0b' },
+                  ] : []),
+                ] as { key: 'income'|'expenses'|'report'|'events'; label: string; count: number|null; color: string }[]).map(({ key, label, count, color }) => (
                   <button key={key} onClick={() => setViewType(key)}
                     className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5"
                     style={viewType === key ? { background: color, color: 'white', boxShadow: `0 2px 8px ${color}50` } : { background: 'transparent', color: 'var(--text-secondary)' }}>
@@ -4517,6 +4520,112 @@ function FinProjectsTab() {
                 })
               })()}
             </div>
+            )}
+
+            {/* ── EVENT SUMMARIES ── */}
+            {viewType === 'events' && current && (
+              <div className="space-y-4">
+                {loadingEvents ? (
+                  <div className="text-center py-12 text-sm" style={{ color: 'var(--text-secondary)' }}>טוען הופעות...</div>
+                ) : artistEvents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>לא נמצאו הופעות</p>
+                    <button
+                      onClick={async () => {
+                        const boardId = ARTIST_BOARD_MAP[current.name]
+                        if (!boardId) return
+                        setLoadingEvents(true)
+                        const res = await fetch(`/api/artist-events?boardId=${boardId}`)
+                        const d = await res.json()
+                        const past = (d.events || []).filter((e: ArtistEvent) => e.date && e.date < new Date().toISOString().split('T')[0] && e.status !== 'בוטל')
+                        setArtistEvents(past)
+                        setLoadingEvents(false)
+                      }}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold"
+                      style={{ background: '#10b981', color: 'white' }}
+                    >
+                      טען הופעות מ-Monday
+                    </button>
+                  </div>
+                ) : (() => {
+                  const pn = (v: string | null | undefined) => parseFloat((v||'').replace(/[₪,\s]/g,''))||0
+                  const fmt2 = (n: number) => n === 0 ? '—' : `₪${Math.round(n).toLocaleString('he-IL')}`
+                  const sorted = [...artistEvents].sort((a, b) => (b.date||'').localeCompare(a.date||''))
+
+                  const totalRev = artistEvents.reduce((s,e) => s + pn(e.total_revenue), 0)
+                  const totalExp = artistEvents.reduce((s,e) => s + pn(e.total_expenses), 0)
+                  const totalNet = totalRev - totalExp
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Summary bar */}
+                      <div className="grid grid-cols-3 gap-3 rounded-2xl p-4" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                        {[
+                          { label: 'סה"כ הכנסות', v: totalRev, color: '#6366f1' },
+                          { label: 'סה"כ הוצאות', v: totalExp, color: '#ef4444' },
+                          { label: 'נותר לחלוקה',  v: totalNet, color: totalNet >= 0 ? '#10b981' : '#ef4444' },
+                        ].map(c => (
+                          <div key={c.label} className="text-right">
+                            <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
+                            <div className="text-lg font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Per-event cards */}
+                      {sorted.map((ev, i) => {
+                        const rev = pn(ev.total_revenue)
+                        const exp = pn(ev.total_expenses)
+                        const net = rev - exp
+                        const artistShare = pn(ev.artist_share) || net * 0.75
+                        const officeShare = pn(ev.office_share) || net * 0.25
+
+                        return (
+                          <div key={ev.id} className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                            {/* Event header */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{ev.name}</p>
+                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                                  {ev.date ? new Date(ev.date).toLocaleDateString('he-IL', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'}
+                                  {ev.location && ` · ${ev.location}`}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {ev.event_type && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>{ev.event_type}</span>
+                                )}
+                                {ev.contract_status && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>{ev.contract_status}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Financial grid */}
+                            {(rev > 0 || exp > 0) ? (
+                              <div className="grid grid-cols-4 gap-2">
+                                {[
+                                  { label: 'הכנסות', v: rev,         color: '#6366f1' },
+                                  { label: 'הוצאות', v: exp,         color: '#ef4444' },
+                                  { label: 'נותר',   v: net,         color: net >= 0 ? '#10b981' : '#ef4444' },
+                                  { label: 'חלק אומן', v: artistShare, color: '#f59e0b' },
+                                ].map(c => (
+                                  <div key={c.label} className="rounded-lg p-2.5 text-right" style={{ background: 'var(--bg-secondary)' }}>
+                                    <div className="text-[10px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>{c.label}</div>
+                                    <div className="text-sm font-bold" style={{ color: c.color }}>{fmt2(c.v)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs py-2 text-center" style={{ color: 'var(--text-secondary)' }}>אין נתוני הכנסות/הוצאות</p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
             )}
 
             {/* ── ARTIST REPORT ── */}
