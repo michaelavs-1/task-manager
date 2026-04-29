@@ -178,18 +178,31 @@ export function MediaLibraryView() {
   useEffect(() => {
     setMounted(true)
     loadCampaigns()
-    // Use env var token first, fallback to localStorage
+    // Use env var token first, then localStorage, then Supabase (most persistent)
     const envToken = process.env.NEXT_PUBLIC_DROPBOX_TOKEN
     if (envToken) {
       setDropboxToken(envToken)
     } else {
-      try {
-        const t = localStorage.getItem('dropbox_token_v1')
-        if (t) setDropboxToken(t)
-        else setDropboxStatus('missing')
-      } catch { setDropboxStatus('missing') }
+      // 1. Try localStorage first (fastest)
+      const localToken = (() => { try { return localStorage.getItem('dropbox_token_v1') } catch { return null } })()
+      if (localToken) {
+        setDropboxToken(localToken)
+      } else {
+        // 2. Fallback: load from Supabase (survives localStorage clearing)
+        fetch('/api/app-settings?key=dropbox_token')
+          .then(r => r.json())
+          .then(d => {
+            if (d.value) {
+              setDropboxToken(d.value)
+              try { localStorage.setItem('dropbox_token_v1', d.value) } catch {}
+            } else {
+              setDropboxStatus('missing')
+            }
+          })
+          .catch(() => setDropboxStatus('missing'))
+      }
     }
-    // Load user-chosen custom path (overrides the auto-resolved shared link path)
+    // Load user-chosen custom path
     try {
       const cp = localStorage.getItem('dropbox_custom_path_v1')
       if (cp) setDropboxCustomPath(cp)
@@ -302,7 +315,14 @@ export function MediaLibraryView() {
   function saveDropboxToken() {
     const trimmed = tokenInputValue.trim()
     if (!trimmed) return
+    // Save to localStorage (fast, local)
     try { localStorage.setItem('dropbox_token_v1', trimmed) } catch {}
+    // Save to Supabase (persistent across browsers/devices, survives localStorage clear)
+    fetch('/api/app-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'dropbox_token', value: trimmed })
+    }).catch(() => {}) // fire and forget
     setDropboxToken(trimmed)
     setTokenInputValue('')
     setShowTokenInput(false)
@@ -647,12 +667,19 @@ export function MediaLibraryView() {
               >רענן גלריה</button>
             </div>
           )}
-          {(dropboxStatus === 'invalid' || dropboxStatus === 'missing') && (
-            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-              יש ליצור טוקן חדש מ-
-              <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Dropbox App Console</a>
-              {' '}(הרשאות נדרשות: <span className="font-mono">files.content.write</span>, <span className="font-mono">files.content.read</span>, <span className="font-mono">files.metadata.read</span>, <span className="font-mono">sharing.read</span>)
-            </p>
+          {(dropboxStatus === 'invalid' || dropboxStatus === 'missing' || dropboxStatusMsg.includes('פג תוקף')) && (
+            <div className="mt-1 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+              <p>
+                ⚡ לטוקן <strong>קבוע שלא פג תוקף</strong>:{' '}
+                <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+                  פתח Dropbox App Console
+                </a>
+                {' '}← בחר את האפליקציה ← "Generated access token" ← לחץ Generate
+              </p>
+              <p className="text-amber-600 dark:text-amber-400">
+                💡 טוקן שנוצר ישירות מ-App Console הוא לטווח ארוך ולא פג תוקף.
+              </p>
+            </div>
           )}
           {dropboxStatus === 'valid' && !dropboxBasePath && !dropboxCustomPath && (
             <p className="text-xs text-amber-600 dark:text-amber-300 mt-0.5">
