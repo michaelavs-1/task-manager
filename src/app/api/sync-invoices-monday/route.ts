@@ -47,7 +47,11 @@ function isoDate(d: string | null): string | null {
   return null
 }
 
-function buildColumnValues(inv: Record<string, unknown>, projectName?: string): string {
+function buildColumnValues(
+  inv: Record<string, unknown>,
+  projectName?: string,
+  dropdownOptions: { id: number; name: string }[] = []
+): string {
   const cv: Record<string, unknown> = {}
 
   if (inv.invoice_num) cv[COL.invoice_num] = String(inv.invoice_num)
@@ -56,37 +60,60 @@ function buildColumnValues(inv: Record<string, unknown>, projectName?: string): 
     if (d) cv[COL.date] = { date: d }
   }
   if (inv.before_vat != null) cv[COL.before_vat] = Number(inv.before_vat)
-  if (inv.total != null)      cv[COL.total]      = Number(inv.total)
-  if (inv.paid != null)       cv[COL.paid]        = Number(inv.paid)
+  if (inv.total != null)      cv[COL.total]       = Number(inv.total)
+  if (inv.paid != null)       cv[COL.paid]         = Number(inv.paid)
   if (inv.tax_withheld != null && Number(inv.tax_withheld) > 0)
     cv[COL.tax_withheld] = Number(inv.tax_withheld)
-  if (inv.notes)        cv[COL.notes]   = String(inv.notes)
+  // Always write notes (even empty string clears the field)
+  cv[COL.notes] = inv.notes ? String(inv.notes) : ''
   if (inv.receipt_number) cv[COL.receipt] = String(inv.receipt_number)
   if (inv.payment_date) {
     const d = isoDate(inv.payment_date as string)
     if (d) cv[COL.payment_date] = { date: d }
   }
-  if (inv.doc_type)   cv[COL.doc_type] = { label: String(inv.doc_type) }
-  // Dropdown column: Monday accepts {"labels": ["option"]} format to match by label
-  if (projectName)    cv[COL.project]  = { labels: [projectName] }
+  if (inv.doc_type) cv[COL.doc_type] = { label: String(inv.doc_type) }
+
+  // Project dropdown: match by label to get ID, or use label fallback
+  if (projectName) {
+    const match = dropdownOptions.find(o =>
+      o.name.toLowerCase() === projectName.toLowerCase()
+    )
+    if (match) {
+      cv[COL.project] = { ids: [match.id] }
+    } else if (dropdownOptions.length === 0) {
+      // No options configured yet — try label-based (Monday may create the option)
+      cv[COL.project] = { label: projectName }
+    }
+    // If options exist but none match → skip (can't set unknown dropdown value)
+  }
 
   return JSON.stringify(cv)
 }
 
-async function mondayMutation(query: string) {
+async function mondayRequest(query: string) {
   const r = await fetch('https://api.monday.com/v2', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: MONDAY_TOKEN!,
-      'API-Version': '2023-10',
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: MONDAY_TOKEN!, 'API-Version': '2023-10' },
     body: JSON.stringify({ query }),
   })
   if (!r.ok) throw new Error(`Monday API ${r.status}`)
   const d = await r.json()
   if (d.errors) throw new Error(d.errors[0]?.message)
   return d.data
+}
+const mondayMutation = mondayRequest
+
+// Fetch dropdown option IDs for the project column
+async function fetchDropdownOptions(): Promise<{ id: number; name: string }[]> {
+  try {
+    const data = await mondayRequest(
+      `{ boards(ids: [${BOARD_ID}]) { columns(ids: ["${COL.project}"]) { settings_str } } }`
+    )
+    const settings = data?.boards?.[0]?.columns?.[0]?.settings_str
+    if (!settings) return []
+    const parsed = JSON.parse(settings)
+    return (parsed.labels || parsed.options || []).map((o: { id: number; name: string }) => ({ id: o.id, name: o.name }))
+  } catch { return [] }
 }
 
 export async function POST(req: NextRequest) {
@@ -108,11 +135,14 @@ export async function POST(req: NextRequest) {
   const projectMap: Record<string, string> = {}
   for (const p of projects || []) projectMap[p.id] = p.name
 
+  // Fetch dropdown options once for project mapping
+  const dropdownOptions = await fetchDropdownOptions()
+
   const results: { id: number; monday_id: string; action: string; error?: string }[] = []
 
   for (const inv of (invoices || [])) {
     const projectName = inv.project_id ? projectMap[inv.project_id] : undefined
-    const colVals = buildColumnValues(inv, projectName)
+    const colVals = buildColumnValues(inv, projectName, dropdownOptions)
     const clientName = (inv.client || inv.invoice_num || 'ללא שם').replace(/"/g, '\\"')
 
     try {
