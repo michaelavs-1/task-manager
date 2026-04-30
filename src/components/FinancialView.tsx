@@ -4112,6 +4112,18 @@ function FinProjectsTab() {
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [reportMonths, setReportMonths] = useState<Record<string, boolean>>({})
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editNameVal, setEditNameVal] = useState('')
+
+  async function saveProjectName(id: string) {
+    const trimmed = editNameVal.trim()
+    if (!trimmed) { setEditingName(false); return }
+    const res = await fetch(`/api/projects/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: trimmed }) })
+    if (res.ok) {
+      setProjects(prev => prev.map(p => p.id === id ? { ...p, name: trimmed } : p))
+    }
+    setEditingName(false)
+  }
   const [newName, setNewName] = useState('')
   const [newCategory, setNewCategory] = useState<'artist' | 'production'>('artist')
   const [savingNew, setSavingNew] = useState(false)
@@ -4331,7 +4343,37 @@ function FinProjectsTab() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{current.name}</h2>
+                {editingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={editNameVal}
+                      onChange={e => setEditNameVal(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') saveProjectName(current.id)
+                        if (e.key === 'Escape') setEditingName(false)
+                      }}
+                      className="text-xl font-bold bg-transparent border-b-2 border-indigo-400 focus:outline-none"
+                      style={{ color: 'var(--text-primary)', minWidth: 160 }}
+                    />
+                    <button onClick={() => saveProjectName(current.id)} className="text-xs px-2 py-1 rounded-lg text-white font-semibold" style={{ background: '#6366f1' }}>שמור</button>
+                    <button onClick={() => setEditingName(false)} className="text-xs px-2 py-1 rounded-lg" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>ביטול</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 group">
+                    <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{current.name}</h2>
+                    <button
+                      onClick={() => { setEditNameVal(current.name); setEditingName(true) }}
+                      title="ערוך שם"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-indigo-50"
+                      style={{ color: '#6366f1' }}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{invoices.length} חשבוניות · {expenses.length} הוצאות</p>
               </div>
               <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: current.category === 'artist' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)', color: current.category === 'artist' ? '#818cf8' : '#10b981' }}>
