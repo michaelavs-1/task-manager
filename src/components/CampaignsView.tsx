@@ -1140,52 +1140,64 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
   // Load per-campaign Dropbox files whenever the popup opens.
   const loadDropboxFilesForCampaign = async () => {
     const { token, basePath, rootNs } = readDropboxConfig()
-    if (!token || !basePath) {
-      setDropboxFiles([])
-      setDropboxError(null)
-      return
-    }
-    setDropboxLoading(true)
-    setDropboxError(null)
-    try {
-      // Primary: campaign-specific folder (basePath/מופעים/CampaignName [id]/)
-      const campaignFolder = campaignFolderPath(basePath, campaign.id, campaign.name)
-      let allEntries: DropboxFileEntry[] = []
-      try {
-        allEntries = await dbxListFolder(token, campaignFolder, rootNs, true)
-      } catch { /* folder might not exist yet */ }
+    if (!token || !basePath) { setDropboxFiles([]); setDropboxError(null); return }
+    setDropboxLoading(true); setDropboxError(null)
 
-      // Fallback: also look in artist/campaign-name folder at basePath root
-      // e.g. "LOUD - 2026-05-15 (ערב)" → try "basePath/LOUD/" and "basePath/LOUD - 2026-05-15 (ערב)/"
-      if (allEntries.length === 0) {
-        const nameParts = campaign.name.split(/\s*[-–]\s*/)
-        const candidates = [
-          campaign.name,                    // full name
-          nameParts[0]?.trim(),             // first part e.g. "LOUD"
-          campaign.project_name || '',       // project name
-        ].filter((v, i, a) => v && a.indexOf(v) === i)
-
-        for (const candidate of candidates) {
-          const altFolder = (basePath.replace(/\/$/, '')) + '/' + candidate
-          try {
-            const altEntries = await dbxListFolder(token, altFolder, rootNs, true)
-            if (altEntries.length > 0) { allEntries = altEntries; break }
-          } catch { /* not found */ }
-        }
+    // Helper: recursive Dropbox listing (returns ALL file entries under a path)
+    const listRecursive = async (path: string): Promise<DropboxFileEntry[]> => {
+      const hdrs: Record<string, string> = {
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json',
       }
+      if (rootNs) hdrs['Dropbox-API-Path-Root'] = JSON.stringify({ '.tag': 'namespace_id', 'namespace_id': rootNs })
+      const res = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST', headers: hdrs,
+        body: JSON.stringify({ path, recursive: true, include_deleted: false, limit: 500 })
+      })
+      if (!res.ok) return []
+      const data = await res.json()
+      const entries: DropboxFileEntry[] = (data.entries || []).filter((e: any) => e['.tag'] === 'file')
+      let cursor = data.cursor, hasMore = data.has_more
+      while (hasMore) {
+        const r2 = await fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+          method: 'POST', headers: hdrs, body: JSON.stringify({ cursor })
+        })
+        if (!r2.ok) break
+        const d2 = await r2.json()
+        for (const e of (d2.entries || [])) if (e['.tag'] === 'file') entries.push(e)
+        cursor = d2.cursor; hasMore = d2.has_more
+      }
+      return entries
+    }
 
-      // Resolve temp URLs in small batches
+    try {
+      // Build search keywords from campaign name: "LOUD - 2026-05-15 (ערב)" → ["loud", "2026-05-15"]
+      const nameLower = campaign.name.toLowerCase()
+      const artistPart = campaign.name.split(/\s*[-–]\s*/)[0]?.trim().toLowerCase() || nameLower
+      const datePart = campaign.launch_date?.slice(0, 10) || ''
+
+      // Do ONE recursive listing of the full basePath and filter by relevance
+      const allFiles = await listRecursive(basePath)
+
+      // Filter to files whose path contains the campaign name or artist part or date
+      const isMedia = (name: string) => /\.(jpg|jpeg|png|gif|webp|mp4|mov|m4v|webm|avi|mkv|svg)$/i.test(name)
+      const matched = allFiles.filter(e => {
+        if (!isMedia(e.name)) return false
+        const p = e.path_lower
+        return p.includes(nameLower) ||
+          (artistPart && p.includes(artistPart)) ||
+          (datePart && p.includes(datePart))
+      })
+
+      // Resolve temp URLs
       const results: { name: string; url: string; path: string }[] = []
       const batchSize = 6
-      for (let i = 0; i < allEntries.length; i += batchSize) {
-        const slice = allEntries.slice(i, i + batchSize)
+      for (let i = 0; i < matched.length; i += batchSize) {
+        const slice = matched.slice(i, i + batchSize)
         const urls = await Promise.all(slice.map(e =>
           getDropboxTempLink(token, e.path_lower, rootNs).catch(() => null)
         ))
-        slice.forEach((e, idx) => {
-          const u = urls[idx]
-          if (u) results.push({ name: e.name, url: u, path: e.path_lower })
-        })
+        slice.forEach((e, idx) => { const u = urls[idx]; if (u) results.push({ name: e.name, url: u, path: e.path_lower }) })
       }
       setDropboxFiles(results)
     } catch (e) {
