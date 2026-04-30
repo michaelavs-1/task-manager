@@ -103,7 +103,7 @@ async function mondayRequest(query: string) {
 }
 const mondayMutation = mondayRequest
 
-// Fetch dropdown option IDs for the project column
+// Fetch current dropdown options for the project column
 async function fetchDropdownOptions(): Promise<{ id: number; name: string }[]> {
   try {
     const data = await mondayRequest(
@@ -114,6 +114,42 @@ async function fetchDropdownOptions(): Promise<{ id: number; name: string }[]> {
     const parsed = JSON.parse(settings)
     return (parsed.labels || parsed.options || []).map((o: { id: number; name: string }) => ({ id: o.id, name: o.name }))
   } catch { return [] }
+}
+
+// Ensure all project names have a corresponding dropdown option.
+// Adds any missing labels and returns the full updated options list.
+async function ensureDropdownOptions(
+  projectNames: string[],
+  existing: { id: number; name: string }[]
+): Promise<{ id: number; name: string }[]> {
+  const missing = projectNames.filter(
+    n => n && !existing.find(o => o.name.toLowerCase() === n.toLowerCase())
+  )
+  if (missing.length === 0) return existing
+
+  // Build merged labels array: keep existing + add missing
+  const nextId = existing.length > 0 ? Math.max(...existing.map(o => o.id)) + 1 : 1
+  const newLabels = missing.map((name, i) => ({ id: nextId + i, name }))
+  const allLabels = [...existing, ...newLabels]
+
+  // Write back to Monday using change_column_metadata
+  const labelsJson = JSON.stringify({ labels: allLabels }).replace(/"/g, '\\"')
+  try {
+    await mondayRequest(`
+      mutation {
+        change_column_metadata(
+          board_id: ${BOARD_ID},
+          column_id: "${COL.project}",
+          column_property: labels,
+          value: "${labelsJson}"
+        ) { id }
+      }
+    `)
+    return allLabels
+  } catch {
+    // If metadata update fails, still try with label-based approach
+    return existing
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -135,8 +171,18 @@ export async function POST(req: NextRequest) {
   const projectMap: Record<string, string> = {}
   for (const p of projects || []) projectMap[p.id] = p.name
 
-  // Fetch dropdown options once for project mapping
-  const dropdownOptions = await fetchDropdownOptions()
+  // Collect all project names that appear in this invoice batch
+  const projectNamesInBatch = [...new Set(
+    (invoices || [])
+      .map(inv => inv.project_id ? projectMap[inv.project_id] : null)
+      .filter(Boolean) as string[]
+  )]
+
+  // Fetch dropdown options and ensure all project names exist as options
+  let dropdownOptions = await fetchDropdownOptions()
+  if (projectNamesInBatch.length > 0) {
+    dropdownOptions = await ensureDropdownOptions(projectNamesInBatch, dropdownOptions)
+  }
 
   const results: { id: number; monday_id: string; action: string; error?: string }[] = []
 
