@@ -12,12 +12,12 @@ const COL = {
   before_vat:     'numeric_mm22f70e',
   total:          'numeric_mm228jfv',
   paid:           'numeric_mm226xtx',
-  notes:          'text_mm22jacf',
+  notes:          'text_mm222aa2',   // the visible "הערות" column in Monday
   payment_date:   'date_mm22jbh4',
   tax_withheld:   'numeric_mm22z4v4',
   receipt:        'text_mm22wrms',
   doc_type:       'color_mm22t98t',
-  project:        'text_mm222aa2',   // using second notes field for project name
+  project:        'dropdown_mm22thq0',  // actual "שיוך לפרויקט" dropdown column
 }
 
 function sb() {
@@ -67,7 +67,8 @@ function buildColumnValues(inv: Record<string, unknown>, projectName?: string): 
     if (d) cv[COL.payment_date] = { date: d }
   }
   if (inv.doc_type)   cv[COL.doc_type] = { label: String(inv.doc_type) }
-  if (projectName)    cv[COL.project]  = projectName
+  // Dropdown column: Monday accepts {"labels": ["option"]} format to match by label
+  if (projectName)    cv[COL.project]  = { labels: [projectName] }
 
   return JSON.stringify(cv)
 }
