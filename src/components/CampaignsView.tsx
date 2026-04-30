@@ -1148,13 +1148,37 @@ function BarbyCard({ campaign, onStatusChange, updatingId, muted=false, onMediaU
     setDropboxLoading(true)
     setDropboxError(null)
     try {
-      const folder = campaignFolderPath(basePath, campaign.id, campaign.name)
-      const entries: DropboxFileEntry[] = await dbxListFolder(token, folder, rootNs, true)
-      // Resolve temp URLs in small batches (Dropbox API isn't batched for get_temporary_link)
+      // Primary: campaign-specific folder (basePath/מופעים/CampaignName [id]/)
+      const campaignFolder = campaignFolderPath(basePath, campaign.id, campaign.name)
+      let allEntries: DropboxFileEntry[] = []
+      try {
+        allEntries = await dbxListFolder(token, campaignFolder, rootNs, true)
+      } catch { /* folder might not exist yet */ }
+
+      // Fallback: also look in artist/campaign-name folder at basePath root
+      // e.g. "LOUD - 2026-05-15 (ערב)" → try "basePath/LOUD/" and "basePath/LOUD - 2026-05-15 (ערב)/"
+      if (allEntries.length === 0) {
+        const nameParts = campaign.name.split(/\s*[-–]\s*/)
+        const candidates = [
+          campaign.name,                    // full name
+          nameParts[0]?.trim(),             // first part e.g. "LOUD"
+          campaign.project_name || '',       // project name
+        ].filter((v, i, a) => v && a.indexOf(v) === i)
+
+        for (const candidate of candidates) {
+          const altFolder = (basePath.replace(/\/$/, '')) + '/' + candidate
+          try {
+            const altEntries = await dbxListFolder(token, altFolder, rootNs, true)
+            if (altEntries.length > 0) { allEntries = altEntries; break }
+          } catch { /* not found */ }
+        }
+      }
+
+      // Resolve temp URLs in small batches
       const results: { name: string; url: string; path: string }[] = []
       const batchSize = 6
-      for (let i = 0; i < entries.length; i += batchSize) {
-        const slice = entries.slice(i, i + batchSize)
+      for (let i = 0; i < allEntries.length; i += batchSize) {
+        const slice = allEntries.slice(i, i + batchSize)
         const urls = await Promise.all(slice.map(e =>
           getDropboxTempLink(token, e.path_lower, rootNs).catch(() => null)
         ))
