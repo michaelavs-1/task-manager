@@ -2063,7 +2063,21 @@ function InvoicesTab() {
   const [modalInv, setModalInv] = useState<InvoiceRow | null | 'new'>(null)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [mondaySyncing, setMondaySyncing] = useState(false)
+  const [mondaySyncResult, setMondaySyncResult] = useState<string | null>(null)
   useEsc(deleteId !== null, () => setDeleteId(null))
+
+  async function syncToMonday() {
+    setMondaySyncing(true)
+    setMondaySyncResult(null)
+    try {
+      const res = await fetch('/api/sync-invoices-monday', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      const d = await res.json()
+      if (d.ok) setMondaySyncResult(`✓ ${d.created} נוצרו, ${d.updated} עודכנו${d.errors ? `, ${d.errors} שגיאות` : ''}`)
+      else setMondaySyncResult('שגיאה: ' + (d.error || 'לא ידועה'))
+    } catch (e) { setMondaySyncResult('שגיאת רשת') }
+    finally { setMondaySyncing(false) }
+  }
   // Withholding confirmation modal state
   const [withholdingInv, setWithholdingInv] = useState<InvoiceRow | null>(null)
   const [withhold5, setWithhold5] = useState<boolean>(false)
@@ -2353,8 +2367,29 @@ const [filterYear, setFilterYear] = useState<string | null>(null)
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
             חשבונית חדשה
           </button>
+          {/* Monday sync button */}
+          <button
+            onClick={syncToMonday}
+            disabled={mondaySyncing}
+            title="סנכרן לבורד Monday ריכוז הכנסות (חד-כיווני)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border"
+            style={mondaySyncing
+              ? { background: '#f9fafb', color: '#9ca3af', borderColor: '#e5e7eb' }
+              : { background: '#fff', color: '#f59e0b', borderColor: '#f59e0b' }}
+          >
+            <svg className={`w-3.5 h-3.5 ${mondaySyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d={mondaySyncing ? "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" : "M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"} />
+            </svg>
+            {mondaySyncing ? 'מסנכרן...' : '↑ Monday'}
+          </button>
         </div>
       </div>
+      {mondaySyncResult && (
+        <div className="px-4 py-2 text-xs rounded-lg mx-4 mb-2" style={{ background: mondaySyncResult.startsWith('✓') ? '#f0fdf4' : '#fef2f2', color: mondaySyncResult.startsWith('✓') ? '#16a34a' : '#dc2626', border: `1px solid ${mondaySyncResult.startsWith('✓') ? '#bbf7d0' : '#fecaca'}` }}>
+          {mondaySyncResult}
+          <button onClick={() => setMondaySyncResult(null)} className="mr-2 opacity-50 hover:opacity-100">✕</button>
+        </div>
+      )}
 
       {/* Combined filter row: Payment status + Years + Months — all inline */}
       <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
